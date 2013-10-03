@@ -89,11 +89,19 @@
 #define EE_WRITE  1
 #define EE_READ   2
 
-#define MASTER_EN_PORT            PORTD   //    PORTB
-#define MASTER_EN_DDR             DDRD    //    DDRB
+#define MASTER_PORT            PORTD   //    
+#define MASTER_DDR             DDRD    //    
+#define MASTER_PIN             PIND    //
 
-#define MASTER_EN_PIN            7 // Mit PinChange-Interrupt beim Sub
-#define SUB_BUSY_PIN             6 // Eingang fuer busy-Meldung des Sub
+#define INTERRUPT_PORT            PORTB   //
+#define INTERRUPT_DDR             DDRB    //
+#define INTERRUPT_PIN             PINB    //
+
+#define MASTER_EN_PIN            7 // Eingang fur PinChange-Interrupt
+
+#define SUB_BUSY_PIN             5 // Ausgang fuer busy-Meldung des Sub an Master
+
+#define SUB_TASK_BIT             4 // Slave hat Aufgaben
 
 #define MASTER_EN_BIT            0 // Master erlaubt SPI
 
