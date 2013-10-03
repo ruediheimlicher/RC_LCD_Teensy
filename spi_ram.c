@@ -67,7 +67,7 @@ void spiram_init()
    
    SPCR=0;
    SPCR = (1<<SPE)|(1<<MSTR);
-   SPCR |= (1<<SPR0);
+ //  SPCR |= (1<<SPR0);
 //   SPCR |= (1<<SPR1);
    
    //SPCR |= (1<<CPOL); // Gleich wie CKP
