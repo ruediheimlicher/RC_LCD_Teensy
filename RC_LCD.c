@@ -791,7 +791,7 @@ int main (void)
 
          if (eepromstatus & (1<<EE_WRITE)) // write an eeprom
          {
-            /*
+           
             SPI_PORT_Init();
             eeprom_testdata++;
             eeprom_testaddress--;
@@ -874,7 +874,7 @@ int main (void)
             //sendbuffer[12] = eeprom_testdata;
             
             // end Daten an EEPROM
-            */
+            
          } // EE_WRITE
          else
             
