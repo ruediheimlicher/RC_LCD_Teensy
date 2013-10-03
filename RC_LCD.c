@@ -170,17 +170,9 @@ void Master_Init(void)
  	LCD_DDR |= (1<<LCD_ENABLE_PIN);	//Pin 5 von PORT D als Ausgang fuer LCD
 	LCD_DDR |= (1<<LCD_CLOCK_PIN);	//Pin 6 von PORT D als Ausgang fuer LCD
    
-	
-   //DDRD |= (1<<PORTD6); // LoopLed
-   //PORTD |= (1<<PORTD6);
    
    ADC_DDR &= ~(1<<PORTF0);
    
-   
-   
-
-   //DDRE |= (1<<PORTE0);
-   //PORTE |= (1<<PORTE0);
 
    MEM_EN_DDR |= (1<<MEM_EN_PIN);
    MEM_EN_PORT |= (1<<MEM_EN_PIN);
@@ -256,10 +248,6 @@ void spi_start(void) // SPI-Pins aktivieren
    SPI_EE_DDR |= (1<<SPI_EE_CS_PIN); // EE-CS-PIN Ausgang
    SPI_EE_PORT |= (1<<SPI_EE_CS_PIN);// HI
    
-   //MCP3208_spi_Init();
-   //spiram_init();
-   //spieeprom_init();
-   //spiadc_init();
    
 }
 
@@ -468,21 +456,6 @@ void timer2 (uint8_t wert)
  //OCR2A   = 5;             // Set CTC compare value with a prescaler of 64
  TCCR2A = 0x00;
 
-//	TCCR2 |= (1<<CS02);							//8-Bit Timer, Timer clock = system clock/256
-
-//Takt fuer Servo
-	TCCR2 |= (1<<CS20)|(1<<CS21);				//Takt /64	Intervall 64 us
-
-	TCCR2 |= (1<<WGM21);							//	ClearTimerOnCompareMatch CTC
-
-	//OC2 akt
-//	TCCR2 |= (1<<COM20);						//	OC2 Pin zuruecksetzen bei CTC
-
-
-	TIFR |= (1<<TOV2);							//Clear TOV2 Timer/Counter Overflow Flag. clear pending interrupts
-	TIMSK0 |= (1<<OCIE2);							//CTC Interrupt aktivieren
-
-	TCNT2 = 0x00;									//Zaehler zuruecksetzen
 	
 	OCR2 = wert;									//Setzen des Compare Registers auf Servoimpulsdauer
 } 
@@ -491,6 +464,7 @@ void timer2 (uint8_t wert)
 volatile uint16_t timer2Counter=0;
 volatile uint16_t timer2BatterieCounter=0;
 
+/*
 ISR (TIMER2_OVF_vect) 
 { 
 	timer2Counter ++;
@@ -517,7 +491,7 @@ ISR (TIMER2_OVF_vect)
 	} 
 	TCNT2 = 10;							// ergibt 2 kHz fuer Timertakt
 }
-
+*/
 /*
 ISR(TIMER2_COMP_vect) // Schaltet Impuls an SERVOPIN0 aus
 {
@@ -533,23 +507,16 @@ ISR(TIMER2_COMP_vect) // Schaltet Impuls an SERVOPIN0 aus
 
 ISR (PCINT0_vect)
 {
-   uint8_t changedbits;
- //  changedbits = PINB ^ portbhistory;
- //  portbhistory = PINB;
    
    if(INTERRUPT_PIN & (1<< MASTER_EN_PIN))// LOW to HIGH pin change, Sub ON
    {
       OSZI_C_LO;
       masterstatus |= (1<<SUB_TASK_BIT); // Zeitfenster fuer Task offen
       
-      //  masterstatus &= ~(1<<SUB_TASK_BIT);
-      
    }
    else // HIGH to LOW pin change, Sub ON
    {
-      
 //      masterstatus &= ~(1<<SUB_TASK_BIT);
-      
       
    }
    
@@ -590,12 +557,6 @@ int main (void)
 	
 	Master_Init();
 	
-   
-   //SPI_PORT_Init(); //Pins fuer SPI aktivieren, incl. SS
-   
-   //SPI_RAM_init(); // SS-Pin fuer RAM aktivieren
-   
-   //SPI_EE_init();
    
       
    volatile    uint8_t outcounter=0;
@@ -685,14 +646,9 @@ int main (void)
          
          if (loopcount1%0x0F == 0)
          {
-            //lcd_gotoxy(18,1);
-            //lcd_puthex(hidstatus);
          }
          else if(loopcount1%8 == 4)
          {
-            //lcd_gotoxy(18,1);
-            //lcd_putc('*');
-            //lcd_putc('*');
             
          }
          
@@ -943,27 +899,6 @@ int main (void)
                
             }
             OSZI_A_HI ;
-
-            
-            /*
-            RAM_CS_LO;
-            _delay_us(LOOPDELAY);
-            //     OSZI_B_LO;
-            _delay_us(LOOPDELAY);
-            Pot_Array[0] = spiram_rdbyte(0);
-            _delay_us(LOOPDELAY);
-            //     OSZI_B_HI;
-            RAM_CS_HI;
-
-            RAM_CS_LO;
-            _delay_us(LOOPDELAY);
-            //     OSZI_B_LO;
-            _delay_us(LOOPDELAY);
-            Pot_Array[1] = spiram_rdbyte(1);
-            _delay_us(LOOPDELAY);
-            //     OSZI_B_HI;
-            RAM_CS_HI;
-             */
             
             
             
@@ -993,15 +928,7 @@ int main (void)
             
             _delay_us(1);
             
-            /*
-             RAM_CS_LO;
-             for (uint8_t k=0;k<32;k++)
-             {
-             spiram_wrbyte(testaddress, testdata);
-             }
-             RAM_CS_HI;
-             */
-            // Daten aendern
+             // Daten aendern
             if (outcounter%0x40 == 0)
             {
                
@@ -1033,7 +960,6 @@ int main (void)
             
             // end Daten an RAM
             
-            _delay_us(1);
             MEM_EN_PORT |= (1<<MEM_EN_PIN);
             
             // EEPROM Test
@@ -1041,20 +967,7 @@ int main (void)
             
             //
             sei();
-            //if (PINC & (1<<PC6))
-            {
-               
-               //  timer1_init(); // Kanaele starten
-               
-            }
-            //PORTD &= ~(1<<PORTD5); //  LO
-            
-            
-            //timer1_stop();
-            
-            
-            //OSZI_A_HI ;
-            
+             
          }
          spi_end(); // SPI von Sub ausschalten
          MASTER_PORT |= (1<<SUB_BUSY_PIN); // Sub schickt ende busy an Master
