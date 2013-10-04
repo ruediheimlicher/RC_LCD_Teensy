@@ -70,6 +70,16 @@
 
 // Bit
 
+// Masterstatus
+
+#define RAM_READ           0x01  Bit 0
+#define RAM_WRITE          0x02  Bit 1
+#define EEPROM_READ            0x04  Bit 2
+#define EEPROM_WRITE           0x08  Bit 3
+
+#define  POT_READ          0x10  Bit 4
+
+
 #define ADC_START 0  //    Start Messung Batteriespannung mit internem ADC
 
 #define POT_START 0  //    Start Messung Potentiometer
@@ -109,3 +119,7 @@
 #define MEM_EN_DDR               DDRE
 #define MEM_EN_PIN               0
 
+
+#define EEPROM_WRITE_TASK     1
+
+#define EEPROM_WRITE_START_OK 0xB0
