@@ -1058,7 +1058,7 @@ int main (void)
            }
         }
          cli();
-         code = 0xA0;
+         //code = 0xA0;
          //code = buffer[0];
          
          //code = buffer[31];
@@ -1096,8 +1096,21 @@ int main (void)
                usbtask |= (1<<EEPROM_WRITE_TASK);
                
             }break;
+             
+            case 0xF0: // HALT
+            {
+               lcd_gotoxy(19,1);
+               lcd_putc('H');
                
+            }break;
+
+            case 0xF1: // GO
+            {
+               lcd_gotoxy(19,1);
+               lcd_putc('G');
                
+            }break;
+
              
 #pragma mark default
             default:
