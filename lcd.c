@@ -245,7 +245,7 @@ char string[8];
 lcd_puts(string);
 }
 
-void lcd_putint12Bit(uint16_t zahl)
+void lcd_putint12(uint16_t zahl)
 {
    char string[5];
    int8_t i;                             // schleifenzähler

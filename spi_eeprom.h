@@ -45,6 +45,16 @@ uint8_t spieeprom_read_status(void);
 // uint8_t data - the data to write
 void spieeprom_wrbyte(uint16_t addr, uint8_t data);
 
+//WRITE schicken zum start einer page, dann msb, lsb
+// uint16_t addr - the address to write to
+void spieeprom_wrpage_start(uint16_t addr);
+
+//WRITE schicken zum start einer page, dann msb, lsb
+// uint16_t addr - the address to write to
+void spieeprom_wrpage_data(uint8_t data);
+
+
+
 //read a memory location
 // uint16_t addr - the address to read from
 // returns uint8_t - the data read

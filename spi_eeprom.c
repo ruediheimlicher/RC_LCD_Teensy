@@ -131,6 +131,40 @@ void spieeprom_wrbyte(uint16_t addr, uint8_t data)
    
 }
 
+//WRITE schicken zum start einer page, dann msb, lsb
+// uint16_t addr - the address to write to
+void spieeprom_wrpage_start(uint16_t addr)
+{
+   
+   _delay_us(EEDELAY);
+   //send write instruction
+   spi_send(0x02);
+   _delay_us(EEDELAY);
+   //send address
+   
+   spi_send((addr>>8)); //most significant byte
+   _delay_us(EEDELAY);
+   spi_send(addr); //least significant byte
+   _delay_us(EEDELAY);
+   
+   //send data after
+   
+}
+
+//WRITE schicken zum start einer page, dann msb, lsb
+// uint16_t addr - the address to write to
+void spieeprom_wrpage_data(uint8_t data)
+{
+   
+   //send data
+   spi_send(data);
+   _delay_us(EEDELAY);
+
+}
+
+
+
+
 //read a memory location
 // uint16_t addr - the address to read from
 // returns uint8_t - the data read
