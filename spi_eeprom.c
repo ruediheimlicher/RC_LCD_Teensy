@@ -151,8 +151,7 @@ void spieeprom_wrpage_start(uint16_t addr)
    
 }
 
-//WRITE schicken zum start einer page, dann msb, lsb
-// uint16_t addr - the address to write to
+//Weitere Daten schicken
 void spieeprom_wrpage_data(uint8_t data)
 {
    
@@ -177,7 +176,7 @@ uint8_t spieeprom_rdbyte(uint16_t addr)
    spi_send(0x03);
    _delay_us(EEDELAY);
    //send address
-   
+  
    spi_send(addr>>8); //most significant byte
    _delay_us(EEDELAY);
    spi_send(addr); //least significant byte
@@ -189,6 +188,77 @@ uint8_t spieeprom_rdbyte(uint16_t addr)
    
    return result;
 }
+
+//READ schicken zum start einer page, dann msb, lsb
+// uint16_t addr - the address to write to
+void spieeprom_rdpage_start(uint16_t addr)
+{
+   
+   _delay_us(EEDELAY);
+   //send read instruction
+   spi_send(0x03);
+   _delay_us(EEDELAY);
+   //send address
+   
+   spi_send(addr>>8); //most significant byte
+   _delay_us(EEDELAY);
+   spi_send(addr); //least significant byte
+   _delay_us(EEDELAY);
+
+}
+
+
+//Weitere Daten schicken
+uint8_t spieeprom_rdpage_data()
+{
+   uint8_t result = 0x00;
+   //send dummy data, read relult
+   result = spi_send(0x66); //send clock pulses, get result
+   _delay_us(EEDELAY);
+   return result;
+}
+
+//writes an page to an address
+//  uint16_t startaddr - the address the first byte will be written to
+//  const uint8_t* data - the array to be written
+//  uint16_t length - the number of bytes to be written from the array
+void spieeprom_wrpage(uint16_t startaddr, const volatile uint8_t* data)
+//void spieeprom_wrpage(uint16_t startaddr, const char* data)
+{
+   uint16_t i;
+   
+   //send the write instruction
+   spi_send(0x02);
+   //send address
+   spi_send(startaddr>>8);
+   spi_send(startaddr);
+   //send data
+   for(i=0; i<EE_PAGESIZE; i++)
+   {
+      spi_send(data[i]);
+   }
+}
+
+//reads a page of memory into an array
+//  uint16_t startaddr - the address the first byte will be read from
+//  uint8_t* data - the array to be written to
+void spieeprom_rdpage(uint16_t startaddr, volatile uint8_t* data)
+//void spieeprom_rdpage(uint16_t startaddr, char* data)
+{
+   uint16_t i;
+   
+   //send the read instruction
+   spi_send(0x03);
+   //send address
+   spi_send(startaddr>>8);
+   spi_send(startaddr);
+   //read in data
+   for(i=0; i<EE_PAGESIZE; i++)
+   {
+      data[i] = spi_send(0x77);
+   }
+}
+
 
 
 uint8_t spieeprom_read_status()
@@ -203,4 +273,50 @@ uint8_t spieeprom_read_status()
 }
 
 
+//writes an array to an address
+//  uint16_t startaddr - the address the first byte will be written to
+//  const uint8_t* data - the array to be written
+//  uint16_t length - the number of bytes to be written from the array
+void spiram_wrseq(uint16_t startaddr, const uint8_t* data, uint16_t length)
+{
+   uint16_t i;
+   
+   //send the write instruction
+   spi_send(__WRITE_INST);
+   //send address
+   spi_send(startaddr>>8);
+   spi_send(startaddr);
+   //send data
+   for(i=0; i<length; i++){
+      spi_send(data[i]);
+   }
+}
+
+//reads a portion of memory into an array
+//  uint16_t startaddr - the address the first byte will be read from
+//  uint8_t* data - the array to be written to
+//  uint16_t length - the number of bytes to be read from memory
+void spiram_rdseq(uint16_t startaddr, uint8_t* data, uint16_t length){
+   uint16_t i;
+   
+   //send the read instruction
+   spi_send(__READ_INST);
+   //send address
+   spi_send(startaddr>>8);
+   spi_send(startaddr);
+   //read in data
+   for(i=0; i<length; i++){
+      data[i] = spi_send(__NULL_INST);
+   }
+}
+
+void test_rdpage(uint16_t startaddr, volatile char* data)
+{
+   
+}
+
+void test_rdpage_uint(uint16_t startaddr, volatile uint8_t* data)
+{
+   
+}
 

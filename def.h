@@ -119,7 +119,9 @@
 #define MEM_EN_DDR               DDRE
 #define MEM_EN_PIN               0
 
-
-#define EEPROM_WRITE_TASK     1
+#define EEPROM_WRITE_BYTE_TASK     1
+#define EEPROM_WRITE_PAGE_TASK     2
+#define EEPROM_READ_BYTE_TASK       3
+#define EEPROM_READ_PAGE_TASK       4
 
 #define EEPROM_WRITE_START_OK 0xB0
