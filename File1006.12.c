@@ -150,7 +150,7 @@ void Master_Init(void)
    OSZIPORT |= (1<<OSZI_PULS_D);		//Pin   von   als Ausgang fuer OSZI
 	
    /*
-    TASTENDDR &= ~(1<<TASTE0);	//Bit 0 von PORT B als Eingang fŸr Taste 0
+    TASTENDDR &= ~(1<<TASTE0);	//Bit 0 von PORT B als Eingang fÃ¼r Taste 0
     TASTENPORT |= (1<<TASTE0);	//Pull-up
     */
    
@@ -456,7 +456,7 @@ void timer0 (void) // nicht verwendet
 	
 	//TIFR |= (1<<TOV0);							//Clear TOV0 Timer/Counter Overflow Flag. clear pending interrupts
 	TIMSK0 |= (1<<TOIE0);							//Overflow Interrupt aktivieren
-	TCNT0 = TIMER0_STARTWERT;					//RŸcksetzen des Timers
+	TCNT0 = TIMER0_STARTWERT;					//RÃ¼cksetzen des Timers
    
 }
 
@@ -625,7 +625,7 @@ int main (void)
 	
 	
 	/*
-    Bit 0: 1 wenn wdt ausgelšst wurde
+    Bit 0: 1 wenn wdt ausgelÃ¶st wurde
 	 
     */
 	uint8_t i=0;
