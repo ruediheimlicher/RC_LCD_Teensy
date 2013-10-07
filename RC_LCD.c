@@ -526,7 +526,7 @@ ISR (PCINT0_vect)
    
    if(INTERRUPT_PIN & (1<< MASTER_EN_PIN))// LOW to HIGH pin change, Sub ON
    {
-      OSZI_C_LO;
+      //OSZI_C_LO;
       
       masterstatus |= (1<<SUB_TASK_BIT); // Zeitfenster fuer Task offen
       
@@ -706,7 +706,7 @@ int main (void)
          
 #pragma mark USB send
          // neue Daten abschicken
-         if (usbtask & (1<<EEPROM_WRITE_PAGE_TASK) || usbtask & (1<<EEPROM_WRITE_BYTE_TASK))
+         if (usbtask & (1<<EEPROM_WRITE_PAGE_TASK) )//|| usbtask & (1<<EEPROM_WRITE_BYTE_TASK))
          {
             // Write im Gang, nichts senden
             lcd_gotoxy(0,1);
@@ -736,7 +736,7 @@ int main (void)
       {
          
         masterstatus |= (1<<SUB_TASK_BIT);
-         
+        // usbtask=0;
       }
       
       /**	ADC	***********************/
@@ -764,18 +764,18 @@ int main (void)
          
       }
       
-      if ((masterstatus & (1<<SUB_TASK_BIT) ) )// SPI starten, in PCINT0 gesetzt
+      if ((masterstatus & (1<<SUB_TASK_BIT) ) )//|| (masterstatus & (1<< HALT_BIT)))// SPI starten, in PCINT0 gesetzt
       {
-         if (masterstatus & (1<< HALT_BIT)) // SUB_TASK_BIT nicht zuruecksetzen 
+         if (masterstatus & (1<< HALT_BIT)) // SUB_TASK_BIT nicht zuruecksetzen
          {
-            masterstatus &= ~(1<< HALT_BIT);
+            //masterstatus &= ~(1<< HALT_BIT);
          }
-         else
+         //else
          {
             masterstatus &= ~(1<<SUB_TASK_BIT); // SUB nur fuer Fenster vom Master oeffnen
          }
          
-         OSZI_C_HI;
+         //OSZI_C_HI;
          
          
          _delay_us(1);
@@ -906,7 +906,7 @@ int main (void)
             
             sei();
             // end Daten an EEPROM
-            OSZI_D_HI ;
+            //OSZI_D_HI ;
             
          }
          
@@ -960,7 +960,7 @@ int main (void)
          
          else if (usbtask & (1<<EEPROM_WRITE_PAGE_TASK))
          {
-            OSZI_D_LO ;
+            //OSZI_D_LO ;
             uint8_t a0=0,a1=0,a2=0,a3=0;
             a0 = buffer[0];
             a1 = buffer[1];
@@ -1250,7 +1250,7 @@ int main (void)
                eepromstatus &= ~(1<<EE_WRITE);
                usbtask &= ~(1<<EEPROM_WRITE_PAGE_TASK);
                
-               MASTER_PORT |= (1<<SUB_BUSY_PIN); // busy beenden
+ //              MASTER_PORT |= (1<<SUB_BUSY_PIN); // busy beenden
               
                abschnittnummer =0;
             }
@@ -1269,7 +1269,7 @@ int main (void)
             
             //
             // end Daten an EEPROM
-            OSZI_D_HI ;
+            //OSZI_D_HI ;
          } // EE_WRITE
          
          
@@ -1310,7 +1310,7 @@ int main (void)
             //     OSZI_B_HI;
             RAM_CS_HI;
             
-            OSZI_A_LO ;
+            //OSZI_A_LO ;
             for (i=0;i< 8;i++)
             {
                RAM_CS_LO;
@@ -1324,7 +1324,7 @@ int main (void)
                RAM_CS_HI;
                
             }
-            OSZI_A_HI ;
+            //OSZI_A_HI ;
             
             
             
@@ -1394,16 +1394,19 @@ int main (void)
       /**	Begin USB-routinen	***********************/
 #pragma mark USB read
       // Start USB
-      //OSZI_B_LO;
+      
       r = usb_rawhid_recv((void*)buffer, 0);
-      //OSZI_B_HI;
+      
       if (r > 0)
       {
+         OSZI_A_TOGG;
+         //OSZI_D_LO;
          cli();
          uint8_t code = 0x00;
          usbstatus |= (1<<USB_RECV);
          if (abschnittnummer == 0) // erster Abschnitt enthaelt code
          {
+            OSZI_C_TOGG;
             code = buffer[0];
             lcd_gotoxy(18,1);
             lcd_putc('-');
@@ -1570,13 +1573,15 @@ int main (void)
          }
          else
          {
-            
+            abschnittnummer=0;
+            //OSZI_A_TOGG ;
          }
          
          //lcd_putc('$');
          code=0;
          sei();
          
+       //OSZI_D_HI;
          
 		} // r>0, neue Daten
       else
