@@ -909,7 +909,8 @@ int main (void)
             //OSZI_D_HI ;
             
          }
-         
+ 
+#pragma mark EEPROM_READ_BYTE_TASK
          else if (usbtask & (1<<EEPROM_READ_BYTE_TASK))
          {
             cli();
@@ -1226,7 +1227,7 @@ int main (void)
                
                sendbuffer[0] = 0xD5;
                eepromstatus &= ~(1<<EE_WRITE);
-               usbtask &= ~(1<<EEPROM_READ_BYTE_TASK);
+               usbtask &= ~(1<<EEPROM_READ_PAGE_TASK);
                
 //               MASTER_PORT |= (1<<SUB_BUSY_PIN); // busy beenden
                
@@ -1565,7 +1566,6 @@ int main (void)
                       lcd_putc(' ');
                      
                       
-                     
                   }
                }break; // default
                   
