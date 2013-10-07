@@ -1480,9 +1480,9 @@ int main (void)
                   lcd_putc('1');
                   //lcd_putc('*');
                   
-                  sendbuffer[0] = 0xC5;
-                  usb_rawhid_send((void*)sendbuffer, 50);
-                  lcd_putc('*');
+                  //sendbuffer[0] = 0xC5;
+                  //usb_rawhid_send((void*)sendbuffer, 50);
+                  //lcd_putc('*');
                   usbtask |= (1<<EEPROM_WRITE_BYTE_TASK);
                   masterstatus |= (1<<SUB_TASK_BIT);
                }break;
@@ -1573,7 +1573,7 @@ int main (void)
          }
          else
          {
-            abschnittnummer=0;
+            //abschnittnummer=0;
             //OSZI_A_TOGG ;
          }
          
