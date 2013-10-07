@@ -527,6 +527,7 @@ ISR (PCINT0_vect)
    if(INTERRUPT_PIN & (1<< MASTER_EN_PIN))// LOW to HIGH pin change, Sub ON
    {
       OSZI_C_LO;
+      
       masterstatus |= (1<<SUB_TASK_BIT); // Zeitfenster fuer Task offen
       
    }
@@ -731,6 +732,13 @@ int main (void)
          //
       } // if loopcount0
       
+      if (masterstatus & (1<< HALT_BIT))
+      {
+         
+        masterstatus |= (1<<SUB_TASK_BIT);
+         
+      }
+      
       /**	ADC	***********************/
       
       if (adcstatus & (1<< ADC_START)) // ADC starten
@@ -756,12 +764,19 @@ int main (void)
          
       }
       
-      if (masterstatus & (1<<SUB_TASK_BIT)) // SPI starten, in PCINT0 gesetzt
+      if ((masterstatus & (1<<SUB_TASK_BIT) ) )// SPI starten, in PCINT0 gesetzt
       {
-         masterstatus &= ~(1<<SUB_TASK_BIT);
+         if (masterstatus & (1<< HALT_BIT)) // SUB_TASK_BIT nicht zuruecksetzen 
+         {
+            masterstatus &= ~(1<< HALT_BIT);
+         }
+         else
+         {
+            masterstatus &= ~(1<<SUB_TASK_BIT); // SUB nur fuer Fenster vom Master oeffnen
+         }
+         
          OSZI_C_HI;
          
-         //        MASTER_PORT &= ~(1<<SUB_BUSY_PIN); // Sub busy an Master melden
          
          _delay_us(1);
          
@@ -1213,7 +1228,7 @@ int main (void)
                eepromstatus &= ~(1<<EE_WRITE);
                usbtask &= ~(1<<EEPROM_READ_BYTE_TASK);
                
-               MASTER_PORT |= (1<<SUB_BUSY_PIN); // busy beenden
+//               MASTER_PORT |= (1<<SUB_BUSY_PIN); // busy beenden
                
                abschnittnummer =0;
                
@@ -1234,7 +1249,9 @@ int main (void)
                usb_rawhid_send((void*)sendbuffer, 50);
                eepromstatus &= ~(1<<EE_WRITE);
                usbtask &= ~(1<<EEPROM_WRITE_PAGE_TASK);
+               
                MASTER_PORT |= (1<<SUB_BUSY_PIN); // busy beenden
+              
                abschnittnummer =0;
             }
             //lcd_putc('+');
@@ -1383,7 +1400,6 @@ int main (void)
       if (r > 0)
       {
          cli();
-         //MASTER_PORT &= ~(1<<SUB_BUSY_PIN);
          uint8_t code = 0x00;
          usbstatus |= (1<<USB_RECV);
          if (abschnittnummer == 0) // erster Abschnitt enthaelt code
@@ -1497,6 +1513,7 @@ int main (void)
                {
                   lcd_gotoxy(19,1);
                   lcd_putc('H');
+                  masterstatus |= (1<<HALT_BIT); // Halt-Bit aktiviert Task bei ausgeschaltetem Slave
                   MASTER_PORT &= ~(1<<SUB_BUSY_PIN);
                   abschnittnummer=0;
                   
@@ -1506,9 +1523,17 @@ int main (void)
                {
                   lcd_gotoxy(19,1);
                   lcd_putc('G');
+                  masterstatus &= ~(1<<HALT_BIT);
                   MASTER_PORT |= (1<<SUB_BUSY_PIN);
                   abschnittnummer=0;
 
+               }break;
+                  
+               case 0xF0:
+               {
+                  lcd_gotoxy(18,1);
+                  lcd_putc('D');
+                  lcd_putc(' ');
                }break;
                   
                   
