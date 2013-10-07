@@ -927,7 +927,10 @@ int main (void)
             sendbuffer[0] = 0xD5;
             eepromstatus &= ~(1<<EE_WRITE);
             usbtask &= ~(1<<EEPROM_READ_BYTE_TASK);
-            MASTER_PORT |= (1<<SUB_BUSY_PIN); // busy beenden
+            
+            
+ //           MASTER_PORT |= (1<<SUB_BUSY_PIN); // busy beenden
+            
             abschnittnummer =0;
             
             //lcd_putc('+');
@@ -1209,7 +1212,9 @@ int main (void)
                sendbuffer[0] = 0xD5;
                eepromstatus &= ~(1<<EE_WRITE);
                usbtask &= ~(1<<EEPROM_READ_BYTE_TASK);
+               
                MASTER_PORT |= (1<<SUB_BUSY_PIN); // busy beenden
+               
                abschnittnummer =0;
                
                //lcd_putc('+');
@@ -1488,19 +1493,22 @@ int main (void)
                   
                }break;
                   
-               case 0xF0: // HALT
+               case 0xF6: // HALT
                {
                   lcd_gotoxy(19,1);
                   lcd_putc('H');
                   MASTER_PORT &= ~(1<<SUB_BUSY_PIN);
+                  abschnittnummer=0;
+                  
                }break;
                   
-               case 0xF1: // GO
+               case 0xF7: // GO
                {
                   lcd_gotoxy(19,1);
                   lcd_putc('G');
                   MASTER_PORT |= (1<<SUB_BUSY_PIN);
-                  
+                  abschnittnummer=0;
+
                }break;
                   
                   
@@ -1523,18 +1531,21 @@ int main (void)
                      
                   {
                      
-                     /*
-                      lcd_gotoxy(17,1);
+                     
+                      lcd_gotoxy(18,1);
                       lcd_putc('D');
                       lcd_putc(' ');
-                      lcd_putc(' ');
-                      */
+                     
+                      
                      
                   }
-                  
                }break; // default
                   
             } // switch code
+         }
+         else
+         {
+            
          }
          
          //lcd_putc('$');
