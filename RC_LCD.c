@@ -967,21 +967,21 @@ int main (void)
             a1 = buffer[1];
             a2 = buffer[2];
             a3 = buffer[3];
-            if (abschnittnummer == 2)
+            if (abschnittnummer == 1)
             {
                
-               /*
+               
                 lcd_gotoxy(0,0);
                 
-                lcd_puthex(buffer[0]);
+                lcd_puthex(buffer[4]);
                 lcd_putc('$');
-                lcd_puthex(buffer[1]);
+                lcd_puthex(buffer[5]);
                 lcd_putc('$');
-                lcd_puthex(buffer[2]);
+                lcd_puthex(buffer[6]);
                 lcd_putc('$');
-                lcd_puthex(buffer[3]);
+                lcd_puthex(buffer[7]);
                 lcd_putc('$');
-                */
+                
             }
             
             cli();
@@ -1061,7 +1061,15 @@ int main (void)
                
                EE_CS_LO;
                _delay_us(LOOPDELAY);
-               spieeprom_wrbyte(eepromstartadresse+i,buffer[eepromstartadresse+i]);
+               
+               uint8_t databyte = buffer[abschnittstartadresse+i]& 0xFF;
+               if (abschnittnummer < 8 && i<8)
+               {
+                  //sendbuffer[1+i] = abschnittnummer+i; // sendbuffer[0] ist code
+                  sendbuffer[1+i] = databyte; // sendbuffer[0] ist code
+               }
+                
+               spieeprom_wrbyte(eepromstartadresse+i,buffer[abschnittstartadresse+i]);
                _delay_us(LOOPDELAY);
                EE_CS_HI; // SS HI End
                
@@ -1149,6 +1157,7 @@ int main (void)
                //if (abschnittnummer==2)
                {
                   sendbuffer[0] = 0xC1;
+                  /*
                   sendbuffer[1] = buffer[0];
                   sendbuffer[2] = buffer[1];
                   sendbuffer[3] = buffer[2];
@@ -1167,6 +1176,7 @@ int main (void)
                   sendbuffer[12] = (abschnittstartadresse & 0xFF00)>>8;
                   sendbuffer[13] = 0xA3;
                   sendbuffer[14] = 0xA4;
+                   */
                }
                /*
                 else
