@@ -23,6 +23,7 @@
 
 #define OSZI_D_LO OSZIPORT &= ~(1<<OSZI_PULS_D)
 #define OSZI_D_HI OSZIPORT |= (1<<OSZI_PULS_D)
+#define OSZI_D_TOGG OSZIPORT ^= (1<<OSZI_PULS_D)
 
 
 
@@ -123,5 +124,6 @@
 #define EEPROM_WRITE_PAGE_TASK     2
 #define EEPROM_READ_BYTE_TASK       3
 #define EEPROM_READ_PAGE_TASK       4
+#define EEPROM_AUSGABE_TASK         5
 
 #define EEPROM_WRITE_START_OK 0xB0
