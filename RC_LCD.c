@@ -32,7 +32,7 @@
 // USB
 #define CPU_PRESCALE(n)	(CLKPR = 0x80, CLKPR = (n))
 
-#define LOOPDELAY 1
+#define LOOPDELAY 10
 
 #define SERVOMAX  4400
 #define SERVOMIN  1400
@@ -557,6 +557,125 @@ void setMitte(void)
    }
 }
 
+uint16_t eeprombyteladen(uint8_t eeprom_loaddatabyte)
+{
+   uint8_t byte_errcount=0;
+   uint8_t checkbyte=0;
+   cli();
+   MEM_EN_PORT &= ~(1<<MEM_EN_PIN);
+   spi_start();
+   SPI_PORT_Init();
+   
+   spieeprom_init();
+   
+   _delay_us(5);
+   
+   //OSZI_C_LO;
+   // statusregister schreiben
+   
+   // WREN
+   EE_CS_LO;
+   _delay_us(LOOPDELAY);
+   spieeprom_wren();
+   _delay_us(LOOPDELAY);
+   EE_CS_HI; // SS HI End
+   _delay_us(LOOPDELAY);
+   /*
+    */
+   
+   //Write status
+   EE_CS_LO;
+   _delay_us(LOOPDELAY);
+   spieeprom_write_status();
+   _delay_us(LOOPDELAY);
+   EE_CS_HI; // SS HI End
+   
+   
+   _delay_us(5);
+   
+   // Byte  write
+   
+   // WREN schicken 220 us
+   EE_CS_LO;
+   _delay_us(LOOPDELAY);
+   spieeprom_wren();
+   _delay_us(LOOPDELAY);
+   EE_CS_HI; // SS HI End
+   _delay_us(LOOPDELAY);
+   
+   EE_CS_LO;
+   _delay_us(LOOPDELAY);
+   spieeprom_wrbyte(eepromstartadresse,eeprom_loaddatabyte);
+   _delay_us(LOOPDELAY);
+   EE_CS_HI; // SS HI End
+   
+   // Byte  read 270 us
+   EE_CS_LO;
+   _delay_us(LOOPDELAY);
+   //     OSZI_B_LO;
+   _delay_us(LOOPDELAY);
+   checkbyte = (uint8_t)spieeprom_rdbyte(eepromstartadresse);
+   _delay_us(LOOPDELAY);
+   //     OSZI_B_HI;
+   EE_CS_HI;
+   //OSZI_C_HI;
+   
+   
+   
+   lcd_gotoxy(0,1);
+   //lcd_putc('*');
+   lcd_puthex(eeprom_loaddatabyte);
+   
+   lcd_putc(' ');
+   lcd_puthex(checkbyte);
+   lcd_putc('e');
+   if ((eeprom_loaddatabyte - checkbyte)||(checkbyte -eeprom_loaddatabyte))
+   {
+      byte_errcount++;
+      lcd_putc('?');
+   }
+   //lcd_putc(' ');
+   
+   lcd_puthex(byte_errcount);
+   lcd_putc('e');
+   
+   //lcd_puthex(eeprom_testdata-eeprom_indata);
+   //lcd_puthex(eeprom_indata - eeprom_testdata);
+   //lcd_putc(' ');
+   /*
+    */
+   
+   
+   sendbuffer[1] = eepromstartadresse & 0xFF;
+   sendbuffer[2] = (eepromstartadresse & 0xFF00)>>8;
+   sendbuffer[3] = byte_errcount;
+   sendbuffer[4] = eeprom_databyte;
+   sendbuffer[5] = checkbyte;
+   sendbuffer[6] = 0xAA;
+   sendbuffer[7] = 0x00;
+   sendbuffer[8] = 0xF9;
+   sendbuffer[9] = 0xFA;
+
+   
+   //sendbuffer[12] = eeprom_testdata;
+   
+   
+   sendbuffer[0] = 0xC5;
+   eepromstatus &= ~(1<<EE_WRITE);
+   usbtask &= ~(1<<EEPROM_WRITE_BYTE_TASK);
+   MASTER_PORT |= (1<<SUB_BUSY_PIN); // busy beenden
+   
+   //lcd_putc('+');
+   usb_rawhid_send((void*)sendbuffer, 50);
+   lcd_putc('+');
+   
+   sei();
+   // end Daten an EEPROM
+   //OSZI_D_HI ;
+  // MEM_EN_PORT |= (1<<MEM_EN_PIN); // blockiert USB
+   return byte_errcount;
+}
+
 uint16_t eeprompartladen(void)
 {
    spi_start();
@@ -791,8 +910,8 @@ uint16_t eeprompartladen(void)
    sei();
    // end Daten an EEPROM
    //OSZI_D_HI ;
-   sei();
    
+  // MEM_EN_PORT |= (1<<MEM_EN_PIN);
    return result;
 }
 
@@ -1919,9 +2038,9 @@ int main (void)
                   eeprom_errcount=0;
                   abschnittnummer++;
                   eepromstartadresse = buffer[1] | (buffer[2]<<8);
-                  eeprom_databyte = buffer[9];
+                  eeprom_databyte = buffer[3];
                   
-                  anzahlpakete = buffer[3];
+                  //anzahlpakete = buffer[3];
                   //eepromstatus |= (1<<EE_WRITE);
                   lcd_gotoxy(18,1);
                   lcd_putc('W');
@@ -1931,8 +2050,32 @@ int main (void)
                   //sendbuffer[0] = 0xC5;
                   //usb_rawhid_send((void*)sendbuffer, 50);
                   //lcd_putc('*');
-                  usbtask |= (1<<EEPROM_WRITE_BYTE_TASK);
+                  
+                  //
+                  
+                  uint16_t check = eeprombyteladen(buffer[3]);
+                  
+                  
+                  sendbuffer[0] = 0xC5;
+                  
+                  sendbuffer[1] = eepromstartadresse & 0xFF;
+                  sendbuffer[2] = (eepromstartadresse & 0xFF00)>>8;
+                  
+                  sendbuffer[3] = buffer[3];
+                  sendbuffer[4] = check;// ist bytechecksumme
+                  sendbuffer[5] = 0xFF;
+                  
+                  sendbuffer[6] = 0xFF;
+                  sendbuffer[7] = 0xFF;
+                  
+                  sendbuffer[8] = 0xF8;
+                  sendbuffer[9] = 0xFB;
+                  
+                  usb_rawhid_send((void*)sendbuffer, 50);
+
                   masterstatus |= (1<<SUB_TASK_BIT);
+                  //usbtask |= (1<<EEPROM_WRITE_BYTE_TASK);
+                  
                }break;
                   
                case 0xC6: // Ausgabe von Daten Start
@@ -1976,7 +2119,7 @@ int main (void)
                
                }break;
                   
-               case 0xCA:
+               case 0xCA: // EEPROM Part laden
                {
                   lcd_gotoxy(18,1);
                   lcd_putint2(32);
@@ -2018,6 +2161,7 @@ int main (void)
                   usb_rawhid_send((void*)sendbuffer, 50);
 
                   anzeigecounter=1;
+                  masterstatus |= (1<<SUB_TASK_BIT);
                
                }break;
                   
