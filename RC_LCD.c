@@ -557,6 +557,10 @@ void setMitte(void)
    }
 }
 
+
+
+
+
 uint16_t eeprombyteladen(uint8_t eeprom_loaddatabyte)
 {
    uint8_t byte_errcount=0;
