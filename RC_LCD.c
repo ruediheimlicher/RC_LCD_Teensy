@@ -39,7 +39,7 @@
 
 
 #define USB_DATENBREITE 64
-
+#define EE_PARTBREITE 32
 
 volatile uint8_t do_output=0;
 static volatile uint8_t testbuffer[USB_DATENBREITE]={};
@@ -49,6 +49,7 @@ static volatile uint8_t buffer[USB_DATENBREITE]={};
 static volatile uint8_t sendbuffer[USB_DATENBREITE]={};
 
 static volatile uint8_t outbuffer[USB_DATENBREITE]={};
+static volatile uint8_t inbuffer[USB_DATENBREITE]={};
 
 static volatile uint8_t eeprombuffer[USB_DATENBREITE]={};
 
@@ -105,9 +106,16 @@ volatile uint16_t maxwert=0;
 
 volatile uint16_t eepromstartadresse=0;
 
+volatile uint16_t inchecksumme=0;
+
+volatile uint16_t bytechecksumme=0;
+volatile uint16_t outchecksumme=0;
+
 volatile uint8_t eeprom_databyte=0;
 volatile uint8_t anzahlpakete=0;
+volatile uint8_t eeprom_errcount = 0;
 
+volatile uint8_t  eeprom_indata=0;
 
 void startTimer2(void)
 {
@@ -549,6 +557,245 @@ void setMitte(void)
    }
 }
 
+uint16_t eeprompartladen(void)
+{
+   spi_start();
+   MEM_EN_PORT &= ~(1<<MEM_EN_PIN);
+   uint16_t result = 0;
+   cli();
+   //OSZI_D_LO ;
+   SPI_PORT_Init();
+   
+   uint16_t abschnittstartadresse = eepromstartadresse ; // Ladeort im EEPROM
+   spieeprom_init();
+   
+   _delay_us(5);
+   
+   //OSZI_C_LO;
+   // statusregister schreiben
+   
+   // WREN
+   EE_CS_LO;
+   _delay_us(LOOPDELAY);
+   spieeprom_wren();
+   _delay_us(LOOPDELAY);
+   EE_CS_HI; // SS HI End
+   _delay_us(LOOPDELAY);
+   /*
+    */
+   
+   //Write status
+   EE_CS_LO;
+   _delay_us(LOOPDELAY);
+   spieeprom_write_status();
+   _delay_us(LOOPDELAY);
+   EE_CS_HI; // SS HI End
+   
+   
+   _delay_us(5);
+   
+   // Byte  write
+   
+   
+   // WREN schicken 220 us
+   EE_CS_LO;
+   _delay_us(LOOPDELAY);
+   spieeprom_wren();
+   _delay_us(LOOPDELAY);
+   EE_CS_HI; // SS HI End
+   _delay_us(LOOPDELAY);
+   
+   
+   eeprom_errcount=0;
+   
+   
+   uint8_t i=0;
+   for (i=0;i<4;i++)
+   {
+      uint8_t tempadresse = abschnittstartadresse+i;
+      uint8_t databyte = eeprombuffer[EE_PARTBREITE+i]& 0xFF; // ab byte 32
+      if (i<8)
+      {
+         sendbuffer[EE_PARTBREITE+i] = databyte;
+         sendbuffer[EE_PARTBREITE+i+8] = tempadresse;
+      }
+      
+      result += databyte;
+      
+       
+      _delay_us(LOOPDELAY);
+
+      // WREN schicken 220 us
+      EE_CS_LO;
+      _delay_us(LOOPDELAY);
+      spieeprom_wren();
+      _delay_us(LOOPDELAY);
+      EE_CS_HI; // SS HI End
+      _delay_us(LOOPDELAY);
+      
+      EE_CS_LO;
+      _delay_us(LOOPDELAY);
+      
+      // Byte 0-31: codes
+      // Byte 32-63: data
+      
+      spieeprom_wrbyte(tempadresse,databyte); // an abschnittstartadresse und folgende
+
+       //spieeprom_wrbyte(0,13); // an abschnittstartadresse und folgende
+      _delay_us(LOOPDELAY);
+      EE_CS_HI; // SS HI End
+      _delay_us(LOOPDELAY);
+      // Byte  read 270 us
+      EE_CS_LO;
+      _delay_us(LOOPDELAY);
+      //     OSZI_B_LO;
+      _delay_us(LOOPDELAY);
+      
+      eeprom_indata = (uint8_t)spieeprom_rdbyte(tempadresse);
+      
+      
+      //eeprom_indata = (uint8_t)spieeprom_rdbyte(0);
+      _delay_us(LOOPDELAY);
+      EE_CS_HI;
+      
+      if (i<8)
+      {
+         sendbuffer[EE_PARTBREITE+i+16] = eeprom_indata;
+      }
+
+      
+      //     OSZI_B_HI;
+      
+
+      if ((databyte - eeprom_indata)||(eeprom_indata - databyte))
+      {
+         eeprom_errcount++;
+         
+      }
+   
+   
+   
+   }
+   
+   _delay_us(LOOPDELAY);
+   
+   
+   
+   
+   EE_CS_HI; // SS HI End
+   
+   /*
+    for (i=0;i<64;i++)
+    {
+    // Data schicken 350 us
+    EE_CS_LO;
+    _delay_us(LOOPDELAY);
+    spieeprom_wrbyte(eeprom_testaddress, eeprom_testdata);
+    _delay_us(LOOPDELAY);
+    EE_CS_HI; // SS HI End
+    }
+    */
+   _delay_us(5);
+   
+   /*
+    // Byte  read 270 us
+    EE_CS_LO;
+    _delay_us(LOOPDELAY);
+    //     OSZI_B_LO;
+    _delay_us(LOOPDELAY);
+    eeprom_indata = (uint8_t)spieeprom_rdbyte(eeprom_testaddress);
+    _delay_us(LOOPDELAY);
+    //     OSZI_B_HI;
+    EE_CS_HI;
+    //OSZI_C_HI;
+    
+    
+    
+    lcd_gotoxy(0,1);
+    //lcd_putc('*');
+    lcd_puthex(eeprom_testdata);
+    
+    lcd_putc(' ');
+    lcd_puthex(eeprom_indata);
+    lcd_putc('e');
+    if ((eeprom_testdata - eeprom_indata)||(eeprom_indata-eeprom_testdata))
+    {
+    eeprom_errcount++;
+    lcd_putc('!');
+    }
+    //lcd_putc(' ');
+    
+    lcd_puthex(eeprom_errcount);
+    lcd_putc('e');
+    */
+   //lcd_puthex(eeprom_testdata-eeprom_indata);
+   //lcd_puthex(eeprom_indata - eeprom_testdata);
+   //lcd_putc(' ');
+   /*
+    */
+   //lcd_putc('*');
+   //lcd_puthex(abschnittnummer);
+   
+   
+   //sendbuffer[12] = eeprom_testdata;
+   /*
+    lcd_gotoxy(0,1);
+    
+    lcd_puthex(buffer[0]);
+    lcd_putc('$');
+    lcd_puthex(buffer[1]);
+    lcd_putc('$');
+    lcd_puthex(buffer[2]);
+    lcd_putc('$');
+    lcd_puthex(buffer[3]);
+    lcd_putc('$');
+    */
+   
+   sendbuffer[0] = 0xCB;
+   
+   sendbuffer[1] = abschnittstartadresse & 0xFF;
+   sendbuffer[2] = (abschnittstartadresse & 0xFF00)>>8;
+   
+   sendbuffer[3] = eeprom_errcount;
+   sendbuffer[4] = result & 0xFF;
+   sendbuffer[5] = (result & 0xFF00)>>8;
+   
+   sendbuffer[6] = 0xFF;
+   sendbuffer[7] = 0xFF;
+   
+   sendbuffer[8] = 0xA3;
+   sendbuffer[9] = 0xA4;
+   
+   
+   /*
+    else
+    {
+    sendbuffer[0] = 0xC1;
+    sendbuffer[1] = abschnittnummer+1;
+    sendbuffer[2] = abschnittnummer+2;
+    sendbuffer[3] = abschnittnummer+3;
+    sendbuffer[4] = abschnittnummer+4;
+    sendbuffer[5] = 0xFF;
+    sendbuffer[6] = abschnittnummer;
+    
+    sendbuffer[8] = abschnittstartadresse & 0xFF;
+    sendbuffer[9] = (abschnittstartadresse & 0xFF00)>>8;
+    sendbuffer[10] = 0xA3;
+    sendbuffer[11] = 0xA4;
+    
+    }
+    */
+   
+   usb_rawhid_send((void*)sendbuffer, 50);
+   
+   sei();
+   // end Daten an EEPROM
+   //OSZI_D_HI ;
+   sei();
+   
+   return result;
+}
+
 
 #pragma mark - main
 int main (void)
@@ -646,7 +893,7 @@ int main (void)
    volatile uint8_t versioninth = (versionint & 0xFF00)>>8;
    
    uint8_t anzeigecounter=0;
-   
+   uint8_t ind = 32;
    
 #pragma mark while
 	while (1)
@@ -664,35 +911,47 @@ int main (void)
  			//
 			//timer0();
          
-          if(loopcount1%8 == 0)
+          if(loopcount1%16 == 0)
          {
             
             if (anzeigecounter)
             {
-               anzeigecounter=0;
-               cli();
-               lcd_gotoxy(17,0);
-               lcd_putint(eepromstartadresse);
-
-               
-               uint8_t ind = eepromstartadresse*8;
-               lcd_gotoxy(0,1);
-               
+               if (anzeigecounter > 3)
+               {
+                  anzeigecounter=0;
+                  ind = 32;
+               }
+               else
+                  
+               {
+                  lcd_gotoxy(3,0);
+                  lcd_puthex(eeprombuffer[0]);
+                  lcd_putc('*');
+                  lcd_putint(eepromstartadresse);
+                  lcd_putc('*');
+                  
+                  lcd_puthex(eeprombuffer[3]);
+                  lcd_puthex(eeprombuffer[4]);
+                  
+                  lcd_gotoxy(0,1);
+                  
+                  lcd_puthex(eeprombuffer[ind+0]);
+                  lcd_putc(' ');
+                  lcd_puthex(eeprombuffer[ind+1]);
+                  lcd_putc(' ');
+                  lcd_puthex(eeprombuffer[ind+2]);
+                  lcd_putc(' ');
+                  lcd_puthex(eeprombuffer[ind+3]);
+                  lcd_putc(' ');
+                  lcd_puthex(eeprombuffer[ind+4]);
+                  lcd_putc(' ');
+                  lcd_puthex(eeprombuffer[ind+5]);
+                  lcd_putc(' ');
+                  
+                  anzeigecounter++;
+                  ind += 6;
+               }
                /*
-               lcd_putc('*');
-               lcd_puthex(eeprombuffer[ind+0]);
-               lcd_putc('*');
-               lcd_puthex(eeprombuffer[ind+1]);
-               lcd_putc('*');
-               lcd_puthex(eeprombuffer[ind+2]);
-               lcd_putc('*');
-               lcd_puthex(eeprombuffer[ind+3]);
-               lcd_putc('*');
-               lcd_puthex(eeprombuffer[ind+4]);
-               lcd_putc('*');
-               lcd_puthex(eeprombuffer[ind+5]);
-               lcd_putc('*');
-               */
                uint16_t wert = eeprombuffer[ind+0]+(eeprombuffer[ind+1]<<8);
                
                lcd_putint12(wert);
@@ -705,7 +964,7 @@ int main (void)
                wert = eeprombuffer[ind+6]+(eeprombuffer[ind+7]<<8);
                lcd_putc(' ');
                lcd_putint12(wert);
-
+                */
                /*
                lcd_putc('*');
                lcd_puthex(buffer[ind+0]);
@@ -721,7 +980,7 @@ int main (void)
                lcd_puthex(buffer[ind+5]);
                lcd_putc('*');
                 */
-               sei();
+               //sei();
             }
          }
          
@@ -1687,7 +1946,8 @@ int main (void)
                      if (abschnittnummer==0)
                      {
                         eepromstartadresse = buffer[1] | (buffer[2]<<8);
-                        anzahlpakete = buffer[3];
+                        inchecksumme = buffer[3] | (buffer[4]<<8);
+                        //anzahlpakete = buffer[3];
                      }
                      uint8_t index=0;
                      //eeprombuffer[4] = buffer[4];
@@ -1713,6 +1973,51 @@ int main (void)
                   
                   usbtask |= (1<<EEPROM_AUSGABE_TASK);
                   
+               
+               }break;
+                  
+               case 0xCA:
+               {
+                  lcd_gotoxy(18,1);
+                  lcd_putint2(32);
+                  uint8_t index;
+                  bytechecksumme=0;
+                  eepromstartadresse = buffer[1] | (buffer[2]<<8);
+                   inchecksumme = buffer[3] | (buffer[4]<<8);
+                  // Byte 0-31: codes
+                  // Byte 32-63: data
+                                    
+                  for (index=0;index<USB_DATENBREITE;index++)
+                  {
+                     eeprombuffer[index] = buffer[index];
+                     if (index > EE_PARTBREITE) // ab 32
+                     {
+                        bytechecksumme+= buffer[index]; // bytes aufaddieren
+                        sendbuffer[index] = buffer[index];
+                     }
+                  }
+                  
+                  
+                  uint16_t erfolg =  eeprompartladen(); // returnbytechecksumme
+                  
+                  sendbuffer[0] = 0xCC;
+                  
+                  sendbuffer[1] = eepromstartadresse & 0xFF;
+                  sendbuffer[2] = (eepromstartadresse & 0xFF00)>>8;
+                  
+                  sendbuffer[3] = 0xFF;
+                  sendbuffer[4] = erfolg & 0xFF;// ist bytechecksumme
+                  sendbuffer[5] = (erfolg & 0xFF00)>>8;
+                  
+                  sendbuffer[6] = bytechecksumme & 0x00FF; // aus Eingabe
+                  sendbuffer[7] = (bytechecksumme & 0xFF00)>>8;
+                  
+                   sendbuffer[8] = 0xF9;
+                  sendbuffer[9] = 0xFA;
+
+                  usb_rawhid_send((void*)sendbuffer, 50);
+
+                  anzeigecounter=1;
                
                }break;
                   
