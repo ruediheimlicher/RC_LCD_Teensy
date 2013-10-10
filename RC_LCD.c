@@ -2001,7 +2001,7 @@ int main (void)
          cli();
          uint8_t code = 0x00;
          usbstatus |= (1<<USB_RECV);
-         if (abschnittnummer == 0) // erster Abschnitt enthaelt code
+//         if (abschnittnummer == 0) // erster Abschnitt enthaelt code
          {
             OSZI_A_TOGG;
             code = buffer[0];
@@ -2040,7 +2040,7 @@ int main (void)
                {
                   //MASTER_PORT &= ~(1<<SUB_BUSY_PIN);
                   eeprom_errcount=0;
-                  abschnittnummer++;
+                  //abschnittnummer++;
                   eepromstartadresse = buffer[1] | (buffer[2]<<8);
                   eeprom_databyte = buffer[3];
                   
@@ -2184,7 +2184,7 @@ int main (void)
                   
                case 0xD4: // read 1 EEPROM
                {
-                  abschnittnummer++;
+                  //abschnittnummer++;
                   eepromstartadresse = buffer[1] | (buffer[2]<<8);
                   //sendbuffer[0] = 0xD5;
                   //usb_rawhid_send((void*)sendbuffer, 50);
@@ -2261,7 +2261,7 @@ int main (void)
                   
             } // switch code
          }
-         
+         /*
          else
          {
             // Data
@@ -2275,7 +2275,7 @@ int main (void)
             //abschnittnummer=0;
             OSZI_B_TOGG ;
          }
-         
+         */
          //lcd_putc('$');
          code=0;
          sei();
