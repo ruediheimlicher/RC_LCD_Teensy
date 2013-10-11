@@ -1139,21 +1139,30 @@ int main (void)
             //sendbuffer[8+2*i+1]= (Pot_Array[i]>>8) & 0xFF;  // 9  11
          }
          
+         if (masterstatus & (1<< HALT_BIT))
+         {
+            
+    //        masterstatus |= (1<<SUB_TASK_BIT);
+            // usbtask=0;
+         }
+
+         
          
 #pragma mark USB send
          // neue Daten abschicken
-         if (usbtask & (1<<EEPROM_WRITE_PAGE_TASK) )//|| usbtask & (1<<EEPROM_WRITE_BYTE_TASK))
+//         if ((usbtask & (1<<EEPROM_WRITE_PAGE_TASK) )) //|| usbtask & (1<<EEPROM_WRITE_BYTE_TASK))
+
+         if ((masterstatus & (1<< HALT_BIT) )) //|| usbtask & (1<<EEPROM_WRITE_BYTE_TASK))
          {
             // Write im Gang, nichts senden
-            lcd_gotoxy(0,1);
-            
-            lcd_putc('*');
+         masterstatus |= (1<<SUB_TASK_BIT);
+         
          }
          else
          {
-            //OSZI_B_LO;
+            OSZI_B_LO;
             uint8_t anz = usb_rawhid_send((void*)sendbuffer, 50); // 20 us
-            //OSZI_B_HI;
+            OSZI_B_HI;
          }
          /*
           lcd_gotoxy(0,1);
@@ -1168,12 +1177,6 @@ int main (void)
          //
       } // if loopcount0
       
-      if (masterstatus & (1<< HALT_BIT))
-      {
-         
-        masterstatus |= (1<<SUB_TASK_BIT);
-        // usbtask=0;
-      }
       
       /**	ADC	***********************/
       
@@ -1212,19 +1215,11 @@ int main (void)
          }
          
          //OSZI_C_HI;
-         
-         
          _delay_us(1);
-         
-         
          uint8_t i=0;
          
          // SPI fuer device einschschalten
          spi_start();
-         
-         //anzeigecounter++;
-         
-         ///usb_rawhid_send((void*)sendbuffer, 50); // in loopcount0
          
          // Daten an RAM oder an EEPROM
          
@@ -1397,471 +1392,8 @@ int main (void)
          }
 
 #pragma mark EEPROM_AUSGABE_TASK
-         else if (usbtask & (1<<EEPROM_AUSGABE_TASK))
-         {
-            
-            cli();
-            SPI_PORT_Init();
-            spieeprom_init();
-            
-            lcd_gotoxy(abschnittnummer+2,1);
-            //lcd_putc('a'+abschnittnummer);
-            //lcd_gotoxy(3+abschnittnummer,1);
-
-            //lcd_putint1(abschnittnummer);
-            //lcd_puts("A\0");
-            
-            //lcd_puthex(buffer[3]);
-            
-            if (abschnittnummer == 1)
-            {
-               //lcd_putc('d');
-               outbuffer[5]= 0xEE;
-               anzeigecounter=1;
-               
-            }
-            else
-            {
-  //             lcd_putc('e');// relevant
-            }
-            
-            sendbuffer[0] = 0xC7;
-            
-            if (abschnittnummer)
-            
-            {
-               for (i=1;i<11;i++)
-               {
-                  sendbuffer[i] = eeprombuffer[i];
-                  outbuffer[i] = eeprombuffer[i];
-               }
-
-               sendbuffer[11] = 0xBB;
-               sendbuffer[12] = 0xCC;
-              
-            }
-            else // abschnittnummer ist 0
-            {
-               sendbuffer[1] = anzahlpakete;
-               sendbuffer[2] = abschnittnummer;
-               for (i=3;i<9;i++)
-               {
-                  sendbuffer[i] = eeprombuffer[i];
-                  outbuffer[i] = eeprombuffer[i];
-               }
-               
-               
-               sendbuffer[10] = 0xAA;
-               
-               sendbuffer[11] = eepromstartadresse;
-               sendbuffer[12] = 0xAB;
-            }
-
-            
-            usb_rawhid_send((void*)sendbuffer, 50);
-            //eepromstatus &= ~(1<<EE_WRITE);
-            
-            
-            //           MASTER_PORT |= (1<<SUB_BUSY_PIN); // busy beenden
-            
-            //abschnittnummer =0;
-            
-            // von Write Page
-            if (abschnittnummer < anzahlpakete)
-            {
- //              lcd_putc('f'); // relevant
-               //lcd_gotoxy(19,1);
-               //lcd_putint1(abschnittnummer);
-
-               sendbuffer[0] = 0xC7;
-               for (i=1;i<15;i++)
-               {
-                  sendbuffer[i] = eeprombuffer[i];
-                  outbuffer[i] = eeprombuffer[i];
-               }
-               sendbuffer[15] = abschnittnummer;
-               
-               usb_rawhid_send((void*)sendbuffer, 50);
-               abschnittnummer++;
-               
-               masterstatus |= (1<<SUB_TASK_BIT); // weitere Runde
-               
-            }//
-            else
-            {
-               //lcd_putc('g');
-               sendbuffer[0] = 0xC8;
-               for (i=1;i<15;i++)
-               {
-                  sendbuffer[i] = eeprombuffer[i];
-                  //outbuffer[i] = buffer[i];
-               }
-               sendbuffer[15] = abschnittnummer;
-               usb_rawhid_send((void*)sendbuffer, 50);
-               eepromstatus &= ~(1<<EE_WRITE);
-               usbtask &= ~(1<<EEPROM_AUSGABE_TASK);
-               
-               //              MASTER_PORT |= (1<<SUB_BUSY_PIN); // busy beenden
-               
-               abschnittnummer =0;
-            }
-
-
-            
-            // End von Write Page
-            
-            
-            //usb_rawhid_send((void*)sendbuffer, 50);
-            
-            //lcd_putc('+');
-            lcd_putint(eepromstartadresse);
-            /*
-            uint8_t pos=0;
-            for (pos = 0;pos<8;pos++)
-            {
-               
-            }
-             */
-            
-            
-            
-            
-            
-            
-            sei();
-             
-         } // EEPROM_AUSGABE_TASK
-
 #pragma mark EEPROM_WRITE_PAGE_TASK
-         else if (usbtask & (1<<EEPROM_WRITE_PAGE_TASK))
-         {
-            cli();
-            //OSZI_D_LO ;
-            lcd_gotoxy(abschnittnummer,1);
-            //lcd_putint12(eepromstartadresse);
-            lcd_putc('*');
-            lcd_putint2(abschnittnummer);
-            uint8_t a0=0,a1=0,a2=0,a3=0;
-            a0 = buffer[0];
-            a1 = buffer[1];
-            a2 = buffer[2];
-            a3 = buffer[3];
-            if (abschnittnummer == 1)
-            {
-               
-               
-                lcd_gotoxy(0,1);
-                
-                lcd_puthex(buffer[4]);
-                lcd_putc('$');
-                lcd_puthex(buffer[5]);
-                lcd_putc('$');
-                lcd_puthex(buffer[6]);
-                lcd_putc('$');
-                lcd_puthex(buffer[7]);
-                lcd_putc('$');
-                
-            }
-            
-            cli();
-            SPI_PORT_Init();
-            //lcd_gotoxy(3,0);
-            //lcd_putint(abschnittnummer);
-            //lcd_putc('$');
-            
-            uint16_t abschnittstartadresse = eepromstartadresse + abschnittnummer*USB_DATENBREITE;
-            
-            //lcd_gotoxy(16,1);
-            //lcd_putc((eeprom_testdata %10)+48);
-            //lcd_putc(48);
-            
-            spieeprom_init();
-            
-            _delay_us(5);
-            
-            //OSZI_C_LO;
-            // statusregister schreiben
-            
-            // WREN
-            EE_CS_LO;
-            _delay_us(LOOPDELAY);
-            spieeprom_wren();
-            _delay_us(LOOPDELAY);
-            EE_CS_HI; // SS HI End
-            _delay_us(LOOPDELAY);
-            /*
-             */
-            
-            //Write status
-            EE_CS_LO;
-            _delay_us(LOOPDELAY);
-            spieeprom_write_status();
-            _delay_us(LOOPDELAY);
-            EE_CS_HI; // SS HI End
-            
-            
-            _delay_us(5);
-            
-            // Byte  write
-            
-            // WREN schicken 220 us
-            EE_CS_LO;
-            _delay_us(LOOPDELAY);
-            spieeprom_wren();
-            _delay_us(LOOPDELAY);
-            EE_CS_HI; // SS HI End
-            _delay_us(LOOPDELAY);
-            
-            EE_CS_LO;
-            _delay_us(LOOPDELAY);
-            
-            //spieeprom_wrpage(abschnittstartadresse,buffer);
-            
-            /*
-             spieeprom_wrpage_start(eepromstartadresse);
-             _delay_us(LOOPDELAY);
-             
-             for (i=0;i<USB_DATENBREITE;i++)
-             {
-             _delay_us(LOOPDELAY);
-             spieeprom_wrpage_data(buffer[i]);
-             
-             }
-             */
-            for (i=0;i<USB_DATENBREITE;i++)
-            {
-               // WREN schicken 220 us
-               EE_CS_LO;
-               _delay_us(LOOPDELAY);
-               spieeprom_wren();
-               _delay_us(LOOPDELAY);
-               EE_CS_HI; // SS HI End
-               _delay_us(LOOPDELAY);
-               
-               EE_CS_LO;
-               _delay_us(LOOPDELAY);
-               
-               uint8_t databyte = buffer[abschnittstartadresse+i]& 0xFF;
-               if (abschnittnummer < 8 && i<8)
-               {
-                  //sendbuffer[1+i] = abschnittnummer+i; // sendbuffer[0] ist code
-                  sendbuffer[1+i] = databyte; // sendbuffer[0] ist code
-               }
-                
-               spieeprom_wrbyte(eepromstartadresse+i,buffer[abschnittstartadresse+i]);
-               _delay_us(LOOPDELAY);
-               EE_CS_HI; // SS HI End
-               
-            }
-            
-            _delay_us(LOOPDELAY);
-            
-            
-            
-            
-            EE_CS_HI; // SS HI End
-            
-            /*
-             for (i=0;i<64;i++)
-             {
-             // Data schicken 350 us
-             EE_CS_LO;
-             _delay_us(LOOPDELAY);
-             spieeprom_wrbyte(eeprom_testaddress, eeprom_testdata);
-             _delay_us(LOOPDELAY);
-             EE_CS_HI; // SS HI End
-             }
-             */
-            _delay_us(5);
-            
-            /*
-             // Byte  read 270 us
-             EE_CS_LO;
-             _delay_us(LOOPDELAY);
-             //     OSZI_B_LO;
-             _delay_us(LOOPDELAY);
-             eeprom_indata = (uint8_t)spieeprom_rdbyte(eeprom_testaddress);
-             _delay_us(LOOPDELAY);
-             //     OSZI_B_HI;
-             EE_CS_HI;
-             //OSZI_C_HI;
-             
-             
-             
-             lcd_gotoxy(0,1);
-             //lcd_putc('*');
-             lcd_puthex(eeprom_testdata);
-             
-             lcd_putc(' ');
-             lcd_puthex(eeprom_indata);
-             lcd_putc('e');
-             if ((eeprom_testdata - eeprom_indata)||(eeprom_indata-eeprom_testdata))
-             {
-             eeprom_errcount++;
-             lcd_putc('!');
-             }
-             //lcd_putc(' ');
-             
-             lcd_puthex(eeprom_errcount);
-             lcd_putc('e');
-             */
-            //lcd_puthex(eeprom_testdata-eeprom_indata);
-            //lcd_puthex(eeprom_indata - eeprom_testdata);
-            //lcd_putc(' ');
-            /*
-             */
-            //lcd_putc('*');
-            //lcd_puthex(abschnittnummer);
-            
-            
-            //sendbuffer[12] = eeprom_testdata;
-            if (abschnittnummer == 2)
-            {
-               /*
-                lcd_gotoxy(0,1);
-                
-                lcd_puthex(buffer[0]);
-                lcd_putc('$');
-                lcd_puthex(buffer[1]);
-                lcd_putc('$');
-                lcd_puthex(buffer[2]);
-                lcd_putc('$');
-                lcd_puthex(buffer[3]);
-                lcd_putc('$');
-                */
-            }
-            
-            if (abschnittnummer < anzahlpakete)
-            {
-               //if (abschnittnummer==2)
-               {
-                  sendbuffer[0] = 0xC1;
-                  /*
-                  sendbuffer[1] = buffer[0];
-                  sendbuffer[2] = buffer[1];
-                  sendbuffer[3] = buffer[2];
-                  sendbuffer[4] = buffer[3];
-                  sendbuffer[5] = a0;
-                  sendbuffer[6] = a1;
-                  sendbuffer[7] = a2;
-                  sendbuffer[8] = a3;
-                  
-                  
-                  
-                  sendbuffer[9] = 0xFF;
-                  sendbuffer[10] = abschnittnummer;
-                  
-                  sendbuffer[11] = abschnittstartadresse & 0xFF;
-                  sendbuffer[12] = (abschnittstartadresse & 0xFF00)>>8;
-                  sendbuffer[13] = 0xA3;
-                  sendbuffer[14] = 0xA4;
-                   */
-               }
-               /*
-                else
-                {
-                sendbuffer[0] = 0xC1;
-                sendbuffer[1] = abschnittnummer+1;
-                sendbuffer[2] = abschnittnummer+2;
-                sendbuffer[3] = abschnittnummer+3;
-                sendbuffer[4] = abschnittnummer+4;
-                sendbuffer[5] = 0xFF;
-                sendbuffer[6] = abschnittnummer;
-                
-                sendbuffer[8] = abschnittstartadresse & 0xFF;
-                sendbuffer[9] = (abschnittstartadresse & 0xFF00)>>8;
-                sendbuffer[10] = 0xA3;
-                sendbuffer[11] = 0xA4;
-                
-                }
-                */
-               
-               sendbuffer[15] = abschnittnummer;
-               
-               usb_rawhid_send((void*)sendbuffer, 50);
-               abschnittnummer++;
-               
-               
-            }// 
-            
-            else
-            {
-               sendbuffer[0] = 0xC2;
-               usb_rawhid_send((void*)sendbuffer, 50);
-               eepromstatus &= ~(1<<EE_WRITE);
-               usbtask &= ~(1<<EEPROM_WRITE_PAGE_TASK);
-               
- //              MASTER_PORT |= (1<<SUB_BUSY_PIN); // busy beenden
-              
-               abschnittnummer =0;
-            }
-            //lcd_putc('+');
-            
-            //lcd_putc('+');
-            
-            sei();
-            
-            
-            //   eepromstatus &= ~(1<<EE_WRITE);
-            //   usbtask &= ~(1<<EEPROM_WRITE_PAGE_TASK);
-            
-            
-            //; // Beginn einer neuen Page
-            
-            //
-            // end Daten an EEPROM
-            //OSZI_D_HI ;
-            sei();
-         } // EE_WRITE
-         
 #pragma mark EEPROM_READ_PAGE_TASK
-         else if (usbtask & (1<<EEPROM_READ_PAGE_TASK))
-         {
-            cli();
-            SPI_PORT_Init();
-            
-            spieeprom_init();
-            
-            lcd_gotoxy(0,1);
-            lcd_putint12(eepromstartadresse);
-            lcd_putc('*');
-            eeprom_indata = 0xaa;
-            // Byte  read 270 us
-            EE_CS_LO;
-            _delay_us(LOOPDELAY);
-            //     OSZI_B_LO;
-            _delay_us(LOOPDELAY);
-            
-            spieeprom_rdpage(eepromstartadresse,outbuffer);
-            
-            _delay_us(LOOPDELAY);
-            //     OSZI_B_HI;
-            EE_CS_HI;
-            //OSZI_C_HI;
-            
-            lcd_puthex(eeprom_indata);
-            lcd_putc('*');
-            
-            sendbuffer[1] = eeprom_indata;
-            
-            sendbuffer[0] = 0xD5;
-            eepromstatus &= ~(1<<EE_WRITE);
-            usbtask &= ~(1<<EEPROM_READ_PAGE_TASK);
-            
-            //               MASTER_PORT |= (1<<SUB_BUSY_PIN); // busy beenden
-            
-            abschnittnummer =0;
-            
-            //lcd_putc('+');
-            usb_rawhid_send((void*)sendbuffer, 50);
-            lcd_putc('+');
-            
-            sei();
-            
-            
-            
-         }
-         
          else
          {
             SPI_RAM_init();
@@ -2003,7 +1535,7 @@ int main (void)
          usbstatus |= (1<<USB_RECV);
 //         if (abschnittnummer == 0) // erster Abschnitt enthaelt code
          {
-            OSZI_A_TOGG;
+            
             code = buffer[0];
             
             switch (code)
@@ -2038,6 +1570,7 @@ int main (void)
                   
                case 0xC4: // Write EEPROM Byte
                {
+                  OSZI_A_TOGG;
                   //MASTER_PORT &= ~(1<<SUB_BUSY_PIN);
                   eeprom_errcount=0;
                   //abschnittnummer++;
@@ -2078,6 +1611,7 @@ int main (void)
                   usb_rawhid_send((void*)sendbuffer, 50);
 
                   masterstatus |= (1<<SUB_TASK_BIT);
+                  OSZI_A_TOGG;
                   //usbtask |= (1<<EEPROM_WRITE_BYTE_TASK);
                   
                }break;
@@ -2242,7 +1776,7 @@ int main (void)
                   else
                      
                   {
-                     
+                     /*
                      OSZI_D_LO;
                       //lcd_gotoxy(11,1);
                       //lcd_putc('D');
@@ -2254,7 +1788,7 @@ int main (void)
                         eeprombuffer[index] = buffer[index];
                      }
                      OSZI_D_HI;
-                     
+                     */
                       
                   }
                }break; // default
