@@ -557,7 +557,59 @@ void setMitte(void)
    }
 }
 
+uint8_t eeprombytelesen(uint16_t readadresse)
+{
+   cli();
+   MEM_EN_PORT &= ~(1<<MEM_EN_PIN);
+   spi_start();
 
+   SPI_PORT_Init();
+   
+   spieeprom_init();
+   
+   lcd_gotoxy(0,1);
+   lcd_putint12(readadresse);
+   lcd_putc('*');
+   eeprom_indata = 0xaa;
+   uint8_t readdata=0;
+   // Byte  read 270 us
+   EE_CS_LO;
+   _delay_us(LOOPDELAY);
+   //     OSZI_B_LO;
+   _delay_us(LOOPDELAY);
+   
+   readdata = (uint8_t)spieeprom_rdbyte(readadresse);
+   
+   _delay_us(LOOPDELAY);
+   //     OSZI_B_HI;
+   EE_CS_HI;
+   //OSZI_C_HI;
+   
+   sendbuffer[0] = 0xD5;
+   lcd_puthex(eeprom_indata);
+   lcd_putc('*');
+   
+   sendbuffer[1] = readadresse & 0xFF;
+   sendbuffer[2] = (readadresse & 0xFF00)>>8;
+
+   sendbuffer[3] = readdata;
+   
+   
+   eepromstatus &= ~(1<<EE_WRITE);
+   usbtask &= ~(1<<EEPROM_READ_BYTE_TASK);
+   
+   
+   //           MASTER_PORT |= (1<<SUB_BUSY_PIN); // busy beenden
+   
+   abschnittnummer =0;
+   
+   //lcd_putc('+');
+   usb_rawhid_send((void*)sendbuffer, 50);
+   lcd_putc('+');
+   
+   sei();
+   return readdata;
+}
 
 
 
@@ -1725,7 +1777,9 @@ int main (void)
                   lcd_gotoxy(18,1);
                   lcd_putc('R');
                   lcd_putc('1');
-                  usbtask |= (1<<EEPROM_READ_BYTE_TASK);
+                  
+                  eeprombytelesen(eepromstartadresse);
+                  //usbtask |= (1<<EEPROM_READ_BYTE_TASK);
                   
                }break;
                   
