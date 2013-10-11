@@ -667,7 +667,7 @@ uint16_t eeprombyteladen(uint8_t eeprom_loaddatabyte)
    sendbuffer[0] = 0xC5;
    eepromstatus &= ~(1<<EE_WRITE);
    usbtask &= ~(1<<EEPROM_WRITE_BYTE_TASK);
-   MASTER_PORT |= (1<<SUB_BUSY_PIN); // busy beenden
+//   MASTER_PORT |= (1<<SUB_BUSY_PIN); // busy beenden
    
    //lcd_putc('+');
    usb_rawhid_send((void*)sendbuffer, 50);
