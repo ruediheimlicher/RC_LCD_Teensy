@@ -691,6 +691,7 @@ uint16_t eeprombyteschreiben(uint8_t eeprom_loaddatabyte) //   1 ms ohne lcd-anz
    if ((eeprom_loaddatabyte - checkbyte)||(checkbyte -eeprom_loaddatabyte))
    {
       byte_errcount++;
+      eeprom_errcount ++;
       //lcd_putc('?');
    }
    //lcd_putc(' ');
@@ -719,7 +720,7 @@ uint16_t eeprombyteschreiben(uint8_t eeprom_loaddatabyte) //   1 ms ohne lcd-anz
    //sendbuffer[12] = eeprom_testdata;
    
    
-   sendbuffer[0] = 0xC5;
+   sendbuffer[0] = 0xE5;
    eepromstatus &= ~(1<<EE_WRITE);
    usbtask &= ~(1<<EEPROM_WRITE_BYTE_TASK);
 //   MASTER_PORT |= (1<<SUB_BUSY_PIN); // busy beenden
@@ -1642,9 +1643,6 @@ int main (void)
                   lcd_putc('1');
                   //lcd_putc('*');
                   
-                  //sendbuffer[0] = 0xC5;
-                  //usb_rawhid_send((void*)sendbuffer, 50);
-                  //lcd_putc('*');
                   
                   //
                   
@@ -1658,7 +1656,7 @@ int main (void)
                   
                   sendbuffer[3] = buffer[3];
                   sendbuffer[4] = check;// ist bytechecksumme
-                  sendbuffer[5] = 0xFF;
+                  sendbuffer[5] = eeprom_errcount;
                   
                   sendbuffer[6] = 0xFF;
                   sendbuffer[7] = 0xFF;
