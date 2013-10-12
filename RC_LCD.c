@@ -1177,7 +1177,9 @@ int main (void)
 #pragma mark USB send
          // neue Daten abschicken
 //         if ((usbtask & (1<<EEPROM_WRITE_PAGE_TASK) )) //|| usbtask & (1<<EEPROM_WRITE_BYTE_TASK))
-
+         OSZI_C_LO;
+         uint8_t anz = usb_rawhid_send((void*)sendbuffer, 50); // 20 us
+         OSZI_C_HI;
          if ((masterstatus & (1<< HALT_BIT) )) //|| usbtask & (1<<EEPROM_WRITE_BYTE_TASK))
          {
             // Write im Gang, nichts senden
@@ -1186,9 +1188,9 @@ int main (void)
          }
          else
          {
-            
-            uint8_t anz = usb_rawhid_send((void*)sendbuffer, 50); // 20 us
-            
+                           //OSZI_C_LO;
+            //uint8_t anz = usb_rawhid_send((void*)sendbuffer, 50); // 20 us
+                     //OSZI_C_HI;
          }
          /*
           lcd_gotoxy(0,1);
@@ -1448,7 +1450,7 @@ int main (void)
       //OSZI_D_HI;
       if (r > 0)
       {
-         OSZI_C_TOGG;
+         
          OSZI_D_LO;
          cli();
          uint8_t code = 0x00;
