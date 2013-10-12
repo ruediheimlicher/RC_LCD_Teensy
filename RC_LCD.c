@@ -95,6 +95,9 @@ volatile uint16_t Mitte_Array[ANZ_POT];
 volatile uint16_t RAM_Array[SPI_BUFSIZE];
 
 volatile uint16_t Batteriespannung =0;
+
+volatile uint16_t adc_counter =0; // zaehlt Impulspakete bis wieder die Batteriespannung gelesen werden soll
+
 volatile short int received=0;
 
 volatile uint16_t abschnittnummer=0;
@@ -538,6 +541,7 @@ ISR (PCINT0_vect)
       //OSZI_C_LO;
       
       masterstatus |= (1<<SUB_TASK_BIT); // Zeitfenster fuer Task offen
+      adc_counter ++; // loest adc aus
       
    }
    else // HIGH to LOW pin change, Sub ON
@@ -1166,45 +1170,8 @@ int main (void)
             }
          }
          
-         // Messung anzeigen
-         if (loopcount1%0x4 == 0)
-         {
-            //lcd_gotoxy(0,1);
-            //lcd_putint(sendbuffer[0]);
-            //lcd_putc('*');
-            //lcd_putint(sendbuffer[2]);
-            //lcd_putc('*');
-            
-            /*
-             lcd_gotoxy(0,1);
-             lcd_putint12(Pot_Array[0]);
-             lcd_putc('*');
-             lcd_putint12(Pot_Array[1]);
-             lcd_putc('*');
-             */
-            /*
-             lcd_gotoxy(0,1);
-             lcd_putint12(maxwert);
-             lcd_putc('*');
-             lcd_putint12(minwert);
-             lcd_putc('*');
-             */
-         }
          
-         // neue Daten in sendbuffer, Potentiometerstellungen
-         for (int i=0;i<8;i++)
-         {
-            //sendbuffer[8+2*i]=(Pot_Array[i] & 0xFF);    // 8 10
-            //sendbuffer[8+2*i+1]= (Pot_Array[i]>>8) & 0xFF;  // 9  11
-         }
-         
-         if (masterstatus & (1<< HALT_BIT))
-         {
-            
-    //        masterstatus |= (1<<SUB_TASK_BIT);
-            // usbtask=0;
-         }
-
+ 
          
          
 #pragma mark USB send
@@ -1239,14 +1206,12 @@ int main (void)
       
       /**	ADC	***********************/
       
-      if (adcstatus & (1<< ADC_START)) // ADC starten
+      if (adc_counter > 0x000F) // ADC starten
       {
-         
+         adc_counter =0;
          Batteriespannung = adc_read(0);
          
-         adcstatus &=  ~(1<< ADC_START);
-         
-         lcd_gotoxy(0,0);
+         lcd_gotoxy(14,0);
          
          lcd_putint12(Batteriespannung);
          /*
@@ -1383,7 +1348,7 @@ int main (void)
             
             
             
-            // Daten von Potentiometern senden
+            // Daten von Potentiometern vom RAM lesen und senden
             sendbuffer[0] = 0xF0;
             for (i=0;i< 8;i++)
             {
@@ -1399,6 +1364,12 @@ int main (void)
                
             }
             //OSZI_A_HI ;
+            
+            
+            // Batteriespannung senden
+            sendbuffer[18] = Batteriespannung & 0x00FF; // LO
+            sendbuffer[19] = (Batteriespannung & 0xFF00) >>8; // HI
+            
             
             
             
@@ -1612,7 +1583,7 @@ int main (void)
                    inchecksumme = buffer[3] | (buffer[4]<<8);
                   // Byte 0-31: codes
                   // Byte 32-63: data
-                                    
+                  
                   for (index=0;index<USB_DATENBREITE;index++)
                   {
                      eeprombuffer[index] = buffer[index];
@@ -1626,7 +1597,7 @@ int main (void)
                   
                   uint16_t erfolg =  eeprompartschreiben(); // returnbytechecksumme
                   
-                  sendbuffer[0] = 0xCC;
+                  sendbuffer[0] = 0xEC;
                   
                   sendbuffer[1] = eepromstartadresse & 0xFF;
                   sendbuffer[2] = (eepromstartadresse & 0xFF00)>>8;
