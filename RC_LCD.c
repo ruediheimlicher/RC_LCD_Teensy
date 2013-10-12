@@ -1622,7 +1622,7 @@ int main (void)
                   
                case 0xC4: // Write EEPROM Byte
                {
-                  OSZI_A_TOGG;
+                  //OSZI_A_TOGG;
                   //MASTER_PORT &= ~(1<<SUB_BUSY_PIN);
                   eeprom_errcount=0;
                   //abschnittnummer++;
@@ -1663,7 +1663,6 @@ int main (void)
                   usb_rawhid_send((void*)sendbuffer, 50);
 
                   masterstatus |= (1<<SUB_TASK_BIT);
-                  OSZI_A_TOGG;
                   //usbtask |= (1<<EEPROM_WRITE_BYTE_TASK);
                   
                }break;
@@ -1696,7 +1695,7 @@ int main (void)
                      }
                      
                      //lcd_gotoxy(0,0);
-                     for (index=0;index<8;index++)
+                     //for (index=0;index<8;index++)
                      {
                         //lcd_puthex(eeprombuffer[index]);
                         
@@ -1806,8 +1805,8 @@ int main (void)
                case 0xF0:
                {
                  
-                  lcd_gotoxy(14,1);
-                  lcd_putc('S');
+                  //lcd_gotoxy(14,1);
+                  //lcd_putc('S');
                   //lcd_putc(' ');
                }break;
                   
