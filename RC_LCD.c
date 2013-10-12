@@ -557,8 +557,9 @@ void setMitte(void)
    }
 }
 
-uint8_t eeprombytelesen(uint16_t readadresse)
+uint8_t eeprombytelesen(uint16_t readadresse) // 300 us ohne lcd_anzeige
 {
+   OSZI_B_LO;
    cli();
    MEM_EN_PORT &= ~(1<<MEM_EN_PIN);
    spi_start();
@@ -567,9 +568,9 @@ uint8_t eeprombytelesen(uint16_t readadresse)
    
    spieeprom_init();
    
-   lcd_gotoxy(0,1);
-   lcd_putint12(readadresse);
-   lcd_putc('*');
+   //lcd_gotoxy(0,1);
+   //lcd_putint12(readadresse);
+   //lcd_putc('*');
    eeprom_indata = 0xaa;
    uint8_t readdata=0;
    // Byte  read 270 us
@@ -586,8 +587,8 @@ uint8_t eeprombytelesen(uint16_t readadresse)
    //OSZI_C_HI;
    
    sendbuffer[0] = 0xD5;
-   lcd_puthex(eeprom_indata);
-   lcd_putc('*');
+   //lcd_puthex(eeprom_indata);
+   //lcd_putc('*');
    
    sendbuffer[1] = readadresse & 0xFF;
    sendbuffer[2] = (readadresse & 0xFF00)>>8;
@@ -605,16 +606,18 @@ uint8_t eeprombytelesen(uint16_t readadresse)
    
    //lcd_putc('+');
    usb_rawhid_send((void*)sendbuffer, 50);
-   lcd_putc('+');
+   //lcd_putc('+');
    
    sei();
+   OSZI_B_HI;
    return readdata;
 }
 
 
 
-uint16_t eeprombyteladen(uint8_t eeprom_loaddatabyte)
+uint16_t eeprombyteschreiben(uint8_t eeprom_loaddatabyte) //   1 ms ohne lcd-anzeige
 {
+   OSZI_B_LO;
    uint8_t byte_errcount=0;
    uint8_t checkbyte=0;
    cli();
@@ -678,22 +681,22 @@ uint16_t eeprombyteladen(uint8_t eeprom_loaddatabyte)
    
    
    
-   lcd_gotoxy(0,1);
+   //lcd_gotoxy(0,1);
    //lcd_putc('*');
-   lcd_puthex(eeprom_loaddatabyte);
+   //lcd_puthex(eeprom_loaddatabyte);
    
-   lcd_putc(' ');
-   lcd_puthex(checkbyte);
-   lcd_putc('e');
+   //lcd_putc(' ');
+   //lcd_puthex(checkbyte);
+   //lcd_putc('e');
    if ((eeprom_loaddatabyte - checkbyte)||(checkbyte -eeprom_loaddatabyte))
    {
       byte_errcount++;
-      lcd_putc('?');
+      //lcd_putc('?');
    }
    //lcd_putc(' ');
    
-   lcd_puthex(byte_errcount);
-   lcd_putc('e');
+   //lcd_puthex(byte_errcount);
+   //lcd_putc('e');
    
    //lcd_puthex(eeprom_testdata-eeprom_indata);
    //lcd_puthex(eeprom_indata - eeprom_testdata);
@@ -723,17 +726,19 @@ uint16_t eeprombyteladen(uint8_t eeprom_loaddatabyte)
    
    //lcd_putc('+');
    usb_rawhid_send((void*)sendbuffer, 50);
-   lcd_putc('+');
+   //lcd_putc('+');
    
    sei();
    // end Daten an EEPROM
    //OSZI_D_HI ;
   // MEM_EN_PORT |= (1<<MEM_EN_PIN); // blockiert USB
+   OSZI_B_HI;
    return byte_errcount;
 }
 
-uint16_t eeprompartladen(void)
+uint16_t eeprompartschreiben(void) // 23 ms
 {
+   OSZI_B_LO;
    spi_start();
    MEM_EN_PORT &= ~(1<<MEM_EN_PIN);
    uint16_t result = 0;
@@ -785,7 +790,7 @@ uint16_t eeprompartladen(void)
    
    
    uint8_t i=0;
-   for (i=0;i<4;i++)
+   for (i=0;i<EE_PARTBREITE;i++)
    {
       uint8_t tempadresse = abschnittstartadresse+i;
       uint8_t databyte = eeprombuffer[EE_PARTBREITE+i]& 0xFF; // ab byte 32
@@ -968,6 +973,7 @@ uint16_t eeprompartladen(void)
    //OSZI_D_HI ;
    
   // MEM_EN_PORT |= (1<<MEM_EN_PIN);
+   OSZI_B_HI;
    return result;
 }
 
@@ -1212,9 +1218,9 @@ int main (void)
          }
          else
          {
-            OSZI_B_LO;
+            
             uint8_t anz = usb_rawhid_send((void*)sendbuffer, 50); // 20 us
-            OSZI_B_HI;
+            
          }
          /*
           lcd_gotoxy(0,1);
@@ -1575,13 +1581,13 @@ int main (void)
       /**	Begin USB-routinen	***********************/
 #pragma mark USB read
       // Start USB
-      
-      r = usb_rawhid_recv((void*)buffer, 0);
-      
+      //OSZI_D_LO;
+      r = usb_rawhid_recv((void*)buffer, 0); // 2us
+      //OSZI_D_HI;
       if (r > 0)
       {
          OSZI_C_TOGG;
-         //OSZI_D_LO;
+         OSZI_D_LO;
          cli();
          uint8_t code = 0x00;
          usbstatus |= (1<<USB_RECV);
@@ -1620,7 +1626,7 @@ int main (void)
                }break;
                   
                   
-               case 0xC4: // Write EEPROM Byte
+               case 0xC4: // Write EEPROM Byte  // 10 ms
                {
                   //OSZI_A_TOGG;
                   //MASTER_PORT &= ~(1<<SUB_BUSY_PIN);
@@ -1642,7 +1648,7 @@ int main (void)
                   
                   //
                   
-                  uint16_t check = eeprombyteladen(buffer[3]);
+                  uint16_t check = eeprombyteschreiben(buffer[3]); // 8 ms
                   
                   
                   sendbuffer[0] = 0xC5;
@@ -1708,7 +1714,7 @@ int main (void)
                
                }break;
                   
-               case 0xCA: // EEPROM Part laden
+               case 0xCA: // EEPROM Part laden 5 ms
                {
                   lcd_gotoxy(18,1);
                   lcd_putint2(32);
@@ -1730,7 +1736,7 @@ int main (void)
                   }
                   
                   
-                  uint16_t erfolg =  eeprompartladen(); // returnbytechecksumme
+                  uint16_t erfolg =  eeprompartschreiben(); // returnbytechecksumme
                   
                   sendbuffer[0] = 0xCC;
                   
@@ -1767,7 +1773,7 @@ int main (void)
                   
                   
                   
-               case 0xD4: // read 1 EEPROM
+               case 0xD4: // read 1 EEPROM  // 9ms
                {
                   //abschnittnummer++;
                   eepromstartadresse = buffer[1] | (buffer[2]<<8);
@@ -1777,7 +1783,7 @@ int main (void)
                   lcd_putc('R');
                   lcd_putc('1');
                   
-                  eeprombytelesen(eepromstartadresse);
+                  eeprombytelesen(eepromstartadresse); // 7 ms
                   //usbtask |= (1<<EEPROM_READ_BYTE_TASK);
                   
                }break;
@@ -1867,7 +1873,7 @@ int main (void)
          code=0;
          sei();
          
-       //OSZI_D_HI;
+       OSZI_D_HI;
          
 		} // r>0, neue Daten
       else
