@@ -32,7 +32,7 @@
 // USB
 #define CPU_PRESCALE(n)	(CLKPR = 0x80, CLKPR = (n))
 
-#define LOOPDELAY 50
+#define LOOPDELAY 20
 
 #define SERVOMAX  4400
 #define SERVOMIN  1400
