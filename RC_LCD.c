@@ -740,17 +740,17 @@ uint16_t eeprombyteschreiben(uint16_t writeadresse,uint8_t eeprom_writedatabyte)
    // WREN schicken 220 us
  //  EE_CS_LO;
    
-         _delay_us(LOOPDELAY);
+ //        _delay_us(LOOPDELAY);
          spieeprom_wren(); // 0x06
-         _delay_us(LOOPDELAY);
+ //        _delay_us(LOOPDELAY);
    
  //  EE_CS_HI; // SS HI End
    
-   _delay_us(LOOPDELAY);
+ //  _delay_us(LOOPDELAY);
  //   _delay_us(50);
     // Byte  write
  //  EE_CS_LO;
-   _delay_us(LOOPDELAY);
+ //  _delay_us(LOOPDELAY);
    
       spieeprom_wrbyte(writeadresse,eeprom_writedatabyte);
  //  EE_CS_HI;
@@ -765,14 +765,14 @@ uint16_t eeprombyteschreiben(uint16_t writeadresse,uint8_t eeprom_writedatabyte)
  //  _delay_us(10);
   
   // EE_CS_HI; // SS HI End
-      _delay_us(100);
+//      _delay_us(100);
    
    // Byte  read 270 us
  //  EE_CS_LO;
    
-         _delay_us(LOOPDELAY);
+  //       _delay_us(LOOPDELAY);
          checkbyte = (uint8_t)spieeprom_rdbyte(writeadresse);
-         _delay_us(LOOPDELAY);
+  //       _delay_us(LOOPDELAY);
    
  //  EE_CS_HI;
    
@@ -783,6 +783,7 @@ uint16_t eeprombyteschreiben(uint16_t writeadresse,uint8_t eeprom_writedatabyte)
    }
    
   // lcd_gotoxy(0,0);
+   /*
    lcd_putc('e');
    
    lcd_puthex(byte_errcount);
@@ -791,8 +792,6 @@ uint16_t eeprombyteschreiben(uint16_t writeadresse,uint8_t eeprom_writedatabyte)
    lcd_puthex(eeprom_writedatabyte);
    lcd_putc(' ');
    lcd_puthex(checkbyte);
-   
-   /*
     */
    
    
