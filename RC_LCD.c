@@ -572,27 +572,28 @@ uint8_t eeprombytelesen(uint16_t readadresse) // 300 us ohne lcd_anzeige
    
    spieeprom_init();
    
-   //lcd_gotoxy(0,1);
-   //lcd_putint12(readadresse);
-   //lcd_putc('*');
+   lcd_gotoxy(1,0);
+   lcd_putc('r');
+   lcd_putint12(readadresse);
+   lcd_putc('*');
+   
+   
    eeprom_indata = 0xaa;
    uint8_t readdata=0;
+   
    // Byte  read 270 us
    EE_CS_LO;
-   _delay_us(LOOPDELAY);
-   //     OSZI_B_LO;
    _delay_us(LOOPDELAY);
    
    readdata = (uint8_t)spieeprom_rdbyte(readadresse);
    
    _delay_us(LOOPDELAY);
-   //     OSZI_B_HI;
    EE_CS_HI;
-   //OSZI_C_HI;
+   
+   lcd_puthex(readdata);
+
    
    sendbuffer[0] = 0xD5;
-   //lcd_puthex(eeprom_indata);
-   //lcd_putc('*');
    
    sendbuffer[1] = readadresse & 0xFF;
    sendbuffer[2] = (readadresse & 0xFF00)>>8;
@@ -628,9 +629,9 @@ uint8_t eeprompartlesen(uint16_t readadresse) //   us ohne lcd_anzeige
    
    spieeprom_init();
    
-   //lcd_gotoxy(0,1);
-   //lcd_putint12(readadresse);
-   //lcd_putc('*');
+   lcd_gotoxy(0,1);
+   lcd_putint12(readadresse);
+   lcd_putc('*');
    eeprom_indata = 0xaa;
    uint8_t readdata=0;
    // Byte  read 270 us
@@ -687,7 +688,7 @@ uint8_t eeprompartlesen(uint16_t readadresse) //   us ohne lcd_anzeige
 
 
 
-uint16_t eeprombyteschreiben(uint8_t eeprom_loaddatabyte) //   1 ms ohne lcd-anzeige
+uint16_t eeprombyteschreiben(uint16_t writeadresse,uint8_t eeprom_writedatabyte) //   1 ms ohne lcd-anzeige
 {
    OSZI_B_LO;
    uint8_t byte_errcount=0;
@@ -697,93 +698,105 @@ uint16_t eeprombyteschreiben(uint8_t eeprom_loaddatabyte) //   1 ms ohne lcd-anz
    spi_start();
    SPI_PORT_Init();
    
+   lcd_gotoxy(1,1);
+   lcd_putc('w');
+   lcd_putint12(writeadresse);
+   lcd_putc('*');
+
+   
    spieeprom_init();
    
-   _delay_us(5);
-   
-   //OSZI_C_LO;
    // statusregister schreiben
    
+    
    // WREN
    EE_CS_LO;
-   _delay_us(LOOPDELAY);
-   spieeprom_wren();
-   _delay_us(LOOPDELAY);
-   EE_CS_HI; // SS HI End
-   _delay_us(LOOPDELAY);
-   /*
-    */
    
+         _delay_us(LOOPDELAY);
+         spieeprom_wren(); // 0x06
+         _delay_us(LOOPDELAY);
+   
+   EE_CS_HI; // SS HI End
+   
+   _delay_us(LOOPDELAY);
+   _delay_us(50);
+  
+  
    //Write status
    EE_CS_LO;
-   _delay_us(LOOPDELAY);
-   spieeprom_write_status();
-   _delay_us(LOOPDELAY);
+   
+         _delay_us(LOOPDELAY);
+         spieeprom_write_status(); // 0x01, 0x00
+         _delay_us(LOOPDELAY);
+   
    EE_CS_HI; // SS HI End
    
-   
-   _delay_us(5);
+   _delay_us(50);
    
    // Byte  write
    
    // WREN schicken 220 us
    EE_CS_LO;
-   _delay_us(LOOPDELAY);
-   spieeprom_wren();
-   _delay_us(LOOPDELAY);
-   EE_CS_HI; // SS HI End
-   _delay_us(LOOPDELAY);
    
+         _delay_us(LOOPDELAY);
+         spieeprom_wren(); // 0x06
+         _delay_us(LOOPDELAY);
+   
+   EE_CS_HI; // SS HI End
+   
+   _delay_us(LOOPDELAY);
+    _delay_us(50);
+    // Byte  write
    EE_CS_LO;
    _delay_us(LOOPDELAY);
-   spieeprom_wrbyte(eepromstartadresse,eeprom_loaddatabyte);
-   _delay_us(LOOPDELAY);
+   
+      spieeprom_wrbyte(writeadresse,eeprom_writedatabyte);
+   uint8_t w=0;
+   while (spieeprom_read_status())
+   {
+      w++;
+   };
+
+   _delay_us(1);
+  
    EE_CS_HI; // SS HI End
+      _delay_us(100);
    
    // Byte  read 270 us
    EE_CS_LO;
-   _delay_us(LOOPDELAY);
-   //     OSZI_B_LO;
-   _delay_us(LOOPDELAY);
-   checkbyte = (uint8_t)spieeprom_rdbyte(eepromstartadresse);
-   _delay_us(LOOPDELAY);
-   //     OSZI_B_HI;
+   
+         _delay_us(LOOPDELAY);
+         checkbyte = (uint8_t)spieeprom_rdbyte(writeadresse);
+         _delay_us(LOOPDELAY);
+   
    EE_CS_HI;
-   //OSZI_C_HI;
    
-   
-   
-   //lcd_gotoxy(0,1);
-   //lcd_putc('*');
-   //lcd_puthex(eeprom_loaddatabyte);
-   
-   //lcd_putc(' ');
-   //lcd_puthex(checkbyte);
-   //lcd_putc('e');
-   if ((eeprom_loaddatabyte - checkbyte)||(checkbyte -eeprom_loaddatabyte))
+   if ((eeprom_writedatabyte - checkbyte)||(checkbyte - eeprom_writedatabyte))
    {
       byte_errcount++;
       eeprom_errcount ++;
-      //lcd_putc('?');
    }
-   //lcd_putc(' ');
    
-   //lcd_puthex(byte_errcount);
-   //lcd_putc('e');
+  // lcd_gotoxy(0,0);
+   lcd_putc('e');
    
-   //lcd_puthex(eeprom_testdata-eeprom_indata);
-   //lcd_puthex(eeprom_indata - eeprom_testdata);
-   //lcd_putc(' ');
+   lcd_puthex(byte_errcount);
+   lcd_putc(' ');
+   
+   lcd_puthex(eeprom_writedatabyte);
+   lcd_putc(' ');
+   lcd_puthex(checkbyte);
+   
    /*
     */
    
    
-   sendbuffer[1] = eepromstartadresse & 0xFF;
-   sendbuffer[2] = (eepromstartadresse & 0xFF00)>>8;
+   sendbuffer[1] = writeadresse & 0xFF;
+   sendbuffer[2] = (writeadresse & 0xFF00)>>8;
    sendbuffer[3] = byte_errcount;
-   sendbuffer[4] = eeprom_databyte;
+   sendbuffer[4] = eeprom_writedatabyte;
    sendbuffer[5] = checkbyte;
-   sendbuffer[6] = 0xAA;
+   sendbuffer[6] = w;
    sendbuffer[7] = 0x00;
    sendbuffer[8] = 0xF9;
    sendbuffer[9] = 0xFA;
@@ -861,16 +874,15 @@ uint16_t eeprompartschreiben(void) // 23 ms
    
    eeprom_errcount=0;
    
-   
+   uint8_t w=0;
    uint8_t i=0;
    for (i=0;i<EE_PARTBREITE;i++)
    {
       uint8_t tempadresse = abschnittstartadresse+i;
       uint8_t databyte = eeprombuffer[EE_PARTBREITE+i]& 0xFF; // ab byte 32
-      if (i<8)
+      
       {
          sendbuffer[EE_PARTBREITE+i] = databyte;
-         sendbuffer[EE_PARTBREITE+i+8] = tempadresse;
       }
       
       result += databyte;
@@ -896,7 +908,15 @@ uint16_t eeprompartschreiben(void) // 23 ms
 
        //spieeprom_wrbyte(0,13); // an abschnittstartadresse und folgende
       _delay_us(LOOPDELAY);
+      
+      while (spieeprom_read_status())
+      {
+         w++;
+      };
+
+      
       EE_CS_HI; // SS HI End
+        while (spieeprom_read_status());
       _delay_us(LOOPDELAY);
       // Byte  read 270 us
       EE_CS_LO;
@@ -923,7 +943,6 @@ uint16_t eeprompartschreiben(void) // 23 ms
       if ((databyte - eeprom_indata)||(eeprom_indata - databyte))
       {
          eeprom_errcount++;
-         
       }
    
    
@@ -1577,7 +1596,7 @@ int main (void)
                   
                   //
                   
-                  uint16_t check = eeprombyteschreiben(buffer[3]); // 8 ms
+                  uint16_t check = eeprombyteschreiben(eepromstartadresse,buffer[3]); // 8 ms
                   
                   
                   sendbuffer[0] = 0xC5;
@@ -1660,19 +1679,19 @@ int main (void)
                      if (index > EE_PARTBREITE) // ab 32
                      {
                         bytechecksumme+= buffer[index]; // bytes aufaddieren
-                        sendbuffer[index] = buffer[index];
+                        //sendbuffer[index] = buffer[index];
                      }
                   }
                   
                   
-                  uint16_t erfolg =  eeprompartschreiben(); // returnbytechecksumme
+                  uint16_t erfolg =  eeprompartschreiben(); // return bytechecksumme
                   
                   sendbuffer[0] = 0xEC;
                   
                   sendbuffer[1] = eepromstartadresse & 0xFF;
                   sendbuffer[2] = (eepromstartadresse & 0xFF00)>>8;
                   
-                  sendbuffer[3] = 0xFF;
+                  sendbuffer[3] = eeprom_errcount;
                   sendbuffer[4] = erfolg & 0xFF;// ist bytechecksumme
                   sendbuffer[5] = (erfolg & 0xFF00)>>8;
                   

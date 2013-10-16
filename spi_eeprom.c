@@ -27,7 +27,7 @@
 // http://www.mikrocontroller.net/topic/282013
 // code:  http://www.mikrocontroller.net/attachment/164871/25LC128.c
 
-#define EEDELAY 0
+#define EEDELAY 5
 
 /*
 uint8_t spi_send(uint8_t value)
@@ -212,7 +212,7 @@ void spieeprom_rdpage_start(uint16_t addr)
 uint8_t spieeprom_rdpage_data()
 {
    uint8_t result = 0x00;
-   //send dummy data, read relult
+   //send dummy data, read result
    result = spi_send(0x66); //send clock pulses, get result
    _delay_us(EEDELAY);
    return result;
@@ -222,7 +222,9 @@ uint8_t spieeprom_rdpage_data()
 //  uint16_t startaddr - the address the first byte will be written to
 //  const uint8_t* data - the array to be written
 //  uint16_t length - the number of bytes to be written from the array
+
 void spieeprom_wrpage(uint16_t startaddr, const volatile uint8_t* data)
+
 //void spieeprom_wrpage(uint16_t startaddr, const char* data)
 {
    uint16_t i;
@@ -242,6 +244,7 @@ void spieeprom_wrpage(uint16_t startaddr, const volatile uint8_t* data)
 //reads a page of memory into an array
 //  uint16_t startaddr - the address the first byte will be read from
 //  uint8_t* data - the array to be written to
+
 void spieeprom_rdpage(uint16_t startaddr, volatile uint8_t* data)
 //void spieeprom_rdpage(uint16_t startaddr, char* data)
 {
