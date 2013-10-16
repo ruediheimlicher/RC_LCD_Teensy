@@ -573,23 +573,23 @@ uint8_t eeprombytelesen(uint16_t readadresse) // 300 us ohne lcd_anzeige
    SPI_PORT_Init();
    
    spieeprom_init();
-   
+   /*
    lcd_gotoxy(1,0);
    lcd_putc('r');
    lcd_putint12(readadresse);
    lcd_putc('*');
-   
+   */
    
    eeprom_indata = 0xaa;
    uint8_t readdata=0;
    
    // Byte  read 270 us
    EE_CS_LO;
-   _delay_us(LOOPDELAY);
+   _delay_us(EE_READ_DELAY);
    
    readdata = (uint8_t)spieeprom_rdbyte(readadresse);
    
-   _delay_us(LOOPDELAY);
+   _delay_us(EE_READ_DELAY);
    EE_CS_HI;
    
    lcd_puthex(readdata);
@@ -733,7 +733,7 @@ uint16_t eeprombyteschreiben(uint16_t writeadresse,uint8_t eeprom_writedatabyte)
    
 //   EE_CS_HI; // SS HI End
  */  
-   _delay_us(50);
+ //  _delay_us(50);
    
    // Byte  write
    
@@ -747,7 +747,7 @@ uint16_t eeprombyteschreiben(uint16_t writeadresse,uint8_t eeprom_writedatabyte)
  //  EE_CS_HI; // SS HI End
    
    _delay_us(LOOPDELAY);
-    _delay_us(50);
+ //   _delay_us(50);
     // Byte  write
  //  EE_CS_LO;
    _delay_us(LOOPDELAY);
@@ -762,7 +762,7 @@ uint16_t eeprombyteschreiben(uint16_t writeadresse,uint8_t eeprom_writedatabyte)
       w++;
    };
 
-   _delay_us(10);
+ //  _delay_us(10);
   
   // EE_CS_HI; // SS HI End
       _delay_us(100);

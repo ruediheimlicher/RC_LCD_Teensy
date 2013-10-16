@@ -29,6 +29,8 @@
 
 #define EEDELAY 50
 
+#define EE_READ_DELAY 0
+
 /*
 uint8_t spi_send(uint8_t value)
 {
@@ -178,20 +180,20 @@ uint8_t spieeprom_rdbyte(uint16_t addr)
 {
     EE_CS_LO;
    uint8_t result = 0x00;
-   _delay_us(EEDELAY);
+ //  _delay_us(EEDELAY);
    //send read instruction
    spi_send(0x03);
-   _delay_us(EEDELAY);
+   _delay_us(EE_READ_DELAY);
    //send address
   
    spi_send(addr>>8); //most significant byte
-   _delay_us(EEDELAY);
+   _delay_us(EE_READ_DELAY);
    spi_send(addr); //least significant byte
-   _delay_us(EEDELAY);
+   _delay_us(EE_READ_DELAY);
    
    //read data
    result = spi_send(0x66); //send clock pulses, get result
-   _delay_us(EEDELAY);
+   _delay_us(EE_READ_DELAY);
     EE_CS_HI;
    
    return result;
