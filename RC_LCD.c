@@ -832,6 +832,9 @@ uint16_t eeprompartschreiben(void) // 23 ms
    spi_start();
    MEM_EN_PORT &= ~(1<<MEM_EN_PIN);
    uint16_t result = 0;
+   
+   eeprom_errcount=0;
+   
    cli();
    //OSZI_D_LO ;
    SPI_PORT_Init();
@@ -840,29 +843,6 @@ uint16_t eeprompartschreiben(void) // 23 ms
    spieeprom_init();
    
    _delay_us(5);
-   
-   //OSZI_C_LO;
-   // statusregister schreiben
-   /*
-   // WREN
-   EE_CS_LO;
-   _delay_us(LOOPDELAY);
-   spieeprom_wren();
-   _delay_us(LOOPDELAY);
-   EE_CS_HI; // SS HI End
-   _delay_us(LOOPDELAY);
-   
-   //Write status
-   EE_CS_LO;
-   _delay_us(LOOPDELAY);
-   spieeprom_write_status();
-   _delay_us(LOOPDELAY);
-   EE_CS_HI; // SS HI End
-   */
-   
-   _delay_us(5);
-   
-   // Byte  write
    
    
    // WREN schicken 220 us
@@ -874,7 +854,7 @@ uint16_t eeprompartschreiben(void) // 23 ms
    _delay_us(LOOPDELAY);
    
    
-   eeprom_errcount=0;
+   
    
    uint8_t w=0;
    uint8_t i=0;
