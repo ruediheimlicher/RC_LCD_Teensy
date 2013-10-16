@@ -32,7 +32,7 @@
 // USB
 #define CPU_PRESCALE(n)	(CLKPR = 0x80, CLKPR = (n))
 
-#define LOOPDELAY 1
+#define LOOPDELAY 50
 
 #define SERVOMAX  4400
 #define SERVOMIN  1400
@@ -50,6 +50,8 @@ static volatile uint8_t sendbuffer[USB_DATENBREITE]={};
 
 static volatile uint8_t outbuffer[USB_DATENBREITE]={};
 static volatile uint8_t inbuffer[USB_DATENBREITE]={};
+
+static volatile uint8_t kontrollbuffer[USB_DATENBREITE]={};
 
 static volatile uint8_t eeprombuffer[USB_DATENBREITE]={};
 
@@ -708,68 +710,71 @@ uint16_t eeprombyteschreiben(uint16_t writeadresse,uint8_t eeprom_writedatabyte)
    
    // statusregister schreiben
    
-    
+ /*
    // WREN
-   EE_CS_LO;
+  // EE_CS_LO;
    
          _delay_us(LOOPDELAY);
          spieeprom_wren(); // 0x06
          _delay_us(LOOPDELAY);
    
-   EE_CS_HI; // SS HI End
+ //  EE_CS_HI; // SS HI End
    
    _delay_us(LOOPDELAY);
    _delay_us(50);
   
   
    //Write status
-   EE_CS_LO;
+ //  EE_CS_LO;
    
          _delay_us(LOOPDELAY);
          spieeprom_write_status(); // 0x01, 0x00
          _delay_us(LOOPDELAY);
    
-   EE_CS_HI; // SS HI End
-   
+//   EE_CS_HI; // SS HI End
+ */  
    _delay_us(50);
    
    // Byte  write
    
    // WREN schicken 220 us
-   EE_CS_LO;
+ //  EE_CS_LO;
    
          _delay_us(LOOPDELAY);
          spieeprom_wren(); // 0x06
          _delay_us(LOOPDELAY);
    
-   EE_CS_HI; // SS HI End
+ //  EE_CS_HI; // SS HI End
    
    _delay_us(LOOPDELAY);
     _delay_us(50);
     // Byte  write
-   EE_CS_LO;
+ //  EE_CS_LO;
    _delay_us(LOOPDELAY);
    
       spieeprom_wrbyte(writeadresse,eeprom_writedatabyte);
+ //  EE_CS_HI;
+   
    uint8_t w=0;
+   
    while (spieeprom_read_status())
    {
       w++;
    };
 
-   _delay_us(1);
+   _delay_us(10);
   
-   EE_CS_HI; // SS HI End
+  // EE_CS_HI; // SS HI End
       _delay_us(100);
    
    // Byte  read 270 us
-   EE_CS_LO;
+ //  EE_CS_LO;
    
          _delay_us(LOOPDELAY);
          checkbyte = (uint8_t)spieeprom_rdbyte(writeadresse);
          _delay_us(LOOPDELAY);
    
-   EE_CS_HI;
+ //  EE_CS_HI;
    
    if ((eeprom_writedatabyte - checkbyte)||(checkbyte - eeprom_writedatabyte))
    {
@@ -839,7 +844,7 @@ uint16_t eeprompartschreiben(void) // 23 ms
    
    //OSZI_C_LO;
    // statusregister schreiben
-   
+   /*
    // WREN
    EE_CS_LO;
    _delay_us(LOOPDELAY);
@@ -847,8 +852,6 @@ uint16_t eeprompartschreiben(void) // 23 ms
    _delay_us(LOOPDELAY);
    EE_CS_HI; // SS HI End
    _delay_us(LOOPDELAY);
-   /*
-    */
    
    //Write status
    EE_CS_LO;
@@ -856,7 +859,7 @@ uint16_t eeprompartschreiben(void) // 23 ms
    spieeprom_write_status();
    _delay_us(LOOPDELAY);
    EE_CS_HI; // SS HI End
-   
+   */
    
    _delay_us(5);
    
@@ -925,18 +928,13 @@ uint16_t eeprompartschreiben(void) // 23 ms
       _delay_us(LOOPDELAY);
       
       eeprom_indata = (uint8_t)spieeprom_rdbyte(tempadresse);
-      
+      kontrollbuffer[EE_PARTBREITE+i] = eeprom_indata;
       
       //eeprom_indata = (uint8_t)spieeprom_rdbyte(0);
       _delay_us(LOOPDELAY);
       EE_CS_HI;
       
-      if (i<8)
-      {
-         sendbuffer[EE_PARTBREITE+i+16] = eeprom_indata;
-      }
-
-      
+       
       //     OSZI_B_HI;
       
 
@@ -1023,6 +1021,17 @@ uint16_t eeprompartschreiben(void) // 23 ms
     lcd_putc('$');
     */
    
+   
+   kontrollbuffer[0] = 0xCB;
+   
+   kontrollbuffer[1] = abschnittstartadresse & 0xFF;
+   kontrollbuffer[2] = (abschnittstartadresse & 0xFF00)>>8;
+   
+   kontrollbuffer[3] = eeprom_errcount;
+   kontrollbuffer[8] = 0xA1;
+   kontrollbuffer[9] = 0xA2;
+
+   /*
    sendbuffer[0] = 0xCB;
    
    sendbuffer[1] = abschnittstartadresse & 0xFF;
@@ -1037,7 +1046,7 @@ uint16_t eeprompartschreiben(void) // 23 ms
    
    sendbuffer[8] = 0xA3;
    sendbuffer[9] = 0xA4;
-   
+   */
    
    /*
     else
@@ -1058,7 +1067,7 @@ uint16_t eeprompartschreiben(void) // 23 ms
     }
     */
    
-   usb_rawhid_send((void*)sendbuffer, 50);
+   usb_rawhid_send((void*)kontrollbuffer, 50);
    
    sei();
    // end Daten an EEPROM

@@ -27,7 +27,7 @@
 // http://www.mikrocontroller.net/topic/282013
 // code:  http://www.mikrocontroller.net/attachment/164871/25LC128.c
 
-#define EEDELAY 5
+#define EEDELAY 50
 
 /*
 uint8_t spi_send(uint8_t value)
@@ -78,9 +78,11 @@ uint8_t spieeprom_getmode(void)
 // WREN schicken, anschliessend CS auf HI
 void spieeprom_wren()
 {
+    EE_CS_LO;
    _delay_us(EEDELAY);
    spi_send(0x06);
    _delay_us(EEDELAY);
+    EE_CS_HI;
 
 }
 
@@ -88,11 +90,13 @@ void spieeprom_wren()
 void spieeprom_write_status()
 {
    //send write status instruction WREN, WRSR, 00 (AN1193 p 39)
+    EE_CS_LO;
    _delay_us(EEDELAY);
    spi_send(01);
    _delay_us(EEDELAY);
    spi_send(00);
    _delay_us(EEDELAY);
+    EE_CS_HI;
    
    
 }
@@ -101,10 +105,12 @@ void spieeprom_write_status()
 // Nach WREN WRITE schicken und msb (02, xy)
 void spieeprom_writecmd(uint8_t addr)
 {
+    EE_CS_LO;
    _delay_us(EEDELAY);
    //send write instruction
    spi_send(0x02);
    _delay_us(EEDELAY);
+    EE_CS_HI;
    
 }
 
@@ -113,7 +119,7 @@ void spieeprom_writecmd(uint8_t addr)
 // uint8_t data - the data to write
 void spieeprom_wrbyte(uint16_t addr, uint8_t data)
 {
-   
+    EE_CS_LO;
    _delay_us(EEDELAY);
    //send write instruction
    spi_send(0x02);
@@ -128,6 +134,7 @@ void spieeprom_wrbyte(uint16_t addr, uint8_t data)
    //send data
    spi_send(data);
    _delay_us(EEDELAY);
+    EE_CS_HI;
    
 }
 
@@ -169,7 +176,7 @@ void spieeprom_wrpage_data(uint8_t data)
 // returns uint8_t - the data read
 uint8_t spieeprom_rdbyte(uint16_t addr)
 {
-   
+    EE_CS_LO;
    uint8_t result = 0x00;
    _delay_us(EEDELAY);
    //send read instruction
@@ -185,6 +192,7 @@ uint8_t spieeprom_rdbyte(uint16_t addr)
    //read data
    result = spi_send(0x66); //send clock pulses, get result
    _delay_us(EEDELAY);
+    EE_CS_HI;
    
    return result;
 }
@@ -266,12 +274,14 @@ void spieeprom_rdpage(uint16_t startaddr, volatile uint8_t* data)
 
 uint8_t spieeprom_read_status()
 {
+    EE_CS_LO;
    uint8_t val;
    _delay_us(EEDELAY);
    spi_send(0x05);
    _delay_us(EEDELAY);
    val = spi_send(0xff);
    _delay_us(EEDELAY);
+    EE_CS_HI;
    return val;
 }
 

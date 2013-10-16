@@ -66,6 +66,7 @@ void initADC(uint8_t derKanal)
    }
 }
 
+
 int16_t adc_read(uint8_t derKanal)
 {
    uint8_t low;
