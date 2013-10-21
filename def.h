@@ -38,7 +38,29 @@
 #define TASTE0				   0
 #define TASTE1             1
 
+
+// EEPROM
+
+#define TASK_OFFSET       0x2000 // Ort fuer Einstellungen
+
+#define SETTINGBREITE      0x100; // 256 Bytes, Breite des Settingblocks fuer ein model
+
+#define  MITTE_OFFSET      0x10 // 16
+#define  LEVEL_OFFSET      0x20 // 32
+#define  EXPO_OFFSET       0x30 // 48
+#define  MIX_OFFSET        0x40 // 64
+
+#define MITTE_TASK            0x01 // Mitte lesen
+#define KANAL_TASK            0x02 // Level und Expo lesen
+#define MIX_TASK              0x03 // Mix lesen
+
+
+
+
+
 // SPI
+
+
 
 #define SPI_BUFSIZE 8
 

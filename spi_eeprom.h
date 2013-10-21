@@ -17,6 +17,10 @@
 
 #define SPI_EE_CS_PIN                         6
 
+
+// unabh. von Prozessor
+
+
 #define EE_PAGESIZE 64
 
 #define EE_CS_HI SPI_EE_PORT |= (1<<SPI_EE_CS_PIN)
