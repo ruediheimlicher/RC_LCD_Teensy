@@ -16,6 +16,7 @@
 #include <avr/io.h>
 //#include "spi.h"
 #include "spi_ram.h"
+#include "def.h"
 
 //NOTE: the CS pin on the 23K256 must be brought low before every function
 //  call and subsequently brought high after every funcion call. I don't do
@@ -170,4 +171,5 @@ uint8_t spiram_rdbyte(uint16_t addr)
    
    return result;
 }
+
 

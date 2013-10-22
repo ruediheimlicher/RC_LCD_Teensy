@@ -39,7 +39,7 @@
 #define TASTE1             1
 
 
-// EEPROM
+// EEPROM Speicherorte
 
 #define TASK_OFFSET       0x2000 // Ort fuer Einstellungen
 
@@ -95,10 +95,10 @@
 
 // Masterstatus
 
-#define RAM_READ           0x01  //Bit 0
-#define RAM_WRITE          0x02  //Bit 1
-#define EEPROM_READ            0x04  //Bit 2
-#define EEPROM_WRITE           0x08  //Bit 3
+#define RAM_READ                 0x01  //Bit 0
+#define RAM_WRITE                0x02  //Bit 1
+#define EEPROM_READ              0x04  //Bit 2
+#define EEPROM_WRITE             0x08  //Bit 3
 
 #define  POT_READ          0x10  //Bit 4
 #define  HALT_BIT              7 //Bit 7
@@ -149,3 +149,16 @@
 #define EEPROM_AUSGABE_TASK         5
 
 #define EEPROM_WRITE_START_OK 0xB0
+
+
+// RAM-Tasks
+
+#define READ_TASKADRESSE         0x1FA     // RAM_Adresse fuer  Task-Auftrag an RC_LCD
+#define READ_TASKDATA            0x1FB  
+
+#define WRITE_TASKADRESSE        0x1F0     // RAM_Adresse fuer Task-Auftrag von RC_LCD
+#define WRITE_TASKDATA           0x1F1
+
+#define RAM_SEND_PPM_TASK         2 // PPM soll Status lesen (Auftrag AN PPM)
+#define RAM_RECV_PPM_TASK         1 // LCD soll Status lesen (Auftrag VON PPM)
+#define RAM_TASK_OK           7 // PPM hat Task gelesen

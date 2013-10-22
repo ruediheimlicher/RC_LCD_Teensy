@@ -91,7 +91,13 @@ static volatile uint8_t             pwmdivider=0;
 volatile char SPI_data='0';
 volatile char SPI_dataArray[SPI_BUFSIZE];
 volatile uint16_t Pot_Array[SPI_BUFSIZE];
-volatile uint16_t Mitte_Array[ANZ_POT];
+
+volatile uint16_t Mitte_Array[8];
+
+volatile uint8_t Level_Array[8]; // Levels fuer Kanaele, 1 byte pro kanal
+volatile uint8_t Expo_Array[8]; // Levels fuer Kanaele, 1 byte pro kanal
+
+volatile uint16_t Mix_Array[8];// Mixings, 2 8-bit-bytes pro Mixing
 
 
 volatile uint16_t RAM_Array[SPI_BUFSIZE];
@@ -121,6 +127,13 @@ volatile uint8_t anzahlpakete=0;
 volatile uint8_t eeprom_errcount = 0;
 
 volatile uint8_t  eeprom_indata=0;
+
+volatile    uint8_t task_in=0;      // Task von RC_PPM
+volatile    uint8_t task_indata=0;  // Taskdata von RC_PPM
+
+volatile    uint8_t task_out=0;     // Task an RC_PPM
+volatile    uint8_t task_outdata=0; // Taskdata an RC_PPM
+
 
 
 // MARK: Proto
@@ -574,10 +587,10 @@ uint8_t eeprombytelesen(uint16_t readadresse) // 300 us ohne lcd_anzeige
    
    spieeprom_init();
    
-   lcd_gotoxy(1,0);
-   lcd_putc('r');
-   lcd_putint12(readadresse);
-   lcd_putc('*');
+   //lcd_gotoxy(1,0);
+   //lcd_putc('r');
+   //lcd_putint12(readadresse);
+   //lcd_putc('*');
    
    
    eeprom_indata = 0xaa;
@@ -592,8 +605,8 @@ uint8_t eeprombytelesen(uint16_t readadresse) // 300 us ohne lcd_anzeige
    _delay_us(EE_READ_DELAY);
    EE_CS_HI;
    
-   lcd_puthex(readdata);
-   lcd_putc(' ');
+   //lcd_puthex(readdata);
+   //lcd_putc(' ');
 
    
    sendbuffer[0] = 0xD5;
@@ -632,9 +645,9 @@ uint8_t eeprompartlesen(uint16_t readadresse) //   us ohne lcd_anzeige
    
    spieeprom_init();
    
-   lcd_gotoxy(0,1);
-   lcd_putint12(readadresse);
-   lcd_putc('*');
+   //lcd_gotoxy(0,1);
+   //lcd_putint12(readadresse);
+   //lcd_putc('*');
    eeprom_indata = 0xaa;
    uint8_t readdata=0;
    // Byte  read 270 us
@@ -1030,42 +1043,7 @@ uint16_t eeprompartschreiben(void) // 23 ms
    kontrollbuffer[8] = 0xA1;
    kontrollbuffer[9] = 0xA2;
 
-   /*
-   sendbuffer[0] = 0xCB;
-   
-   sendbuffer[1] = abschnittstartadresse & 0xFF;
-   sendbuffer[2] = (abschnittstartadresse & 0xFF00)>>8;
-   
-   sendbuffer[3] = eeprom_errcount;
-   sendbuffer[4] = result & 0xFF;
-   sendbuffer[5] = (result & 0xFF00)>>8;
-   
-   sendbuffer[6] = 0xFF;
-   sendbuffer[7] = 0xFF;
-   
-   sendbuffer[8] = 0xA3;
-   sendbuffer[9] = 0xA4;
-   */
-   
-   /*
-    else
-    {
-    sendbuffer[0] = 0xC1;
-    sendbuffer[1] = abschnittnummer+1;
-    sendbuffer[2] = abschnittnummer+2;
-    sendbuffer[3] = abschnittnummer+3;
-    sendbuffer[4] = abschnittnummer+4;
-    sendbuffer[5] = 0xFF;
-    sendbuffer[6] = abschnittnummer;
     
-    sendbuffer[8] = abschnittstartadresse & 0xFF;
-    sendbuffer[9] = (abschnittstartadresse & 0xFF00)>>8;
-    sendbuffer[10] = 0xA3;
-    sendbuffer[11] = 0xA4;
-    
-    }
-    */
-   
    usb_rawhid_send((void*)kontrollbuffer, 50);
    
    sei();
@@ -1076,6 +1054,46 @@ uint16_t eeprompartschreiben(void) // 23 ms
    OSZI_B_HI;
    return result;
 }
+
+// MARK: readSettings
+void readSettings(void)
+{
+   RAM_CS_LO;
+   _delay_us(RAMDELAY);
+   /*
+    modelindex = buffer[3]; // welches model soll gelesen werden
+    uint8_t pos=0;
+    
+    // Level lesen
+    uint16_t readstartadresse = TASK_OFFSET  + LEVEL_OFFSET + modelindex*SETTINGBREITE;
+    // startadresse fuer Settings des models
+    for (pos=0;pos<8;pos++)
+    {
+    sendbuffer[EE_PARTBREITE + pos] = eeprombytelesen(readstartadresse+pos);
+    }
+    
+    // Expo lesen
+    readstartadresse = TASK_OFFSET  + EXPO_OFFSET + modelindex*SETTINGBREITE;
+    for (pos=0;pos<8;pos++)
+    {
+    sendbuffer[EE_PARTBREITE + 0x08 + pos] = eeprombytelesen(readstartadresse+pos);
+    }
+    
+    // Mix lesen
+    readstartadresse = TASK_OFFSET  + MIX_OFFSET + modelindex*SETTINGBREITE;
+    for (pos=0;pos<8;pos++)
+    {
+    sendbuffer[EE_PARTBREITE + 0x10 + pos] = eeprombytelesen(readstartadresse+pos);
+    
+    }
+    
+
+    */
+   _delay_us(RAMDELAY);
+   
+   RAM_CS_HI;
+}
+
 
 
 // MARK:  - main
@@ -1194,7 +1212,7 @@ int main (void)
          
           if(loopcount1%16 == 0)
          {
-            
+            anzeigecounter = 0;
             if (anzeigecounter)
             {
                if (anzeigecounter > 10)
@@ -1203,7 +1221,6 @@ int main (void)
                   ind = 32;
                }
                else
-                  
                {
                   lcd_gotoxy(0,1);
                   lcd_puthex(sendbuffer[32]);
@@ -1425,6 +1442,7 @@ int main (void)
             spiram_init();
             
             _delay_us(1);
+            /*
             // statusregister schreiben
             RAM_CS_LO;
             _delay_us(LOOPDELAY);
@@ -1454,7 +1472,15 @@ int main (void)
             RAM_CS_HI;
             
             //OSZI_A_LO ;
-            
+             
+             // Fehler zaehlen
+             if (!(testdata == ram_indata))
+             {
+             errcount++;
+             }
+             
+             
+            */
 // MARK: F0
             // Daten von Potentiometern vom RAM lesen und senden
             sendbuffer[0] = 0xF0;
@@ -1472,6 +1498,35 @@ int main (void)
                
             }
             anzeigecounter = 0;
+            
+            
+            RAM_CS_LO;
+            _delay_us(LOOPDELAY);
+            sendbuffer[24] = spiram_rdbyte(16); // LO
+            RAM_CS_HI;
+            _delay_us(LOOPDELAY);
+
+            RAM_CS_LO;
+            _delay_us(LOOPDELAY);
+            sendbuffer[25] = spiram_rdbyte(17); // LO
+            RAM_CS_HI;
+            _delay_us(LOOPDELAY);
+
+            RAM_CS_LO;
+            _delay_us(LOOPDELAY);
+            sendbuffer[26] = spiram_rdbyte(18); // LO
+            RAM_CS_HI;
+            _delay_us(LOOPDELAY);
+
+            RAM_CS_LO;
+            _delay_us(LOOPDELAY);
+            sendbuffer[27] = spiram_rdbyte(19); // LO
+            RAM_CS_HI;
+            _delay_us(LOOPDELAY);
+
+            
+            
+            /*
           //  diff, diffdata  von PPM lesen
             _delay_us(LOOPDELAY);
             RAM_CS_LO;
@@ -1483,7 +1538,8 @@ int main (void)
             _delay_us(LOOPDELAY);
             sendbuffer[0x3D] = spiram_rdbyte(0x3D); // diff HI
             RAM_CS_HI;
-           
+           */
+            /*
             _delay_us(LOOPDELAY);
             RAM_CS_LO;
             _delay_us(LOOPDELAY);
@@ -1495,16 +1551,31 @@ int main (void)
             sendbuffer[0x3F] = spiram_rdbyte(0x3F); // diff HI
             RAM_CS_HI;
              //OSZI_A_HI ;
+            */
+            
+            
+            
+            // MARK: task_in
+            // task von PPM lesen
+            _delay_us(LOOPDELAY);
+            RAM_CS_LO;
+            _delay_us(LOOPDELAY);
+            task_in = spiram_rdbyte(READ_TASKADRESSE); // Task
+            RAM_CS_HI;
+            _delay_us(LOOPDELAY);
+            RAM_CS_LO;
+            _delay_us(LOOPDELAY);
+            task_indata = spiram_rdbyte(READ_TASKDATA); // Task AData
+            RAM_CS_HI;
+            
+            
+            
+ 
             
             // Batteriespannung senden
-            sendbuffer[18] = Batteriespannung & 0x00FF; // LO
-            sendbuffer[19] = (Batteriespannung & 0xFF00) >>8; // HI
+            sendbuffer[22] = Batteriespannung & 0x00FF; // LO
+            sendbuffer[23] = (Batteriespannung & 0xFF00) >>8; // HI
             
-            // Fehler zaehlen
-            if (!(testdata == ram_indata))
-            {
-               errcount++;
-            }
             
             // statusregister schreiben
             RAM_CS_LO;
@@ -1516,7 +1587,6 @@ int main (void)
             
             // err
             RAM_CS_LO;
-            
             _delay_us(LOOPDELAY);
             //      OSZI_A_LO;
             spiram_wrbyte(0, errcount);
@@ -1524,8 +1594,36 @@ int main (void)
             RAM_CS_HI;
             
             _delay_us(1);
+
+            // MARK: task_out
             
-            // Daten aendern
+            if (task_out & (1<<RAM_SEND_PPM_TASK)) // task an PPM senden
+               {
+                   RAM_CS_LO;
+                   _delay_us(LOOPDELAY);
+                   //      OSZI_A_LO;
+                   spiram_wrbyte(WRITE_TASKADRESSE, task_out);
+                   //     OSZI_A_HI;
+                   RAM_CS_HI;
+                   RAM_CS_LO;
+                   _delay_us(LOOPDELAY);
+                   //      OSZI_A_LO;
+                   spiram_wrbyte(WRITE_TASKDATA, task_outdata);
+                   //     OSZI_A_HI;
+                   RAM_CS_HI;
+                   _delay_us(1);
+                  
+                  
+                  lcd_gotoxy(0,1);
+                  lcd_puthex(task_out);
+                  lcd_putc('*');
+                  lcd_puthex(task_outdata);
+                  lcd_putc('*');
+                  task_out &= ~(1<<RAM_SEND_PPM_TASK); // Bit reset
+                }
+
+            
+            // Fehler ausgeben
             if (outcounter%0x40 == 0)
             {
                lcd_gotoxy(0,0);
@@ -1564,6 +1662,7 @@ int main (void)
       //OSZI_D_LO;
       r = usb_rawhid_recv((void*)buffer, 0); // 2us
       //OSZI_D_HI;
+      // MARK: USB_READ
       if (r > 0)
       {
          
@@ -1605,7 +1704,7 @@ int main (void)
                   masterstatus |= (1<<SUB_TASK_BIT);
                }break;
                   
-                  
+// MARK: C4 Write EEPROM Byte
                case 0xC4: // Write EEPROM Byte  // 10 ms
                {
                   //OSZI_A_TOGG;
@@ -1621,9 +1720,6 @@ int main (void)
                   lcd_putc('W');
                   lcd_putc('1');
                   //lcd_putc('*');
-                  
-                  
-                  //
                   
                   uint16_t check = eeprombyteschreiben(0xE5,eepromstartadresse,buffer[3]); // 8 ms
                   
@@ -1691,7 +1787,7 @@ int main (void)
                
                }break;
                   
- // MARK: EEPROM Part schreiben                 
+ // MARK: CA EEPROM Part schreiben
                case 0xCA: // EEPROM Part schreiben 5 ms
                {
                  // lcd_gotoxy(18,1);
@@ -1764,7 +1860,7 @@ int main (void)
                }break;
                   
                   
- // MARK:  read 1 EEPROM Byte
+ // MARK: D4 read 1 EEPROM Byte
                case 0xD4: // read 1 EEPROM  // 9ms
                {
                   //abschnittnummer++;
@@ -1795,7 +1891,7 @@ int main (void)
                   
                }break;
                   
-// MARK: F2 Fix Settings
+// MARK: F4 Fix Settings
                case 0xF4: // Fix Settings
                {
                   /*
@@ -1829,7 +1925,7 @@ int main (void)
                   {
                      if (changecode & (1<<kanal)) // kanal ist zu aendern
                      {
-                        // Level schreiben 
+                        // Level schreiben
                         uint8_t levelwert = buffer[datastartbyte + 2*changeposition + 1]; // wert an position im buffer
                         errcount += eeprombyteschreiben(0xF5,fixstartadresse + LEVEL_OFFSET + kanal,levelwert); // adresse im EEPROM
                         sendbuffer[EE_PARTBREITE + 2*kanal+1] = levelwert;
@@ -1839,11 +1935,13 @@ int main (void)
                         uint8_t expowert = buffer[datastartbyte + 2*changeposition];
                         errcount += eeprombyteschreiben(0xF5,fixstartadresse + EXPO_OFFSET + kanal,expowert);
                         sendbuffer[EE_PARTBREITE + 2*kanal] = expowert;
-                     
+                        
                         changeposition++;
                      }
                      
-                     
+                     // RAM_SEND_PPM_STATUS schicken: Daten haben geaendert
+                     task_out |= (1<< RAM_SEND_PPM_TASK);
+                     task_outdata = modelindex;
                      
                   }// for kanal
                   sendbuffer[1] = fixstartadresse & 0x00FF;
@@ -1851,6 +1949,8 @@ int main (void)
                   sendbuffer[3] = errcount;
                   sendbuffer[4] = changecode;
                   sendbuffer[5] = modelindex;
+                  sendbuffer[6] = task_out;
+                  sendbuffer[7] = task_outdata;
 
                   sendbuffer[0] = 0xF4;
                   usb_rawhid_send((void*)sendbuffer, 50);
@@ -1858,7 +1958,7 @@ int main (void)
                   
                }break;
                   
-// MARK: F5
+// MARK: F5 read KanalSettings
                case 0xF5: // read KanalSettings
                {
                   uint8_t modelindex =0;
@@ -1921,7 +2021,7 @@ int main (void)
 
                }break;
 
-// MARK: FA
+// MARK: FA Fix Mixing
                case 0xFA: // Fix Mixing
                {
                   /*
@@ -1955,6 +2055,11 @@ int main (void)
                      }
                   }// for mixing
                   
+                  // RAM_SEND_PPM_STATUS schicken: Daten haben geaendert
+                  
+                  task_outdata |= (1<< RAM_SEND_PPM_TASK);
+                  task_outdata &= ~(1<<RAM_TASK_OK);
+                  
                   sendbuffer[1] = fixstartadresse & 0x00FF;
                   sendbuffer[2] = (fixstartadresse & 0xFF00)>>8;
                   sendbuffer[3] = errcount;
@@ -1968,11 +2073,6 @@ int main (void)
                }break;
                   
                   
-// MARK: default
-               default:
-               {
-                  
-                }break; // default
                   
             } // switch code
          }

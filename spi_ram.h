@@ -60,6 +60,6 @@ void spiram_wrseq(uint16_t startaddr, const uint8_t* data, uint16_t length);
 //  uint16_t length - the number of bytes to be read from memory
 void spiram_rdseq(uint16_t startaddr, uint8_t* data, uint16_t length);
 
-
+void readSettings(void);
 
 #endif
