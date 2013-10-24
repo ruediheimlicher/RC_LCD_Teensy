@@ -32,7 +32,7 @@
 // USB
 #define CPU_PRESCALE(n)	(CLKPR = 0x80, CLKPR = (n))
 
-#define LOOPDELAY 20
+#define LOOPDELAY 1
 
 #define SERVOMAX  4400
 #define SERVOMIN  1400
@@ -1194,6 +1194,8 @@ int main (void)
    uint8_t anzeigecounter=0;
    uint8_t ind = 32;
    
+   masterstatus |= (1<<SUB_READ_EEPROM_BIT); // sub soll EE lesen
+   
 // MARK:  while
 	while (1)
 	{
@@ -1209,6 +1211,17 @@ int main (void)
          
  			//
 			//timer0();
+         
+         if (loopcount1%8 == 0)
+         {
+            if (masterstatus & (1<<SUB_READ_EEPROM_BIT)) // beim Start ee lesen
+            {
+               masterstatus &= ~(1<<SUB_READ_EEPROM_BIT);
+               // Beim Start RAM_SEND_PPM_STATUS schicken
+               task_out |= (1<< RAM_SEND_PPM_TASK);
+               task_outdata = 0;
+            }
+         }
          
           if(loopcount1%16 == 0)
          {
@@ -1524,7 +1537,32 @@ int main (void)
             RAM_CS_HI;
             _delay_us(LOOPDELAY);
 
+            RAM_CS_LO;
+            _delay_us(LOOPDELAY);
+            sendbuffer[28] = spiram_rdbyte(20); // LO
+            RAM_CS_HI;
+            _delay_us(LOOPDELAY);
+
+            RAM_CS_LO;
+            _delay_us(LOOPDELAY);
+            sendbuffer[29] = spiram_rdbyte(21); // LO
+            RAM_CS_HI;
+            _delay_us(LOOPDELAY);
             
+            RAM_CS_LO;
+            _delay_us(LOOPDELAY);
+            sendbuffer[30] = spiram_rdbyte(22); // LO
+            RAM_CS_HI;
+            _delay_us(LOOPDELAY);
+            
+            RAM_CS_LO;
+            _delay_us(LOOPDELAY);
+            sendbuffer[31] = spiram_rdbyte(23); // LO
+            //sendbuffer[31] = 0xEF; // LO
+            RAM_CS_HI;
+            _delay_us(LOOPDELAY);
+
+
             
             /*
           //  diff, diffdata  von PPM lesen
@@ -1912,11 +1950,11 @@ int main (void)
                    */
 
                  // uint16_t fixstartadresse =  buffer[1] | (buffer[2]<<8);
-                  uint16_t fixstartadresse =  TASK_OFFSET ; // Startadresse fuer Settings
+                  
                   uint8_t changecode = buffer[3];// Bits fuer zu aendernde kanaele
                   uint8_t modelindex = buffer[4]; // Nummer des models
+                  uint16_t fixstartadresse =  TASK_OFFSET + modelindex * SETTINGBREITE; // Startadresse fuer Settings
                   
-                  fixstartadresse += modelindex * SETTINGBREITE; // Startadresse fuer model
                   uint8_t datastartbyte = 16; // Beginn  der Settings auf dem buffer
                   uint8_t errcount=0;
                   uint8_t changeposition=0; // position des bytes im sendbuffer. Nur zu aendernde bytes sind darin.
@@ -2028,37 +2066,45 @@ int main (void)
                    pro mixing:
                    mixart: typ
                    mixcanals: wer mit welchem Kanal Bits 0-2: Kanal A,  Bits 4-6: Kanal B
-                   
                    */
-                 
+                  
                   uint8_t changecode = buffer[3];// Bits fuer zu aendernde mixes
                   uint8_t modelindex = buffer[4];// model
                   uint16_t fixstartadresse =  TASK_OFFSET + modelindex * SETTINGBREITE; // Startadresse fuer Settings
                   uint8_t datastartbyte = 16; // Beginn  der Settings auf dem buffer
                   uint8_t errcount=0;
                   uint8_t changeposition=0; // position des bytes im sendbuffer. Nur zu aendernde bytes sind darin.
-                  uint8_t writeposition=0; // schreibposition im EEPROM 
-                   for (uint8_t mixing=0;mixing < 4;mixing++) //
-                   {
+                  uint8_t writeposition=0; // schreibposition im EEPROM
+                  
+                  for (uint8_t mixing=0;mixing < 4;mixing++) //
+                  {
                      if (changecode & (1<<mixing)) // mixing ist zu aendern
                      {
+                        // mixwert schreiben
+                        
                         uint8_t mixwert = buffer[datastartbyte + 2*changeposition];
-                        errcount += eeprombyteschreiben(0xFB,fixstartadresse + MIX_OFFSET + writeposition,mixwert);
+                        errcount += eeprombyteschreiben(0xFB,fixstartadresse + MIX_OFFSET + 2*mixing,mixwert);
+                        
                         sendbuffer[EE_PARTBREITE + 2*mixing] = mixwert;
+                        sendbuffer[EE_PARTBREITE + 16 + 2*mixing] = (fixstartadresse + MIX_OFFSET + writeposition)&0x00FF;
+                        sendbuffer[EE_PARTBREITE + 16 + 2*mixing+1] = ((fixstartadresse + MIX_OFFSET + writeposition)&0xFF00)>>8;
+                        
                         writeposition++;
                         
                         uint8_t canalwert = (buffer[datastartbyte + 2*changeposition+1]);
-                        errcount += eeprombyteschreiben(0xFB,fixstartadresse + MIX_OFFSET + writeposition,canalwert);
+                        errcount += eeprombyteschreiben(0xFB,fixstartadresse + MIX_OFFSET + 2*mixing+1,canalwert);                        
+                        
                         sendbuffer[EE_PARTBREITE + 2*mixing+1] = canalwert;
                         writeposition++;
                         changeposition++;
                      }
+                     
                   }// for mixing
                   
                   // RAM_SEND_PPM_STATUS schicken: Daten haben geaendert
                   
-                  task_outdata |= (1<< RAM_SEND_PPM_TASK);
-                  task_outdata &= ~(1<<RAM_TASK_OK);
+                  task_out |= (1<< RAM_SEND_PPM_TASK);
+                  task_outdata = modelindex;
                   
                   sendbuffer[1] = fixstartadresse & 0x00FF;
                   sendbuffer[2] = (fixstartadresse & 0xFF00)>>8;
@@ -2068,11 +2114,23 @@ int main (void)
                   
                   sendbuffer[0] = 0xFA;
                   usb_rawhid_send((void*)sendbuffer, 50);
-
+                  
                   
                }break;
                   
+                 case 0xFC: // Refresh
+               {
                   
+                  // RAM_SEND_PPM_STATUS schicken: Daten haben geaendert
+                  task_out |= (1<< RAM_SEND_PPM_TASK);
+                  uint8_t modelindex = buffer[4];// model
+
+                  task_outdata = modelindex;
+
+                  sendbuffer[0] = 0xFC;
+                  usb_rawhid_send((void*)sendbuffer, 50);
+
+               }break;
                   
             } // switch code
          }

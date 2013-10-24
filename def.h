@@ -134,7 +134,9 @@
 
 #define SUB_BUSY_PIN             5 // Ausgang fuer busy-Meldung des Sub an Master
 
-#define SUB_TASK_BIT             4 // Slave hat Aufgaben
+#define SUB_READ_EEPROM_BIT      5 // Sub soll EEPROM lesen
+
+#define SUB_TASK_BIT             4 // Sub hat Aufgaben
 
 #define MASTER_EN_BIT            0 // Master erlaubt SPI
 
