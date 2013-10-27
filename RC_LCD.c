@@ -582,16 +582,13 @@ uint8_t eeprombytelesen(uint16_t readadresse) // 300 us ohne lcd_anzeige
    cli();
    MEM_EN_PORT &= ~(1<<MEM_EN_PIN);
    spi_start();
-
    SPI_PORT_Init();
-   
    spieeprom_init();
    
    //lcd_gotoxy(1,0);
    //lcd_putc('r');
    //lcd_putint12(readadresse);
    //lcd_putc('*');
-   
    
    eeprom_indata = 0xaa;
    uint8_t readdata=0;
@@ -605,29 +602,18 @@ uint8_t eeprombytelesen(uint16_t readadresse) // 300 us ohne lcd_anzeige
    _delay_us(EE_READ_DELAY);
    EE_CS_HI;
    
-   //lcd_puthex(readdata);
-   //lcd_putc(' ');
-
-   
    sendbuffer[0] = 0xD5;
    
    sendbuffer[1] = readadresse & 0xFF;
    sendbuffer[2] = (readadresse & 0xFF00)>>8;
-
    sendbuffer[3] = readdata;
-   
    
    eepromstatus &= ~(1<<EE_WRITE);
    usbtask &= ~(1<<EEPROM_READ_BYTE_TASK);
    
-   
-   //           MASTER_PORT |= (1<<SUB_BUSY_PIN); // busy beenden
-   
    abschnittnummer =0;
    
-   //lcd_putc('+');
    usb_rawhid_send((void*)sendbuffer, 50);
-   //lcd_putc('+');
    
    sei();
    OSZI_B_HI;
@@ -657,15 +643,12 @@ uint8_t eeprompartlesen(uint16_t readadresse) //   us ohne lcd_anzeige
    
    uint8_t i=0;
    for (i=0;i<EE_PARTBREITE;i++)
-   {
-      
+   {      
       EE_CS_LO;
       _delay_us(LOOPDELAY);
-   
-      readdata = (uint8_t)spieeprom_rdbyte(readadresse+i); // 220 us
-      sendbuffer[EE_PARTBREITE+i] = readdata;
-   
-      _delay_us(LOOPDELAY);
+         readdata = (uint8_t)spieeprom_rdbyte(readadresse+i); // 220 us
+         sendbuffer[EE_PARTBREITE+i] = readdata;
+         _delay_us(LOOPDELAY);
       EE_CS_HI;
       
    }
@@ -674,35 +657,23 @@ uint8_t eeprompartlesen(uint16_t readadresse) //   us ohne lcd_anzeige
    //OSZI_C_HI;
    
    sendbuffer[0] = 0xDB;
-   //lcd_puthex(eeprom_indata);
-   //lcd_putc('*');
-   
+    
    sendbuffer[1] = readadresse & 0xFF;
    sendbuffer[2] = (readadresse & 0xFF00)>>8;
-   
    sendbuffer[3] = readdata;
-   
    sendbuffer[4] = 0xDB;
-   
    
    eepromstatus &= ~(1<<EE_WRITE);
    usbtask &= ~(1<<EEPROM_READ_BYTE_TASK);
    
-   
-   //           MASTER_PORT |= (1<<SUB_BUSY_PIN); // busy beenden
-   
    abschnittnummer =0;
    
-   //lcd_putc('+');
    usb_rawhid_send((void*)sendbuffer, 50);
-   //lcd_putc('+');
    
    sei();
    OSZI_B_HI;
    return readdata;
 }
-
-
 
 uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_writedatabyte) //   1 ms ohne lcd-anzeige
 {
@@ -723,50 +694,6 @@ uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_w
    
    spieeprom_init();
    
-   // statusregister schreiben
-   
- /*
-   // WREN
-  // EE_CS_LO;
-   
-         _delay_us(LOOPDELAY);
-         spieeprom_wren(); // 0x06
-         _delay_us(LOOPDELAY);
-   
- //  EE_CS_HI; // SS HI End
-   
-   _delay_us(LOOPDELAY);
-   _delay_us(50);
-  
-  
-   //Write status
- //  EE_CS_LO;
-   
-         _delay_us(LOOPDELAY);
-         spieeprom_write_status(); // 0x01, 0x00
-         _delay_us(LOOPDELAY);
-   
-//   EE_CS_HI; // SS HI End
- */  
- //  _delay_us(50);
-   
-   // Byte  write
-   
-   // WREN schicken 220 us
- //  EE_CS_LO;
-   
- //        _delay_us(LOOPDELAY);
-         spieeprom_wren(); // 0x06
- //        _delay_us(LOOPDELAY);
-   
- //  EE_CS_HI; // SS HI End
-   
- //  _delay_us(LOOPDELAY);
- //   _delay_us(50);
-    // Byte  write
- //  EE_CS_LO;
- //  _delay_us(LOOPDELAY);
-   
       spieeprom_wrbyte(writeadresse,eeprom_writedatabyte);
  //  EE_CS_HI;
    
@@ -776,17 +703,9 @@ uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_w
    {
       w++;
    };
-
- //  _delay_us(10);
-  
-  // EE_CS_HI; // SS HI End
-//      _delay_us(100);
-   
-   // Byte  read 270 us
- //  EE_CS_LO;
    
   //       _delay_us(LOOPDELAY);
-         checkbyte = (uint8_t)spieeprom_rdbyte(writeadresse);
+   checkbyte = (uint8_t)spieeprom_rdbyte(writeadresse);
   //       _delay_us(LOOPDELAY);
    
  //  EE_CS_HI;
@@ -809,7 +728,6 @@ uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_w
    lcd_puthex(checkbyte);
     */
    
-   
    sendbuffer[1] = writeadresse & 0xFF;
    sendbuffer[2] = (writeadresse & 0xFF00)>>8;
    sendbuffer[3] = byte_errcount;
@@ -819,16 +737,10 @@ uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_w
    sendbuffer[7] = 0x00;
    sendbuffer[8] = 0xF9;
    sendbuffer[9] = 0xFA;
-
    
-   //sendbuffer[12] = eeprom_testdata;
-   
-   
-   //sendbuffer[0] = 0xE5;
    sendbuffer[0] = code;
    eepromstatus &= ~(1<<EE_WRITE);
    usbtask &= ~(1<<EEPROM_WRITE_BYTE_TASK);
-//   MASTER_PORT |= (1<<SUB_BUSY_PIN); // busy beenden
    
    //lcd_putc('+');
    usb_rawhid_send((void*)sendbuffer, 50);
@@ -837,7 +749,6 @@ uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_w
    sei();
    // end Daten an EEPROM
    //OSZI_D_HI ;
-  // MEM_EN_PORT |= (1<<MEM_EN_PIN); // blockiert USB
    OSZI_B_HI;
    return byte_errcount;
 }
@@ -848,9 +759,6 @@ uint16_t eeprompartschreiben(void) // 23 ms
    spi_start();
    MEM_EN_PORT &= ~(1<<MEM_EN_PIN);
    uint16_t result = 0;
-   
-   
-
    
    eeprom_errcount=0;
    
@@ -871,11 +779,8 @@ uint16_t eeprompartschreiben(void) // 23 ms
    lcd_puthex(eeprombuffer[35]);
    */
    
-   
    spieeprom_init();
-   
    _delay_us(5);
-   
    
    // WREN schicken 220 us
    EE_CS_LO;
@@ -885,23 +790,16 @@ uint16_t eeprompartschreiben(void) // 23 ms
    EE_CS_HI; // SS HI End
    _delay_us(LOOPDELAY);
    
-   
-   
-   
    uint8_t w=0;
    uint8_t i=0;
    for (i=0;i<EE_PARTBREITE;i++)
    {
       uint16_t tempadresse = abschnittstartadresse+i;
       uint8_t databyte = eeprombuffer[EE_PARTBREITE+i]& 0xFF; // ab byte 32
-      
       {
          sendbuffer[EE_PARTBREITE+i] = databyte;
       }
-      
-      
       result += databyte;
-      
        
       _delay_us(LOOPDELAY);
 
@@ -928,7 +826,6 @@ uint16_t eeprompartschreiben(void) // 23 ms
       {
          w++;
       };
-
       
       EE_CS_HI; // SS HI End
         while (spieeprom_read_status());
@@ -945,24 +842,13 @@ uint16_t eeprompartschreiben(void) // 23 ms
       //eeprom_indata = (uint8_t)spieeprom_rdbyte(0);
       _delay_us(LOOPDELAY);
       EE_CS_HI;
-      
-       
-      //     OSZI_B_HI;
-      
-
+ 
       if ((databyte - eeprom_indata)||(eeprom_indata - databyte))
       {
          eeprom_errcount++;
       }
-   
-   
-   
    }
-   
    _delay_us(LOOPDELAY);
-   
-   
-   
    
    EE_CS_HI; // SS HI End
    
@@ -1033,16 +919,12 @@ uint16_t eeprompartschreiben(void) // 23 ms
     lcd_putc('$');
     */
    
-   
    kontrollbuffer[0] = 0xCB;
-   
    kontrollbuffer[1] = abschnittstartadresse & 0xFF;
    kontrollbuffer[2] = (abschnittstartadresse & 0xFF00)>>8;
-   
    kontrollbuffer[3] = eeprom_errcount;
    kontrollbuffer[8] = 0xA1;
    kontrollbuffer[9] = 0xA2;
-
     
    usb_rawhid_send((void*)kontrollbuffer, 50);
    
@@ -1086,8 +968,6 @@ void readSettings(void)
     sendbuffer[EE_PARTBREITE + 0x10 + pos] = eeprombytelesen(readstartadresse+pos);
     
     }
-    
-
     */
    _delay_us(RAMDELAY);
    
@@ -1117,11 +997,7 @@ int main (void)
 	_delay_ms(100);
    
 	sei();
-	
-	
 	Master_Init();
-	
-   
    
    volatile    uint8_t outcounter=0;
    volatile    uint8_t testdata =0x00;
@@ -1168,16 +1044,10 @@ int main (void)
 	
 	uint16_t loopcount0=0;
 	uint8_t loopcount1=0;
-   
-	
-	
-	
 	/*
     Bit 0: 1 wenn wdt ausgelšst wurde
-	 
     */
 	uint8_t i=0;
-   
    
    sei();
    
@@ -1207,10 +1077,6 @@ int main (void)
 			loopcount0=0;
 			loopcount1+=1;
 			LOOPLEDPORT ^=(1<<LOOPLED);
-         //PORTD ^= (1<<PORTD6);
-         
- 			//
-			//timer0();
          
          if (loopcount1%8 == 0)
          {
@@ -1308,11 +1174,6 @@ int main (void)
                //sei();
             }
          }
-         
-         
- 
-         
-         
 // MARK:  USB send
          // neue Daten abschicken
 //         if ((usbtask & (1<<EEPROM_WRITE_PAGE_TASK) )) //|| usbtask & (1<<EEPROM_WRITE_BYTE_TASK))
@@ -1331,25 +1192,14 @@ int main (void)
             //uint8_t anz = usb_rawhid_send((void*)sendbuffer, 50); // 20 us
                      //OSZI_C_HI;
          }
-         /*
-          lcd_gotoxy(0,1);
-          lcd_putint(anz);
-          lcd_putc('*');
-          lcd_putint(Pot_Array[0]);
-          lcd_putc('*');
-          lcd_putint(sendbuffer[9]);
-          lcd_putc('*');
-          */
-         
-         //
       } // if loopcount0
-      
       
       /**	ADC	***********************/
       
       if (adc_counter > 0x000F) // ADC starten
       {
          adc_counter =0;
+         
          Batteriespannung = adc_read(0);
          
          lcd_gotoxy(14,0);
@@ -1392,15 +1242,14 @@ int main (void)
          
          _delay_us(1);
          SPI_PORT_Init();
-// MARK:  EEPROM_WRITE_BYTE_TASK
-         //if (eepromstatus & (1<<EE_WRITE)) // write an eeprom
-         
-         if (usbtask & (1<<EEPROM_WRITE_BYTE_TASK))
+
+
+         if (usbtask & (1<<EEPROM_WRITE_BYTE_TASK))// MARK:  EEPROM_WRITE_BYTE_TASK
          {
          }
  
-// MARK:  EEPROM_READ_BYTE_TASK
-         else if (usbtask & (1<<EEPROM_READ_BYTE_TASK))
+
+         else if (usbtask & (1<<EEPROM_READ_BYTE_TASK))// MARK:  EEPROM_READ_BYTE_TASK
          {
             cli();
             SPI_PORT_Init();
@@ -1433,9 +1282,6 @@ int main (void)
             eepromstatus &= ~(1<<EE_WRITE);
             usbtask &= ~(1<<EEPROM_READ_BYTE_TASK);
             
-            
- //           MASTER_PORT |= (1<<SUB_BUSY_PIN); // busy beenden
-            
             abschnittnummer =0;
             
             //lcd_putc('+');
@@ -1446,10 +1292,8 @@ int main (void)
             
          }
 
- // MARK:  EEPROM_AUSGABE_TASK
- // MARK:   EEPROM_WRITE_PAGE_TASK
- // MARK:  EEPROM_READ_PAGE_TASK
-         else
+          else// MARK:  SPI_RAM
+
          {
             SPI_RAM_init();
             spiram_init();
@@ -1496,6 +1340,7 @@ int main (void)
             */
 // MARK: F0
             // Daten von Potentiometern vom RAM lesen und senden
+            
             sendbuffer[0] = 0xF0;
             for (i=0;i< 8;i++)
             {
@@ -1512,7 +1357,7 @@ int main (void)
             }
             anzeigecounter = 0;
             
-            
+            /*
             RAM_CS_LO;
             _delay_us(LOOPDELAY);
             sendbuffer[24] = spiram_rdbyte(16); // LO
@@ -1561,7 +1406,7 @@ int main (void)
             //sendbuffer[31] = 0xEF; // LO
             RAM_CS_HI;
             _delay_us(LOOPDELAY);
-
+             */
 
             
             /*
@@ -1611,8 +1456,8 @@ int main (void)
  
             
             // Batteriespannung senden
-            sendbuffer[22] = Batteriespannung & 0x00FF; // LO
-            sendbuffer[23] = (Batteriespannung & 0xFF00) >>8; // HI
+            sendbuffer[0x3E] = Batteriespannung & 0x00FF; // LO
+            sendbuffer[0x3F] = (Batteriespannung & 0xFF00) >>8; // HI
             
             
             // statusregister schreiben
