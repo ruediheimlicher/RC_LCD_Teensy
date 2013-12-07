@@ -144,6 +144,13 @@
 #define MEM_EN_DDR               DDRE
 #define MEM_EN_PIN               0
 
+
+#define TOUCH_AB_PORT            PORTB
+#define TOUCH_AB_DDR             DDRB
+#define TOUCH_XY_PORT            PORTF
+#define TOUCH_XY_DDR             DDRF
+
+
 #define EEPROM_WRITE_BYTE_TASK     1
 #define EEPROM_WRITE_PAGE_TASK     2
 #define EEPROM_READ_BYTE_TASK       3
