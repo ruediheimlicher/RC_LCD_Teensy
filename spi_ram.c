@@ -49,7 +49,11 @@ uint8_t spi_send(uint8_t value)
    //shift the first byte of the value
    SPDR = value;
    //wait for the SPI bus to finish
-   while(!(SPSR & (1<<SPIF)));
+   while(!(SPSR & (1<<SPIF)))
+   {
+      OSZI_A_TOGG;
+     ;
+   }
    //get the received data
    //result = SPDR;
    

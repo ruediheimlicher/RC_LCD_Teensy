@@ -123,17 +123,18 @@ void spieeprom_wrbyte(uint16_t addr, uint8_t data)
 {
     EE_CS_LO;
    _delay_us(EEDELAY);
-   //send write instruction
+   
+//send write instruction
    spi_send(0x02);
    _delay_us(EEDELAY);
-   //send address
-
+   
+//send address
    spi_send((addr>>8)); //most significant byte
    _delay_us(EEDELAY);
    spi_send(addr); //least significant byte
    _delay_us(EEDELAY);
    
-   //send data
+//send data
    spi_send(data);
    _delay_us(EEDELAY);
     EE_CS_HI;
@@ -150,20 +151,16 @@ void spieeprom_wrpage_start(uint16_t addr)
    spi_send(0x02);
    _delay_us(EEDELAY);
    //send address
-   
    spi_send((addr>>8)); //most significant byte
    _delay_us(EEDELAY);
    spi_send(addr); //least significant byte
    _delay_us(EEDELAY);
-   
    //send data after
-   
 }
 
 //Weitere Daten schicken
 void spieeprom_wrpage_data(uint8_t data)
 {
-   
    //send data
    spi_send(data);
    _delay_us(EEDELAY);
@@ -182,8 +179,11 @@ uint8_t spieeprom_rdbyte(uint16_t addr)
    uint8_t result = 0x00;
  //  _delay_us(EEDELAY);
    //send read instruction
+   
    spi_send(0x03);
+   
    _delay_us(EE_READ_DELAY);
+   
    //send address
   
    spi_send(addr>>8); //most significant byte

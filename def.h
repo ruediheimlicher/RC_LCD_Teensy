@@ -157,7 +157,7 @@
 #define EEPROM_READ_PAGE_TASK       4
 #define EEPROM_AUSGABE_TASK         5
 
-#define EEPROM_WRITE_START_OK 0xB0
+#define EEPROM_WRITE_START_OK    0xB0
 
 
 // RAM-Tasks
