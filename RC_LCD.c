@@ -621,24 +621,24 @@ uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_w
    MEM_EN_PORT &= ~(1<<MEM_EN_PIN);
    spi_start();
    SPI_PORT_Init();
-   
-   
-   lcd_gotoxy(3,0);
-   lcd_putc('w');
-   lcd_putint12(writeadresse);
-   lcd_putc('*');
+
+   //   lcd_gotoxy(3,0);
+//   lcd_putc('w');
+//   lcd_putint12(writeadresse);
+//   lcd_putc('*');
    
    spieeprom_init();
    
    // Test 131210
+  
    _delay_us(LOOPDELAY);
    EE_CS_LO;
    _delay_us(LOOPDELAY);
    spieeprom_wren();
    _delay_us(LOOPDELAY);
    EE_CS_HI; // SS HI End
-   
-   lcd_putc('a');
+ 
+//   lcd_putc('a');
    
    // End Test
    
@@ -648,7 +648,7 @@ uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_w
    
     EE_CS_HI;
    
-   lcd_putc('b');
+//   lcd_putc('b');
    uint8_t w=0;
    
  //  while (spieeprom_read_status())
@@ -656,25 +656,26 @@ uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_w
  //     w++;
    }
    
-   lcd_putc('c');
+//   lcd_putc('c');
    
    
   //       _delay_us(LOOPDELAY);
    checkbyte = (uint8_t)spieeprom_rdbyte(writeadresse);
-   lcd_putc('d');
+//   lcd_putc('d');
   //       _delay_us(LOOPDELAY);
    lcd_puthex(checkbyte);
  //  EE_CS_HI;
    //lcd_putc('*');
+   
    if ((eeprom_writedatabyte - checkbyte)||(checkbyte - eeprom_writedatabyte))
    {
       byte_errcount++;
       eeprom_errcount ++;
    }
-   lcd_putc('e');
+//   lcd_putc('e');
 
-  // lcd_gotoxy(0,0);
-   /*
+  lcd_gotoxy(0,0);
+   
    lcd_putc('e');
    
    lcd_puthex(byte_errcount);
@@ -683,7 +684,7 @@ uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_w
    lcd_puthex(eeprom_writedatabyte);
    lcd_putc(' ');
    lcd_puthex(checkbyte);
-    */
+   
    
    sendbuffer[1] = writeadresse & 0xFF;
    sendbuffer[2] = (writeadresse & 0xFF00)>>8;
@@ -1159,9 +1160,9 @@ int main (void)
          
          Batteriespannung = adc_read(0);
          
-         lcd_gotoxy(14,0);
+         //lcd_gotoxy(14,0);
          
-         lcd_putint12(Batteriespannung);
+         //lcd_putint12(Batteriespannung);
          /*
           lcd_putc('*');
           uint8_t high = (Batteriespannung & 0xFF00)>>8; // *0xFF rechnen und zu low dazuzaehlen
@@ -1752,7 +1753,7 @@ int main (void)
                    */
 
                  // uint16_t fixstartadresse =  buffer[1] | (buffer[2]<<8);
-                  lcd_gotoxy(7,1);
+                  lcd_gotoxy(0,1);
                   //lcd_putc('A');
                   uint8_t changecode = buffer[3];// Bits fuer zu aendernde kanaele
                   uint8_t modelindex = buffer[4]; // Nummer des models
@@ -1761,21 +1762,20 @@ int main (void)
                   uint8_t datastartbyte = 16; // Beginn  der Settings auf dem buffer
                   uint8_t errcount=0;
                   uint8_t changeposition=0; // position des bytes im sendbuffer. Nur zu aendernde bytes sind darin.
-                  lcd_putc('X');
+                  //lcd_putc('X');
                   //changecode |= (1<<1);
                   for (uint8_t kanal=0;kanal < 8;kanal++)
                   {
                      //lcd_putc('A'+kanal);
                      if (changecode & (1<<kanal)) // kanal ist zu aendern
                      {
-                        lcd_putc('A'+kanal);
+                        //lcd_putc('A'+kanal);
                         
                         // Level schreiben
                         uint8_t levelwert = buffer[datastartbyte + 2*changeposition + 1]; // wert an position im buffer
-                         lcd_putint(levelwert);
+                         //lcd_putint(levelwert);
                         //levelwert = 1;
-                        // uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_writedatabyte);
-
+ 
       
                       errcount += eeprombyteschreiben(0xF5,fixstartadresse + LEVEL_OFFSET + kanal,levelwert); // adresse im EEPROM
                //       lcd_putint(errcount);
@@ -1784,22 +1784,35 @@ int main (void)
                         */
                         //lcd_putc('A'+kanal);
                         // Expo schreiben
-                        /*
+                        
                         uint8_t expowert = buffer[datastartbyte + 2*changeposition];
+                        
                         errcount += eeprombyteschreiben(0xF5,fixstartadresse + EXPO_OFFSET + kanal,expowert);
+                        
                         sendbuffer[EE_PARTBREITE + 2*kanal] = expowert;
-                         */
+                        
                         //lcd_putc('A'+kanal);
+                        //lcd_putc('*');
+                        lcd_gotoxy(0,1);
+                        lcd_putc('k');
+                        lcd_putint2(kanal);
+                        lcd_putc('w');
+                        lcd_puthex(levelwert);
+                        lcd_putc('e');
+                        lcd_puthex(expowert);
                         lcd_putc('*');
+                        sendbuffer[0x0F+2*kanal] = levelwert;
+                        sendbuffer[0x0F+2*kanal+1] = expowert;
+
                         changeposition++;
                      }
-                     lcd_putc('M'+kanal);
+                     //lcd_putc('M'+kanal);
                      // RAM_SEND_PPM_STATUS schicken: Daten haben geaendert
                      task_out |= (1<< RAM_SEND_PPM_TASK);
                      task_outdata = modelindex;
                      
                   }// for kanal
-                  lcd_putc('C');
+                  //lcd_putc('C');
                   sendbuffer[1] = fixstartadresse & 0x00FF;
                   sendbuffer[2] = (fixstartadresse & 0xFF00)>>8;
                   sendbuffer[3] = errcount;
@@ -1807,10 +1820,12 @@ int main (void)
                   sendbuffer[5] = modelindex;
                   sendbuffer[6] = task_out;
                   sendbuffer[7] = task_outdata;
+                  
 
                   sendbuffer[0] = 0xF4;
                   usb_rawhid_send((void*)sendbuffer, 50);
-
+                  
+                  //lcd_putc('D');
                   
                }break;
                   
@@ -1893,7 +1908,7 @@ int main (void)
                   uint8_t errcount=0;
                   uint8_t changeposition=0; // position des bytes im sendbuffer. Nur zu aendernde bytes sind darin.
                   uint8_t writeposition=0; // schreibposition im EEPROM
-                  
+                  uint8_t schleifencounter=0;
                   for (uint8_t mixing=0;mixing < 4;mixing++) //
                   {
                      if (changecode & (1<<mixing)) // mixing ist zu aendern
