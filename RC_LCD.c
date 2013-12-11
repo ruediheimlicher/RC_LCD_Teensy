@@ -32,7 +32,7 @@
 // USB
 #define CPU_PRESCALE(n)	(CLKPR = 0x80, CLKPR = (n))
 
-#define LOOPDELAY 1
+#define LOOPDELAY 5
 
 #define SERVOMAX  4400
 #define SERVOMIN  1400
@@ -621,50 +621,54 @@ uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_w
    MEM_EN_PORT &= ~(1<<MEM_EN_PIN);
    spi_start();
    SPI_PORT_Init();
-
+   
    //   lcd_gotoxy(3,0);
-//   lcd_putc('w');
-//   lcd_putint12(writeadresse);
-//   lcd_putc('*');
+   //   lcd_putc('w');
+   //   lcd_putint12(writeadresse);
+   //   lcd_putc('*');
    
    spieeprom_init();
    
    // Test 131210
-  
+   
+   // WREN schicken: Write ermoeglichen
+   
    _delay_us(LOOPDELAY);
    EE_CS_LO;
    _delay_us(LOOPDELAY);
    spieeprom_wren();
    _delay_us(LOOPDELAY);
    EE_CS_HI; // SS HI End
- 
-//   lcd_putc('a');
    
+   //  lcd_putc('a');
    // End Test
    
+   
+   // Data schicken
    EE_CS_LO;
-   
    spieeprom_wrbyte(writeadresse,eeprom_writedatabyte);
-   
-    EE_CS_HI;
-   
-//   lcd_putc('b');
+   EE_CS_HI;
    uint8_t w=0;
    
- //  while (spieeprom_read_status())
+   //  while (spieeprom_read_status()) // Blockierte SPI > entfernt 131209
    {
- //     w++;
+      //     w++;
    }
    
-//   lcd_putc('c');
+   //   lcd_putc('c');
    
+   // Kontrolle
+   _delay_us(LOOPDELAY);
+   EE_CS_LO;
+   _delay_us(LOOPDELAY);
    
-  //       _delay_us(LOOPDELAY);
-   checkbyte = (uint8_t)spieeprom_rdbyte(writeadresse);
-//   lcd_putc('d');
-  //       _delay_us(LOOPDELAY);
-   lcd_puthex(checkbyte);
- //  EE_CS_HI;
+   //checkbyte = spieeprom_rdbyte(writeadresse);
+   checkbyte = eeprombytelesen(writeadresse);
+   
+   //   lcd_putc('d');
+   _delay_us(LOOPDELAY);
+   EE_CS_HI;
+ 
    //lcd_putc('*');
    
    if ((eeprom_writedatabyte - checkbyte)||(checkbyte - eeprom_writedatabyte))
@@ -672,15 +676,13 @@ uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_w
       byte_errcount++;
       eeprom_errcount ++;
    }
-//   lcd_putc('e');
-
-  lcd_gotoxy(0,0);
+   //   lcd_putc('e');
    
+   lcd_gotoxy(0,1);
    lcd_putc('e');
    
    lcd_puthex(byte_errcount);
    lcd_putc(' ');
-   
    lcd_puthex(eeprom_writedatabyte);
    lcd_putc(' ');
    lcd_puthex(checkbyte);
@@ -1159,7 +1161,7 @@ int main (void)
          adc_counter =0;
          
          Batteriespannung = adc_read(0);
-          
+         
       }
       
       if ((masterstatus & (1<<SUB_TASK_BIT) ) )//|| (masterstatus & (1<< HALT_BIT)))// SPI starten, in PCINT0 gesetzt
@@ -1558,9 +1560,7 @@ int main (void)
 // MARK: F4 Fix Settings
                case 0xF4: // Fix Settings
                {
-                  
                   /*
-                   
                    pro Kanal:
                    art = 0;      Offset: 2   EXPO_OFFSET
                    expoa = 0;    Offset: 0
@@ -1573,9 +1573,7 @@ int main (void)
                    nummer = 0;
                    richtung = 0; Offset: 7  
                    state = 1;
-                   
                    */
-
                  // uint16_t fixstartadresse =  buffer[1] | (buffer[2]<<8);
                   lcd_gotoxy(0,1);
                   //lcd_putc('A');
@@ -1584,7 +1582,8 @@ int main (void)
                   uint16_t fixstartadresse =  TASK_OFFSET + modelindex * SETTINGBREITE; // Startadresse fuer Settings
                   
                   uint8_t datastartbyte = 16; // Beginn  der Settings auf dem buffer
-                  uint8_t errcount=0;
+                  uint8_t errcount0=0;
+                  uint8_t errcount1=0;
                   uint8_t changeposition=0; // position des bytes im sendbuffer. Nur zu aendernde bytes sind darin.
                   //lcd_putc('X');
                   //changecode |= (1<<1);
@@ -1596,13 +1595,14 @@ int main (void)
                         //lcd_putc('A'+kanal);
                         
                         // Level schreiben
-                        uint8_t levelwert = buffer[datastartbyte + 2*changeposition + 1]; // wert an position im buffer
+                        uint8_t levelwert = buffer[datastartbyte + 2*changeposition + 1]; // wert an position im buffer // 0x20
                          //lcd_putint(levelwert);
                         //levelwert = 1;
  
       
-                      errcount += eeprombyteschreiben(0xF5,fixstartadresse + LEVEL_OFFSET + kanal,levelwert); // adresse im EEPROM
-               //       lcd_putint(errcount);
+                      errcount0 += eeprombyteschreiben(0xF5,fixstartadresse + LEVEL_OFFSET + kanal,levelwert); // adresse im EEPROM
+               
+                        //       lcd_putint(errcount);
                   /*
                          sendbuffer[EE_PARTBREITE + 2*kanal+1] = levelwert;
                         */
@@ -1611,12 +1611,17 @@ int main (void)
                         
                         uint8_t expowert = buffer[datastartbyte + 2*changeposition];
                         
-                        errcount += eeprombyteschreiben(0xF5,fixstartadresse + EXPO_OFFSET + kanal,expowert);
+                        //Test
+                       // expowert= 0;
+                        //
+                        
+                        errcount1 += eeprombyteschreiben(0xF5,fixstartadresse + EXPO_OFFSET + kanal,expowert); // 0x30
                         
                         sendbuffer[EE_PARTBREITE + 2*kanal] = expowert;
                         
                         //lcd_putc('A'+kanal);
                         //lcd_putc('*');
+                        /*
                         lcd_gotoxy(0,1);
                         lcd_putc('k');
                         lcd_putint2(kanal);
@@ -1625,6 +1630,7 @@ int main (void)
                         lcd_putc('e');
                         lcd_puthex(expowert);
                         lcd_putc('*');
+                         */
                         sendbuffer[0x0F+2*kanal] = levelwert;
                         sendbuffer[0x0F+2*kanal+1] = expowert;
 
@@ -1639,11 +1645,12 @@ int main (void)
                   //lcd_putc('C');
                   sendbuffer[1] = fixstartadresse & 0x00FF;
                   sendbuffer[2] = (fixstartadresse & 0xFF00)>>8;
-                  sendbuffer[3] = errcount;
+                  sendbuffer[3] = errcount0;
                   sendbuffer[4] = changecode;
                   sendbuffer[5] = modelindex;
                   sendbuffer[6] = task_out;
                   sendbuffer[7] = task_outdata;
+                  sendbuffer[8] = errcount1;
                   
 
                   sendbuffer[0] = 0xF4;
@@ -1665,21 +1672,21 @@ int main (void)
                   // startadresse fuer Settings des models
                   for (pos=0;pos<8;pos++)
                   {
-                     sendbuffer[EE_PARTBREITE + pos] = eeprombytelesen(readstartadresse+pos);
+                     sendbuffer[EE_PARTBREITE + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x20 32
                   }
                   
                   // Expo lesen
                   readstartadresse = TASK_OFFSET  + EXPO_OFFSET + modelindex*SETTINGBREITE;
                   for (pos=0;pos<8;pos++)
                   {
-                     sendbuffer[EE_PARTBREITE + 0x08 + pos] = eeprombytelesen(readstartadresse+pos);
+                     sendbuffer[EE_PARTBREITE + 0x08 + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x28 40
                   }
                  
                   // Mix lesen
                   readstartadresse = TASK_OFFSET  + MIX_OFFSET + modelindex*SETTINGBREITE;
                   for (pos=0;pos<8;pos++)
                   {
-                     sendbuffer[EE_PARTBREITE + 0x10 + pos] = eeprombytelesen(readstartadresse+pos);
+                     sendbuffer[EE_PARTBREITE + 0x10 + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x30 48
                   
                   }
                   
@@ -1749,7 +1756,8 @@ int main (void)
                         writeposition++;
                         
                         uint8_t canalwert = (buffer[datastartbyte + 2*changeposition+1]);
-                        errcount += eeprombyteschreiben(0xFB,fixstartadresse + MIX_OFFSET + 2*mixing+1,canalwert);                        
+                        
+                        errcount += eeprombyteschreiben(0xFB,fixstartadresse + MIX_OFFSET + 2*mixing+1,canalwert);  // 0x40
                         
                         sendbuffer[EE_PARTBREITE + 2*mixing+1] = canalwert;
                         writeposition++;
