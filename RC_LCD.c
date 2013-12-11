@@ -1159,21 +1159,7 @@ int main (void)
          adc_counter =0;
          
          Batteriespannung = adc_read(0);
-         
-         //lcd_gotoxy(14,0);
-         
-         //lcd_putint12(Batteriespannung);
-         /*
-          lcd_putc('*');
-          uint8_t high = (Batteriespannung & 0xFF00)>>8; // *0xFF rechnen und zu low dazuzaehlen
-          lcd_putint(high);
-          uint8_t low = (Batteriespannung & 0xFF);
-          lcd_putc('*');
-          lcd_putint(low);
-          //lcd_puthex(loopcount1);
-          */
-         ;
-         
+          
       }
       
       if ((masterstatus & (1<<SUB_TASK_BIT) ) )//|| (masterstatus & (1<< HALT_BIT)))// SPI starten, in PCINT0 gesetzt
@@ -1208,45 +1194,6 @@ int main (void)
          }
          else if (usbtask & (1<<EEPROM_READ_BYTE_TASK))// MARK:  EEPROM_READ_BYTE_TASK
          {
-            cli();
-            SPI_PORT_Init();
-            
-            spieeprom_init();
-            
-            lcd_gotoxy(0,1);
-            lcd_putint12(eepromstartadresse);
-            lcd_putc('e');
-            eeprom_indata = 0xaa;
-            // Byte  read 270 us
-            EE_CS_LO;
-            _delay_us(LOOPDELAY);
-            //     OSZI_B_LO;
-            _delay_us(LOOPDELAY);
-            
-            eeprom_indata = (uint8_t)spieeprom_rdbyte(eepromstartadresse);
-            
-            _delay_us(LOOPDELAY);
-            //     OSZI_B_HI;
-            EE_CS_HI;
-            //OSZI_C_HI;
-            
-            lcd_puthex(eeprom_indata);
-            lcd_putc('e');
-            
-            sendbuffer[1] = eeprom_indata;
-            
-            sendbuffer[0] = 0xD5;
-            eepromstatus &= ~(1<<EE_WRITE);
-            usbtask &= ~(1<<EEPROM_READ_BYTE_TASK);
-            
-            abschnittnummer =0;
-            
-            //lcd_putc('+');
-            usb_rawhid_send((void*)sendbuffer, 50);
-            lcd_putc('+');
-            
-            sei();
-            
          }
 
           else// MARK:  SPI_RAM
@@ -1256,45 +1203,6 @@ int main (void)
             spiram_init();
             
             _delay_us(1);
-            /*
-            // statusregister schreiben
-            RAM_CS_LO;
-            _delay_us(LOOPDELAY);
-            spiram_write_status(0x00);
-            _delay_us(LOOPDELAY);
-            RAM_CS_HI; // SS HI End
-            _delay_us(1);
-            
-            // testdata in-out
-            RAM_CS_LO;
-            
-            _delay_us(LOOPDELAY);
-            //      OSZI_A_LO;
-            spiram_wrbyte(testaddress, testdata);
-            //     OSZI_A_HI;
-            RAM_CS_HI;
-            
-            // Kontrolle
-            _delay_us(2);
-            RAM_CS_LO;
-            _delay_us(LOOPDELAY);
-            //     OSZI_B_LO;
-            _delay_us(LOOPDELAY);
-            ram_indata = spiram_rdbyte(testaddress);
-            _delay_us(LOOPDELAY);
-            //     OSZI_B_HI;
-            RAM_CS_HI;
-            
-            //OSZI_A_LO ;
-             
-             // Fehler zaehlen
-             if (!(testdata == ram_indata))
-             {
-             errcount++;
-             }
-             
-             
-            */
 // MARK: F0
             // Daten von Potentiometern vom RAM lesen und senden
             
@@ -1314,87 +1222,6 @@ int main (void)
             }
             anzeigecounter = 0;
             
-            /*
-            RAM_CS_LO;
-            _delay_us(LOOPDELAY);
-            sendbuffer[24] = spiram_rdbyte(16); // LO
-            RAM_CS_HI;
-            _delay_us(LOOPDELAY);
-
-            RAM_CS_LO;
-            _delay_us(LOOPDELAY);
-            sendbuffer[25] = spiram_rdbyte(17); // LO
-            RAM_CS_HI;
-            _delay_us(LOOPDELAY);
-
-            RAM_CS_LO;
-            _delay_us(LOOPDELAY);
-            sendbuffer[26] = spiram_rdbyte(18); // LO
-            RAM_CS_HI;
-            _delay_us(LOOPDELAY);
-
-            RAM_CS_LO;
-            _delay_us(LOOPDELAY);
-            sendbuffer[27] = spiram_rdbyte(19); // LO
-            RAM_CS_HI;
-            _delay_us(LOOPDELAY);
-
-            RAM_CS_LO;
-            _delay_us(LOOPDELAY);
-            sendbuffer[28] = spiram_rdbyte(20); // LO
-            RAM_CS_HI;
-            _delay_us(LOOPDELAY);
-
-            RAM_CS_LO;
-            _delay_us(LOOPDELAY);
-            sendbuffer[29] = spiram_rdbyte(21); // LO
-            RAM_CS_HI;
-            _delay_us(LOOPDELAY);
-            
-            RAM_CS_LO;
-            _delay_us(LOOPDELAY);
-            sendbuffer[30] = spiram_rdbyte(22); // LO
-            RAM_CS_HI;
-            _delay_us(LOOPDELAY);
-            
-            RAM_CS_LO;
-            _delay_us(LOOPDELAY);
-            sendbuffer[31] = spiram_rdbyte(23); // LO
-            //sendbuffer[31] = 0xEF; // LO
-            RAM_CS_HI;
-            _delay_us(LOOPDELAY);
-             */
-
-            
-            /*
-          //  diff, diffdata  von PPM lesen
-            _delay_us(LOOPDELAY);
-            RAM_CS_LO;
-            _delay_us(LOOPDELAY);
-            sendbuffer[0x3C] = spiram_rdbyte(0x3C); // diff lo
-            RAM_CS_HI;
-            _delay_us(LOOPDELAY);
-            RAM_CS_LO;
-            _delay_us(LOOPDELAY);
-            sendbuffer[0x3D] = spiram_rdbyte(0x3D); // diff HI
-            RAM_CS_HI;
-           */
-            /*
-            _delay_us(LOOPDELAY);
-            RAM_CS_LO;
-            _delay_us(LOOPDELAY);
-            sendbuffer[0x3E] = spiram_rdbyte(0x3E); // diff lo
-            RAM_CS_HI;
-            _delay_us(LOOPDELAY);
-            RAM_CS_LO;
-            _delay_us(LOOPDELAY);
-            sendbuffer[0x3F] = spiram_rdbyte(0x3F); // diff HI
-            RAM_CS_HI;
-             //OSZI_A_HI ;
-            */
-            
-            
-            
             // MARK: task_in
             // task von PPM lesen
             _delay_us(LOOPDELAY);
@@ -1408,9 +1235,6 @@ int main (void)
             task_indata = spiram_rdbyte(READ_TASKDATA); // Task AData
             RAM_CS_HI;
             
-            
-            
- 
             
             // Batteriespannung senden
             sendbuffer[0x3E] = Batteriespannung & 0x00FF; // LO
