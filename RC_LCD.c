@@ -1215,13 +1215,17 @@ int main (void)
                _delay_us(LOOPDELAY);
                sendbuffer[1+2*i] = spiram_rdbyte(2*i); // LO
                RAM_CS_HI;
+
+               
+               
+               
                _delay_us(LOOPDELAY);
                RAM_CS_LO;
                _delay_us(LOOPDELAY);
                sendbuffer[1+2*i+1] = spiram_rdbyte(2*i+1); // HI
                RAM_CS_HI;
                
-            }
+              }
             anzeigecounter = 0;
             
             // MARK: task_in
@@ -1595,11 +1599,12 @@ int main (void)
                         //lcd_putc('A'+kanal);
                         
                         // Level schreiben
+                        // Der Wert ist auf (16 + 2* changeposition) an der ungeraden Stelle
                         uint8_t levelwert = buffer[datastartbyte + 2*changeposition + 1]; // wert an position im buffer // 0x20
                          //lcd_putint(levelwert);
                         //levelwert = 1;
  
-      
+                     //
                       errcount0 += eeprombyteschreiben(0xF5,fixstartadresse + LEVEL_OFFSET + kanal,levelwert); // adresse im EEPROM
                
                         //       lcd_putint(errcount);
@@ -1607,8 +1612,9 @@ int main (void)
                          sendbuffer[EE_PARTBREITE + 2*kanal+1] = levelwert;
                         */
                         //lcd_putc('A'+kanal);
-                        // Expo schreiben
                         
+                        // Expo schreiben
+                        // Der Wert ist auf (16 + 2* changeposition) an der geraden Stelle
                         uint8_t expowert = buffer[datastartbyte + 2*changeposition];
                         
                         //Test
@@ -1617,7 +1623,7 @@ int main (void)
                         
                         errcount1 += eeprombyteschreiben(0xF5,fixstartadresse + EXPO_OFFSET + kanal,expowert); // 0x30
                         
-                        sendbuffer[EE_PARTBREITE + 2*kanal] = expowert;
+                        //sendbuffer[EE_PARTBREITE + 2*kanal] = expowert;
                         
                         //lcd_putc('A'+kanal);
                         //lcd_putc('*');
@@ -1631,8 +1637,12 @@ int main (void)
                         lcd_puthex(expowert);
                         lcd_putc('*');
                          */
-                        sendbuffer[0x0F+2*kanal] = levelwert;
-                        sendbuffer[0x0F+2*kanal+1] = expowert;
+                        //sendbuffer[0x10+2*kanal] = levelwert;
+                        //sendbuffer[0x10+2*kanal+1] = expowert;
+                        
+                        sendbuffer[EE_PARTBREITE+kanal] = levelwert;
+                        sendbuffer[EE_PARTBREITE+0x08+kanal] = expowert;
+                        
 
                         changeposition++;
                      }
@@ -1677,20 +1687,20 @@ int main (void)
                   
                   // Expo lesen
                   readstartadresse = TASK_OFFSET  + EXPO_OFFSET + modelindex*SETTINGBREITE;
+                  //Im Sendbuffer ab pos 0x08 (8)
                   for (pos=0;pos<8;pos++)
                   {
                      sendbuffer[EE_PARTBREITE + 0x08 + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x28 40
                   }
-                 
                   // Mix lesen
                   readstartadresse = TASK_OFFSET  + MIX_OFFSET + modelindex*SETTINGBREITE;
+                  
+                  //Im Sendbuffer ab pos 0x10 (16)
                   for (pos=0;pos<8;pos++)
                   {
                      sendbuffer[EE_PARTBREITE + 0x10 + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x30 48
                   
                   }
-                  
-                  
                   
                   sendbuffer[1] = readstartadresse & 0x00FF;
                   sendbuffer[2] = (readstartadresse & 0xFF00)>>8;
