@@ -102,6 +102,10 @@ volatile uint16_t Mix_Array[8];// Mixings, 2 8-bit-bytes pro Mixing
 
 volatile uint16_t RAM_Array[SPI_BUFSIZE];
 
+volatile uint8_t testdataarray[8]={};
+volatile uint16_t teststartadresse=0xA0;
+
+
 volatile uint16_t Batteriespannung =0;
 
 volatile uint16_t adc_counter =0; // zaehlt Impulspakete bis wieder die Batteriespannung gelesen werden soll
@@ -897,6 +901,30 @@ uint16_t eeprompartschreiben(void) // 23 ms
    return result;
 }
 
+void writeRamByte(uint16_t adresse , uint8_t data)
+{
+   RAM_CS_LO;
+   _delay_us(LOOPDELAY);
+   spiram_wrbyte(adresse, data);
+   RAM_CS_HI;
+   _delay_us(LOOPDELAY);
+}
+
+
+uint8_t readRAMbyteAnAdresse(uint16_t adresse)
+{
+   RAM_CS_LO;
+   _delay_us(LOOPDELAY);
+   //     OSZI_B_LO;
+   uint8_t ramtestdata = spiram_rdbyte(adresse);
+   _delay_us(LOOPDELAY);
+   //     OSZI_B_HI;
+   RAM_CS_HI;
+   _delay_us(LOOPDELAY);
+   return ramtestdata;
+}
+
+
 // MARK: readSettings
 void readSettings(void)
 {
@@ -1225,7 +1253,18 @@ int main (void)
                sendbuffer[1+2*i+1] = spiram_rdbyte(2*i+1); // HI
                RAM_CS_HI;
                
+ 
               }
+            
+            // Testdaten lesen
+            
+            for (i=0;i<8;i++)
+            {
+               sendbuffer[EE_PARTBREITE+i] = readRAMbyteAnAdresse(teststartadresse+i);
+            
+            }
+            
+
             anzeigecounter = 0;
             
             // MARK: task_in
