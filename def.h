@@ -50,6 +50,10 @@
 #define  EXPO_OFFSET       0x30 // 48
 #define  MIX_OFFSET        0x40 // 64
 
+#define FUNKTION_OFFSET    0x60 // 96
+#define DEVICE_OFFSET      0x70 // 122
+#define AUSGANG_OFFSET     0x80 // 128
+
 #define MITTE_TASK            0x01 // Mitte lesen
 #define KANAL_TASK            0x02 // Level und Expo lesen
 #define MIX_TASK              0x03 // Mix lesen

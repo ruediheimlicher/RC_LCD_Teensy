@@ -544,7 +544,7 @@ uint8_t eeprombytelesen(uint16_t readadresse) // 300 us ohne lcd_anzeige
    
    sendbuffer[0] = 0xD5;
    
-   sendbuffer[1] = readadresse & 0xFF;
+   sendbuffer[1] = readadresse & 0x00FF;
    sendbuffer[2] = (readadresse & 0xFF00)>>8;
    sendbuffer[3] = readdata;
    
@@ -599,7 +599,7 @@ uint8_t eeprompartlesen(uint16_t readadresse) //   us ohne lcd_anzeige
    
    sendbuffer[0] = 0xDB;
     
-   sendbuffer[1] = readadresse & 0xFF;
+   sendbuffer[1] = readadresse & 0x00FF;
    sendbuffer[2] = (readadresse & 0xFF00)>>8;
    sendbuffer[3] = readdata;
    sendbuffer[4] = 0xDB;
@@ -692,7 +692,7 @@ uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_w
    lcd_puthex(checkbyte);
    
    
-   sendbuffer[1] = writeadresse & 0xFF;
+   sendbuffer[1] = writeadresse & 0x00FF;
    sendbuffer[2] = (writeadresse & 0xFF00)>>8;
    sendbuffer[3] = byte_errcount;
    sendbuffer[4] = eeprom_writedatabyte;
@@ -1243,17 +1243,12 @@ int main (void)
                _delay_us(LOOPDELAY);
                sendbuffer[1+2*i] = spiram_rdbyte(2*i); // LO
                RAM_CS_HI;
-
-               
-               
                
                _delay_us(LOOPDELAY);
                RAM_CS_LO;
                _delay_us(LOOPDELAY);
                sendbuffer[1+2*i+1] = spiram_rdbyte(2*i+1); // HI
                RAM_CS_HI;
-               
- 
               }
             
             // Testdaten lesen
@@ -1263,7 +1258,6 @@ int main (void)
                sendbuffer[EE_PARTBREITE+i] = readRAMbyteAnAdresse(teststartadresse+i);
             
             }
-            
 
             anzeigecounter = 0;
             
@@ -1731,6 +1725,7 @@ int main (void)
                   {
                      sendbuffer[EE_PARTBREITE + 0x08 + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x28 40
                   }
+                  
                   // Mix lesen
                   readstartadresse = TASK_OFFSET  + MIX_OFFSET + modelindex*SETTINGBREITE;
                   
@@ -1738,8 +1733,8 @@ int main (void)
                   for (pos=0;pos<8;pos++)
                   {
                      sendbuffer[EE_PARTBREITE + 0x10 + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x30 48
-                  
                   }
+                  
                   
                   sendbuffer[1] = readstartadresse & 0x00FF;
                   sendbuffer[2] = (readstartadresse & 0xFF00)>>8;
@@ -1750,6 +1745,8 @@ int main (void)
                
                
                }break;
+                  
+                  
                   
                   
                case 0xF6: // HALT
@@ -1845,6 +1842,52 @@ int main (void)
                   usb_rawhid_send((void*)sendbuffer, 50);
 
                }break;
+                  
+               case 0xFD: // read Sendersettings
+               {
+                  
+                  uint8_t modelindex =0;
+                  modelindex = buffer[3]; // welches model soll gelesen werden
+                  uint8_t pos=0;
+                  
+                  // funktion lesen
+                  uint16_t readstartadresse = TASK_OFFSET  + FUNKTION_OFFSET + modelindex*SETTINGBREITE;
+                  // startadresse fuer Settings des models
+                  for (pos=0;pos<8;pos++)
+                  {
+                     sendbuffer[EE_PARTBREITE + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x20 32
+                  }
+                  
+                  // device lesen
+                  readstartadresse = TASK_OFFSET  + DEVICE_OFFSET + modelindex*SETTINGBREITE;
+                  //Im Sendbuffer ab pos 0x08 (8)
+                  for (pos=0;pos<8;pos++)
+                  {
+                     sendbuffer[EE_PARTBREITE + 0x08 + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x28 40
+                  }
+                  
+                  // Ausgang lesen
+                  readstartadresse = TASK_OFFSET  + AUSGANG_OFFSET + modelindex*SETTINGBREITE;
+                  
+                  //Im Sendbuffer ab pos 0x10 (16)
+                  for (pos=0;pos<8;pos++)
+                  {
+                     sendbuffer[EE_PARTBREITE + 0x10 + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x30 48
+                     
+                  }
+
+
+                  
+                  sendbuffer[1] = readstartadresse & 0x00FF;
+                  sendbuffer[2] = (readstartadresse & 0xFF00)>>8;
+                  sendbuffer[3] = modelindex;
+                  
+                  sendbuffer[0] = 0xFD;
+                  
+                  
+                  usb_rawhid_send((void*)sendbuffer, 50);
+
+               }
                   
             } // switch code
          }
