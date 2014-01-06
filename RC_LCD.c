@@ -741,7 +741,9 @@ uint8_t eeprombytelesen(uint16_t readadresse) // 300 us ohne lcd_anzeige
    
    abschnittnummer =0;
    
-   usb_rawhid_send((void*)sendbuffer, 50);
+   // wird fuer Darstellung der Read-Ergebnisse im Interface benutzt.
+   
+//   usb_rawhid_send((void*)sendbuffer, 50);
    
    sei();
    //OSZI_B_HI;
@@ -806,7 +808,7 @@ uint8_t eeprompartlesen(uint16_t readadresse) //   us ohne lcd_anzeige
 
 uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_writedatabyte) //   1 ms ohne lcd-anzeige
 {
-   OSZI_B_LO;
+   //OSZI_B_LO;
    uint8_t byte_errcount=0;
    uint8_t checkbyte=0;
    cli();
@@ -870,15 +872,20 @@ uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_w
    }
    //   lcd_putc('e');
    
+   //OSZI_B_LO;
+   // Notewndig fuer schreiben der Expo-Settings (???)
+   _delay_ms(4);
+   
+   /*
    lcd_gotoxy(0,1);
    lcd_putc('e');
-   
    lcd_puthex(byte_errcount);
    lcd_putc(' ');
    lcd_puthex(eeprom_writedatabyte);
    lcd_putc(' ');
    lcd_puthex(checkbyte);
-   
+   */
+   //OSZI_B_HI;
    
    sendbuffer[1] = writeadresse & 0xFF;
    sendbuffer[2] = (writeadresse & 0xFF00)>>8;
@@ -901,7 +908,7 @@ uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_w
    sei();
    // end Daten an EEPROM
    //OSZI_D_HI ;
-   OSZI_B_HI;
+   
    return byte_errcount;
 }
 
@@ -1407,6 +1414,7 @@ int main (void)
             }
          }
          
+ 
          //OSZI_A_HI;
       }
  
@@ -1427,7 +1435,7 @@ int main (void)
 		{
          
          //batteriespannung = adc_read(0); // ca. 6V
-         
+  
 			loopcount0=0;
 			loopcount1+=1;
 			LOOPLEDPORT ^=(1<<LOOPLED);
@@ -2405,7 +2413,7 @@ int main (void)
       if (programmstatus & (1<< TASTATUR_READ))
       {
          substatus &= ~(1<<TASTATUR_OK);
-         OSZI_B_LO;
+         //OSZI_B_LO;
          programmstatus &= ~(1<< TASTATUR_READ);
          // OSZI_B_TOGG;
          Tastenwert=adc_read(TASTATURPIN)>>2;
@@ -4750,7 +4758,7 @@ int main (void)
             }//if TastaturCount
             
          } // if Tastenwert > 5
-         OSZI_B_HI;
+         //OSZI_B_HI;
       }
 		Tastenwert=0;
 		
