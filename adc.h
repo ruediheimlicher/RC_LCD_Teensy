@@ -14,7 +14,7 @@ struct adcwert16 {
 
 // aus adc_simple PJRC
 
-static uint8_t aref = (1<<REFS0); // default to AREF = Vcc
+static uint8_t aref = (1<<REFS0)|(1<<REFS1); // default to AREF = Vcc
 
 #define ADC_REF_POWER     (1<<REFS0)
 #define ADC_REF_INTERNAL  ((1<<REFS1) | (1<<REFS0))

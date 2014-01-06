@@ -35,8 +35,8 @@
 #define TASTENPORT          PORTD
 #define TASTENPIN           PIND
 
-#define TASTE0				   0
-#define TASTE1             1
+#define E_TASTE0				   0 // Einzeltaste
+#define E_TASTE1             1
 
 
 // EEPROM Speicherorte
@@ -54,10 +54,89 @@
 #define DEVICE_OFFSET      0x70 // 122
 #define AUSGANG_OFFSET     0x80 // 128
 
-#define MITTE_TASK            0x01 // Mitte lesen
-#define KANAL_TASK            0x02 // Level und Expo lesen
-#define MIX_TASK              0x03 // Mix lesen
+#define MITTE_TASK         0x01 // Mitte lesen
+#define KANAL_TASK         0x02 // Level und Expo lesen
+#define MIX_TASK           0x03 // Mix lesen
 
+// Tastatur
+// Atmega168
+/*
+ #define TASTE1		19
+ #define TASTE2		29
+ #define TASTE3		44
+ #define TASTE4		67
+ #define TASTE5		94
+ #define TASTE6		122
+ #define TASTE7		155
+ #define TASTE8		186
+ #define TASTE9		212
+ #define TASTE_L	234
+ #define TASTE0		248
+ #define TASTE_R	255
+ */
+/*
+// Atmega328
+#define TASTE1		17
+#define TASTE2		29
+#define TASTE3		44
+#define TASTE4		67
+#define TASTE5		94
+#define TASTE6		122
+#define TASTE7		155
+#define TASTE8		190
+#define TASTE9		214
+#define TASTE_L	234
+#define TASTE0		252
+#define TASTE_R	255
+*/
+// Teensy2 int ref/TL431
+#define TASTE1		15
+#define TASTE2		23
+#define TASTE3		34
+#define TASTE4		51
+#define TASTE5		72
+#define TASTE6		94
+#define TASTE7		120
+#define TASTE8		141
+#define TASTE9		155
+#define TASTE_L	168
+#define TASTE0		178
+#define TASTE_R	194
+
+// Screen
+
+#define DOGM_PORT	PORTD
+#define DOGM_DDR	DDRD
+
+#define DOGM_MOSI_PIN	0
+#define DOGM_SCL_PIN	1
+#define DOGM_CS_PIN   2
+#define DOGM_CMD_PIN	3
+
+#define MOTOR_ON     1
+#define STOP_ON     2
+
+#define MANUELL			7	// Bit 7 von Status
+#define MANUELLPIN		3	// Pin 6 von PORT D fuer Anzeige Manuell
+
+#define MS_DIV		7	// Pin 7 von Status. Gesetzt wenn neue Schalterposition eingestellt
+#define MANUELLTIMEOUT	200 // Loopled-counts bis Manuell zurueckgesetzt wird. 02FF: ca. 100 s
+
+#define SETTINGWAIT  6  // Pin in status wird gesetzt bis Taste 5 3* gedrueckt ist
+
+#define UPDATESCREEN  5 // Pin in status wird gesetzt wenn eine Taste gedrueckt ist, reset wenn update ausgefuerht
+
+
+
+
+#define MINWAIT         3 // Anzahl loops von loopcount1 bis einschalten
+
+
+#define TASTATURPORT PORTF
+#define TASTATURPIN		1
+
+
+// end Screen
 
 
 
@@ -93,6 +172,8 @@
 #define ADC_PORT            PORTF   //    PORTF
 #define ADC_DDR             DDRF    //    DDRF
 #define ADC_PIN             PINF    //    PINF
+
+#define ADC_AKKUPIN         0
 
 
 // Bit
