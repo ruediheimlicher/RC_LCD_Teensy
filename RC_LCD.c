@@ -631,7 +631,6 @@ ISR (TIMER0_OVF_vect)
    if (mscounter > CLOCK_DIV) // 0.5s
    {
       displaycounter++;
-
       //OSZI_A_TOGG;
       programmstatus ^= (1<<MS_DIV);
       mscounter=0;
