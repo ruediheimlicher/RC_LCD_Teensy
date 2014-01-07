@@ -116,16 +116,20 @@
 #define MOTOR_ON     1
 #define STOP_ON     2
 
-#define MANUELL			7	// Bit 7 von Status
+
 #define MANUELLPIN		3	// Pin 6 von PORT D fuer Anzeige Manuell
 
-#define MS_DIV		7	// Pin 7 von Status. Gesetzt wenn neue Schalterposition eingestellt
 #define MANUELLTIMEOUT	200 // Loopled-counts bis Manuell zurueckgesetzt wird. 02FF: ca. 100 s
 
-#define SETTINGWAIT  6  // Pin in status wird gesetzt bis Taste 5 3* gedrueckt ist
 
-#define UPDATESCREEN  5 // Pin in status wird gesetzt wenn eine Taste gedrueckt ist, reset wenn update ausgefuerht
+// programmstatus
+#define MS_DIV          4	// Pin 4 von Status. Gesetzt wenn neue Schalterposition eingestellt
 
+#define UPDATESCREEN    5 // Pin in status wird gesetzt wenn eine Taste gedrueckt ist, reset wenn update ausgefuerht
+
+#define SETTINGWAIT     6  // Pin in status wird gesetzt bis Taste 5 3* gedrueckt ist
+
+#define MANUELL			7	// Bit 7 von Status
 
 
 

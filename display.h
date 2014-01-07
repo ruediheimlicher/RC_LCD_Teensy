@@ -169,6 +169,8 @@ void display_write_propsymbol(PGM_P symbol);
 
 void display_pfeilvollrechts(uint8_t col, uint8_t page);
 void display_write_min_sek(uint16_t rawsekunde, uint8_t prop);
+void display_write_zeit(uint8_t sekunde,uint8_t minute,uint8_t stunde,uint8_t prop);
+
 void display_writeprop_str(uint8_t page, uint8_t column, uint8_t inverse, const uint8_t *pChain);
 
 void display_write_prop_str(uint8_t page, uint8_t column, uint8_t inverse, const uint8_t *pChain, uint8_t prop);

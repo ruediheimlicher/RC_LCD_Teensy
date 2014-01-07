@@ -60,6 +60,8 @@ extern volatile uint8_t       last_cursorspalte; // letzte colonne des cursors
 extern volatile uint16_t      blink_cursorpos;
 
 extern volatile uint16_t      laufsekunde;
+extern volatile uint8_t      laufstunde;
+extern volatile uint8_t      laufminute;
 extern volatile uint16_t      motorsekunde;
 extern volatile uint16_t      stopsekunde;
 extern volatile uint16_t      batteriespannung;
@@ -247,7 +249,7 @@ void setsettingscreen(void)
    resetRegister();
    blink_cursorpos=0xFFFF;
    
-
+  
    // 2. Zeile
    posregister[0][0] =  itemtab[0] |   (2 << 8); //Modellname
    posregister[0][1] =  itemtab[0] |    (2 << 8); //
@@ -951,7 +953,8 @@ void update_time(void)
    char_height_mul = 1;
    char_width_mul = 1;
    
-   display_write_min_sek(laufsekunde, 2);
+   //display_write_min_sek(laufsekunde, 2);
+   display_write_zeit(laufsekunde&0xFF,laufminute,laufstunde, 2);
    
    // Stoppzeit aktualisieren
    char_y= (posregister[2][1] & 0xFF00)>>8;
@@ -985,14 +988,16 @@ void update_time(void)
 
 uint8_t update_screen(void)
 {
+   uint8_t fehler=0;
    uint16_t cursorposition = cursorpos[curr_cursorzeile][curr_cursorspalte];
-   
+   fehler=1;
    switch (curr_screen)
    {
          
       case HOMESCREEN: // homescreen
       {
 #pragma mark update HOMESCREEN
+         fehler=2;
          updatecounter++;
          //Laufzeit
          char_x = posregister[0][0] & 0x00FF;
@@ -1746,7 +1751,7 @@ uint8_t update_screen(void)
 
       }break;
    }
-   return 0;
+   return fehler;
 }
 
 //##############################################################################################
@@ -2945,6 +2950,29 @@ void display_write_min_sek(uint16_t rawsekunde , uint8_t prop)
    uint8_t minute = rawsekunde/60%60;
    uint8_t sekunde = rawsekunde%60;
    uint8_t stunde = rawsekunde/3600;
+   
+   char tempbuffer[6]={};
+   if (stunde)
+   {
+      char stdbuffer[4]={};
+      stdbuffer[0] =stunde/10+'0';
+      stdbuffer[1] =stunde%10+'0';
+      stdbuffer[2] =':';
+      stdbuffer[3] = '\0';
+      display_write_str(stdbuffer,prop);
+   }
+   tempbuffer[0] =minute/10+'0';
+   tempbuffer[1] =minute%10+'0';
+   tempbuffer[2] =':';
+   tempbuffer[3] =sekunde/10+'0';
+   tempbuffer[4] =sekunde%10+'0';
+   tempbuffer[5] = '\0';
+   display_write_str(tempbuffer,prop);
+   
+}
+
+void display_write_zeit(uint8_t sekunde,uint8_t minute,uint8_t stunde,uint8_t prop)
+{
    
    char tempbuffer[6]={};
    if (stunde)

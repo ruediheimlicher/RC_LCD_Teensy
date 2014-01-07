@@ -78,11 +78,7 @@ void delay_ms(unsigned int ms);
 
 static volatile uint8_t             displaystatus=0x00; // Tasks fuer Display
 static volatile uint16_t                   displaycounter=0;
-// Task-Bits fuer Display
-#define UHR_REFRESH     7
-#define UHR_OK         6
-#define SCREEN_REFRESH  5
-#define SCREEN_OK       4
+
 
 
 
@@ -90,7 +86,16 @@ static volatile uint16_t                   displaycounter=0;
 static volatile uint8_t             substatus=0x00; // Tasks fuer Sub
 // Task fuer sub
 #define TASTATUR_READ   0
-#define TASTATUR_OK   1
+#define TASTATUR_OK     1
+
+
+
+#define SCREEN_OK       4
+#define SCREEN_REFRESH  5
+#define UHR_OK          6
+#define UHR_REFRESH     7
+
+
 
 
 static volatile uint8_t             usbstatus=0x00;
@@ -299,7 +304,8 @@ volatile uint16_t                cursorpos[8][8]={}; // Aktueller screen: werte 
 volatile uint16_t                 blink_cursorpos=0xFFFF;
 
 volatile uint16_t laufsekunde=0;
-volatile uint16_t laufminute=0;
+volatile uint8_t laufminute=0;
+volatile uint8_t laufstunde=0;
 
 volatile uint16_t motorsekunde=0;
 volatile uint16_t stopsekunde=0;
@@ -624,6 +630,8 @@ ISR (TIMER0_OVF_vect)
    
    if (mscounter > CLOCK_DIV) // 0.5s
    {
+      displaycounter++;
+
       //OSZI_A_TOGG;
       programmstatus ^= (1<<MS_DIV);
       mscounter=0;
@@ -631,13 +639,27 @@ ISR (TIMER0_OVF_vect)
       if (programmstatus & (1<<SETTINGWAIT))
       {
          startcounter++;
+         
       }
       
       if (programmstatus & (1<<MS_DIV))
       {
          
          laufsekunde++;
-         manuellcounter++;
+         if (laufsekunde==60)
+         {
+            laufminute++;
+            if (laufminute==60)
+            {
+               laufstunde++;
+               laufminute=0;
+            }
+            laufsekunde=0;
+         }
+         
+         {
+            manuellcounter++;
+         }
          
          if (senderstatus & (1<<MOTOR_ON))
          {
@@ -750,6 +772,55 @@ uint8_t eeprombytelesen(uint16_t readadresse) // 300 us ohne lcd_anzeige
    //lcd_putc('*');
    return readdata;
 }
+
+uint8_t eepromverbosebytelesen(uint16_t readadresse) // 300 us ohne lcd_anzeige
+{
+   //OSZI_B_LO;
+   cli();
+   MEM_EN_PORT &= ~(1<<MEM_EN_PIN);
+   spi_start();
+   SPI_PORT_Init();
+   spieeprom_init();
+   
+   
+   //lcd_gotoxy(1,0);
+   //lcd_putc('r');
+   //lcd_putint12(readadresse);
+   //lcd_putc('*');
+   
+   eeprom_indata = 0xaa;
+   uint8_t readdata=0;
+   
+   // Byte  read 270 us
+   EE_CS_LO;
+   _delay_us(EE_READ_DELAY);
+   
+   readdata = (uint8_t)spieeprom_rdbyte(readadresse);
+   
+   _delay_us(EE_READ_DELAY);
+   EE_CS_HI;
+   
+   sendbuffer[0] = 0xD5;
+   
+   sendbuffer[1] = readadresse & 0x00FF;
+   sendbuffer[2] = (readadresse & 0xFF00)>>8;
+   sendbuffer[3] = readdata;
+   
+   eepromstatus &= ~(1<<EE_WRITE);
+   usbtask &= ~(1<<EEPROM_READ_BYTE_TASK);
+   
+   abschnittnummer =0;
+   
+   // wird fuer Darstellung der Read-Ergebnisse im Interface benutzt.
+   
+   usb_rawhid_send((void*)sendbuffer, 50);
+   
+   sei();
+   //OSZI_B_HI;
+   //lcd_putc('*');
+   return readdata;
+}
+
 
 uint8_t eeprompartlesen(uint16_t readadresse) //   us ohne lcd_anzeige
 {
@@ -1356,7 +1427,7 @@ int main (void)
    _delay_us(50);
   
    
-   sethomescreen();
+   
    char_height_mul = 1;
    char_width_mul = 1;
    
@@ -1382,7 +1453,8 @@ int main (void)
    lcd_cls();
    
    setdefaultsetting();
-
+   sethomescreen();
+   //setsettingscreen();
    timer0();
    
    
@@ -1398,37 +1470,43 @@ int main (void)
       }
       else
       {
-         OSZI_A_LO;
+         //OSZI_A_LO;
          //lcd_gotoxy(0,0); // Kein guter Platz, delay
          //lcd_putint12(laufsekunde);
-         displaycounter++;
-         if (displaycounter%4==0)
+         if (displaycounter)
          {
-            if (!(substatus & (1<<TASTATUR_OK)))
-            {
-               programmstatus |= (1<< TASTATUR_READ);
-            }
+            displaycounter=0;
+            update_time();
+/*
             if (!(substatus & (1<<UHR_OK)))
             {
+               
+               OSZI_A_LO;
                substatus |= 1<<UHR_REFRESH;
+               OSZI_A_HI;
             }
-         }
+*/
+            if (!(substatus & (1<<TASTATUR_OK)))
+            {
+               substatus |= (1<< TASTATUR_READ);
+            }
+          }
          
  
-         //OSZI_A_HI;
+         
       }
- 
+ /*
       if (substatus & 1<<UHR_REFRESH)
       {
          substatus &= ~(1<<UHR_REFRESH);
          //OSZI_A_LO;
          //update_screen();
-         update_time();
-         substatus |= (1<<UHR_OK);
+         
+                  substatus |= (1<<UHR_OK);
          //OSZI_A_HI;
       
       }
-      
+  */
       
       
 		if (loopcount0==0xAFFF)
@@ -1439,8 +1517,12 @@ int main (void)
 			loopcount0=0;
 			loopcount1+=1;
 			LOOPLEDPORT ^=(1<<LOOPLED);
-         //lcd_gotoxy(0,0); // Kein guter Platz, delay
-         //lcd_putint12(laufsekunde);
+         
+         if (programmstatus & (1<<SETTINGWAIT))
+         {
+         //lcd_gotoxy(14,0); // Kein guter Platz, delay
+         //lcd_putint12(startcounter);
+         }
          
          if (loopcount1%8 == 0)
          {
@@ -1452,6 +1534,7 @@ int main (void)
                task_out |= (1<< RAM_SEND_PPM_TASK);
                task_outdata = 0;
             }
+            lcd_gotoxy(0,0);
          }
          
         
@@ -1614,8 +1697,11 @@ int main (void)
 */
          {
             substatus &= ~(1<<UHR_OK);
-            programmstatus &= ~(1<< TASTATUR_READ);
-            OSZI_A_HI;
+            
+            substatus &= ~(1<< TASTATUR_READ);
+            substatus &= ~(1<< TASTATUR_OK);
+            
+      //      OSZI_A_HI;
             
             SPI_RAM_init();
             spiram_init();
@@ -2103,14 +2189,23 @@ int main (void)
                {
                   uint8_t modelindex =0;
                   modelindex = buffer[3]; // welches model soll gelesen werden
-                  uint8_t pos=0;
+                  
+                  uint8_t pos=0, verbose=buffer[4];
                   
                   // Level lesen
                   uint16_t readstartadresse = TASK_OFFSET  + LEVEL_OFFSET + modelindex*SETTINGBREITE;
                   // startadresse fuer Settings des models
                   for (pos=0;pos<8;pos++)
                   {
+                     if (buffer[4])
+                     {
+                        sendbuffer[EE_PARTBREITE + pos] = eepromverbosebytelesen(readstartadresse+pos); // ab 0x20 32
+                        
+                     }
+                     else
+                     {
                      sendbuffer[EE_PARTBREITE + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x20 32
+                     }
                   }
                   
                   // Expo lesen
@@ -2118,7 +2213,15 @@ int main (void)
                   //Im Sendbuffer ab pos 0x08 (8)
                   for (pos=0;pos<8;pos++)
                   {
-                     sendbuffer[EE_PARTBREITE + 0x08 + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x28 40
+                     if (buffer[5])
+                     {
+                        sendbuffer[EE_PARTBREITE + 0x08 + pos] = eepromverbosebytelesen(readstartadresse+pos); // ab 0x28 40
+                     }
+                     else
+                     {
+                        sendbuffer[EE_PARTBREITE + 0x08 + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x28 40
+                        
+                     }
                   }
                   
                   // Mix lesen
@@ -2127,7 +2230,15 @@ int main (void)
                   //Im Sendbuffer ab pos 0x10 (16)
                   for (pos=0;pos<8;pos++)
                   {
-                     sendbuffer[EE_PARTBREITE + 0x10 + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x30 48
+                     if (buffer[6])
+                     {
+                        sendbuffer[EE_PARTBREITE + 0x10 + pos] = eepromverbosebytelesen(readstartadresse+pos); // ab 0x30 48
+                        
+                     }
+                     else
+                     {
+                        sendbuffer[EE_PARTBREITE + 0x10 + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x30 48
+                     }
                   }
                   
                   
@@ -2410,11 +2521,12 @@ int main (void)
 		/* ******************** */
 		//		initADC(TASTATURPIN);
 		//		Tastenwert=(uint8_t)(readKanal(TASTATURPIN)>>2);
-      if (programmstatus & (1<< TASTATUR_READ))
+      if (substatus & (1<< TASTATUR_READ))
       {
-         substatus &= ~(1<<TASTATUR_OK);
+         
+
          //OSZI_B_LO;
-         programmstatus &= ~(1<< TASTATUR_READ);
+         substatus &= ~(1<< TASTATUR_READ);
          // OSZI_B_TOGG;
          Tastenwert=adc_read(TASTATURPIN)>>2;
         // lcd_gotoxy(4,1);
@@ -2438,9 +2550,10 @@ int main (void)
              */
             
             TastaturCount++;
-            //if ((TastaturCount>=20) )
+            if ((TastaturCount>=2) )
             {
-               /*
+               substatus |= (1<<TASTATUR_OK);
+                              /*
                lcd_gotoxy(10,1);
                lcd_puts("T:\0");
                lcd_putint12(Tastenwert);
@@ -2458,8 +2571,8 @@ int main (void)
                Tastenwert=0x00;
                //uint8_t i=0;
                //uint8_t pos=0;
-               //				lcd_gotoxy(18,1);
-               //				lcd_putint2(Taste);
+               				lcd_gotoxy(18,1);
+               				lcd_putint2(Taste);
                //programmstatus |= (1<<UPDATESCREEN);
                
                switch (Taste)
@@ -3304,13 +3417,18 @@ int main (void)
                      {
                         case HOMESCREEN:
                         {
+                           
+               				lcd_putint2(startcounter);
+
                            if (startcounter == 0) // Settings sind nicht aktiv
                            {
+                              lcd_putc('A');
                               programmstatus |= (1<< SETTINGWAIT);
                               settingstartcounter++;
                            }
                            else if (startcounter > 5) // Irrtum, kein Umschalten
                            {
+                              lcd_putc('X');
                               programmstatus &= ~(1<< SETTINGWAIT);
                               settingstartcounter=0;
                               startcounter=0;
@@ -3320,16 +3438,20 @@ int main (void)
                            {
                               if (programmstatus & (1<< SETTINGWAIT)) // Umschaltvorgang noch aktiv
                               {
+                                 lcd_putc('B');
                                  settingstartcounter++; // counter fuer klicks
                                  if (settingstartcounter > 2)
                                  {
+                                    lcd_putc('C');
                                     programmstatus &= ~(1<< SETTINGWAIT);
                                     settingstartcounter=0;
                                     startcounter=0;
-                                    
+                                    /*
                                     // Umschalten
                                     display_clear();
+                                    lcd_putc('D');
                                     setsettingscreen();
+                                    lcd_putc('E');
                                     curr_screen = SETTINGSCREEN;
                                     curr_cursorspalte=0;
                                     curr_cursorzeile=0;
@@ -3337,7 +3459,7 @@ int main (void)
                                     last_cursorzeile=0;
                                     blink_cursorpos=0xFFFF;
                                     manuellcounter = 0;
-                                    
+                                    */
                                  } // if settingcounter <
                               }
                            }
