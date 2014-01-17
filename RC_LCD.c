@@ -65,6 +65,8 @@ static volatile uint8_t eeprombuffer[USB_DATENBREITE]={};
 
 #define TIMER0_STARTWERT	0x40
 
+#define EEPROM_STARTADRESSE   0x7FF
+
 volatile uint8_t timer0startwert=TIMER0_STARTWERT;
 
 //volatile uint8_t rxbuffer[USB_DATENBREITE];
@@ -169,7 +171,7 @@ volatile    uint8_t task_outdata=0; // Taskdata an RC_PPM
 
 // Mark Screen
 
-#define CLOCK_DIV 30 // timer0 1 Hz bei Teilung /2 in ISR
+#define CLOCK_DIV 15 // timer0 1 Hz bei Teilung /4 in ISR
 
 
 volatile uint16_t                TastaturCount=0;
@@ -271,12 +273,27 @@ volatile uint8_t                 default_devicearray[8]=
    0x07
 };
 
+volatile uint8_t                 default_ausgangarray[8]=
+{
+   //
+   // bit 0-2: Kanal bit 4-6:
+   0x00,
+   0x01,
+   0x02,
+   0x03,
+   0x04,
+   0x05,
+   0x06,
+   0x07
+};
+
+
 volatile uint8_t              curr_levelarray[8];
 volatile uint8_t              curr_expoarray[8];
 volatile uint8_t              curr_mixarray[8];
 volatile uint8_t              curr_funktionarray[8];
-volatile uint8_t              curr_devicearray[8] = {};
-volatile uint8_t              curr_ausgangarray[8];
+ volatile uint8_t              curr_devicearray[8] = {};
+ volatile uint8_t              curr_ausgangarray[8];
 
 volatile uint16_t                updatecounter; // Zaehler fuer Update des screens
 
@@ -304,11 +321,29 @@ volatile uint16_t                cursorpos[8][8]={}; // Aktueller screen: werte 
 volatile uint16_t                 blink_cursorpos=0xFFFF;
 
 volatile uint16_t laufsekunde=0;
+uint8_t  EEMEM speichersekunde;
+
+
+
 volatile uint8_t laufminute=0;
+uint8_t  EEMEM speicherminute;
+
 volatile uint8_t laufstunde=0;
+uint8_t  EEMEM speicherstunde;
+
 
 volatile uint16_t motorsekunde=0;
+uint8_t  EEMEM speichermotorsekunde;
+
+volatile uint16_t motorminute=0;
+uint8_t  EEMEM speichermotorminute;
+
 volatile uint16_t stopsekunde=0;
+uint8_t  EEMEM speicherstopsekunde;
+
+volatile uint16_t stopminute=0;
+uint8_t  EEMEM speicherstopminute;
+
 
 volatile uint16_t batteriespannung =0;
 
@@ -319,6 +354,9 @@ uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_w
 uint8_t eeprombytelesen(uint16_t readadresse); // 300 us ohne lcd_anzeige
 uint8_t eeprompartlesen(uint16_t readadresse); //   us ohne lcd_anzeige
 uint16_t eeprompartschreiben(void); // 23 ms
+
+void read_eeprom_zeit(void);
+void write_eeprom_zeit(void);
 
 
 void startTimer2(void)
@@ -375,8 +413,13 @@ void Master_Init(void)
    PCIFR |= (1<<PCIF0);
    PCICR |= (1<<PCIE0);
 	PCMSK0 |= (1<<PCINT7);
+  
+   // POWER_OFF
    
-   
+   POWER_OFF_DDR &= ~(1<<POWER_OFF_DETECT_PIN); // Eingang fuer Power_off_detection
+   POWER_OFF_PORT |= (1<<POWER_OFF_DETECT_PIN); // hi
+   EICRA |= (1<<ISC31); // falling edge
+   EIMSK |= (1<<INTF3); // Interrupt en
    
    
    INTERRUPT_DDR &= ~(1 << MASTER_EN_PIN); // Clear the PB7 pin
@@ -621,18 +664,18 @@ void timer0 (void) // nicht verwendet
 volatile uint16_t timer2Counter=0;
 volatile uint16_t timer2BatterieCounter=0;
 
-
+#pragma mark TIMER0_OVF
 
 ISR (TIMER0_OVF_vect)
 {
    
    mscounter++;
    
-   if (mscounter > CLOCK_DIV) // 0.5s
+   if (mscounter > 2*CLOCK_DIV) // 0.5s
    {
       displaycounter++;
       //OSZI_A_TOGG;
-      programmstatus ^= (1<<MS_DIV);
+      programmstatus ^= (1<<MS_DIV); // Teilung /2
       mscounter=0;
       
       if (programmstatus & (1<<SETTINGWAIT))
@@ -660,22 +703,37 @@ ISR (TIMER0_OVF_vect)
             manuellcounter++;
          }
          
-         if (senderstatus & (1<<MOTOR_ON))
+         if (programmstatus & (1<<MOTOR_ON))
          {
             motorsekunde++;
-            if (motorsekunde >= 3600)
+            if (motorsekunde==60)
             {
-               motorsekunde = 0;
+               motorminute++;
+               motorsekunde=0;
             }
+            if (motorminute >= 60)
+            {
+               motorminute = 0;
+            }
+            
          }
          
-         if (senderstatus & (1<<STOP_ON))
+         if (programmstatus & (1<<STOP_ON))
          {
+            lcd_gotoxy(15,0);
+            lcd_putint2(stopsekunde);
+
             stopsekunde++;
-            if (stopsekunde >= 3600)
+            if (stopsekunde == 60)
             {
+               stopminute++;
                stopsekunde=0;
             }
+            if (stopminute >= 60)
+            {
+               stopminute = 0;
+            }
+
          }
       }
    }
@@ -685,7 +743,7 @@ ISR (TIMER0_OVF_vect)
 }
 
 
-
+#pragma mark PIN_CHANGE
 //https://sites.google.com/site/qeewiki/books/avr-guide/external-interrupts-on-the-atmega328
 
 
@@ -707,6 +765,29 @@ ISR (PCINT0_vect)
    }
    
 }
+
+#pragma mark POWER_OFF
+ISR (INT3_vect) // Interrupt bei powerOff
+{
+   /*
+   lcd_gotoxy(0,0);
+   lcd_putc('+');
+   lcd_putint(laufminute);
+   eeprom_update_byte ((uint8_t*)0, (laufsekunde));
+   
+   eeprom_update_byte ((uint8_t*)1, laufminute);
+   laufminute=0;
+   laufminute = eeprom_read_byte((uint8_t*)1);
+    */
+   //lcd_putc(' ');
+   //lcd_putint(laufminute);
+   
+   //eeprom_update_byte ((uint8_t*)2, laufstunde);
+   
+   programmstatus |= (1<<EEPROM_TASK);
+}
+
+
 
 
 void setMitte(void)
@@ -1306,22 +1387,84 @@ void resetcursorpos(void)
 }
 
 
+void EEPROM_write(unsigned int uiAddress, unsigned char ucData)
+{
+   /* Wait for completion of previous write */ while(EECR & (1<<EEPE))
+      ;
+   /* Set up address and Data Registers */ EEAR = uiAddress;
+   EEDR = ucData;
+   /* Write logical one to EEMPE */
+   EECR |= (1<<EEMPE);
+   /* Start eeprom write by setting EEPE */ EECR |= (1<<EEPE);
+}
+
+unsigned char EEPROM_read(unsigned int uiAddress)
+{
+   
+   /* Wait for completion of previous write */
+   while(EECR & (1<<EEPE))
+      ;
+   /* Set up address register */
+   EEAR = uiAddress;
+   /* Start eeprom read by writing EERE */ EECR |= (1<<EERE);
+   /* Return data from Data Register */ return EEDR;
+   
+}
+
+
+
+void write_eeprom_zeit(void)
+{
+   eeprom_write_byte(&speichersekunde, laufsekunde);
+   //lcd_gotoxy(0,0);
+   //lcd_putc('*');
+   //lcd_putint(eeprom_read_byte(&speichersekunde));
+   eeprom_write_byte(&speicherminute, laufminute);
+   eeprom_write_byte(&speicherstunde, laufstunde);
+
+   
+   eeprom_write_byte(&speichermotorsekunde, motorsekunde);
+   eeprom_write_byte(&speichermotorminute, motorminute);
+
+   eeprom_write_byte(&speicherstopsekunde, stopsekunde);
+   eeprom_write_byte(&speicherstopminute, stopminute);
+
+}
+
+void read_eeprom_zeit(void)
+{
+   laufsekunde=0;
+   laufsekunde = eeprom_read_byte(&speichersekunde);
+   //lcd_gotoxy(0,1);
+   //lcd_putc('*');
+   //lcd_putint(laufsekunde);
+   laufminute = eeprom_read_byte(&speicherminute);
+   laufstunde = eeprom_read_byte(&speicherstunde);
+   
+   motorsekunde = eeprom_read_byte(&speichermotorsekunde);
+   motorminute = eeprom_read_byte(&speichermotorminute);
+   
+   stopsekunde = eeprom_read_byte(&speicherstopsekunde);
+   stopminute = eeprom_read_byte(&speicherstopminute);
+
+   
+   
+}
+
+
 void setdefaultsetting(void)
 {
    uint8_t i=0,k=0;
    
    for (i=0;i<8;i++)
    {
-      for (k=0;k<2;k++)
-      {
-         //curr_settingarray[i][k] = default_settingarray[i][k];
-      }
       curr_levelarray[i] = default_levelarray[i];
       curr_expoarray[i] = default_expoarray[i];
       curr_mixarray[i] = default_mixarray[i];
       curr_funktionarray[i] = default_funktionarray[i];
       curr_devicearray[i] = default_devicearray[i];
-      
+      curr_ausgangarray[i] = default_ausgangarray[i];
+
    }
 }
 
@@ -1453,8 +1596,9 @@ int main (void)
    
    setdefaultsetting();
    sethomescreen();
-   //setsettingscreen();
    timer0();
+   
+   read_eeprom_zeit();
    
    
 // MARK:  while
@@ -1465,48 +1609,56 @@ int main (void)
 		loopcount0+=1;
       if(INTERRUPT_PIN & (1<< MASTER_EN_PIN))
       {
-         
+         OSZI_A_HI;
+         if (substatus & (1<< TASTATUR_READ)) // Bit noch nicht reset
+         {
+            //substatus &= ~(1<< TASTATUR_READ);
+            
+         }
       }
       else
       {
-         //OSZI_A_LO;
+         OSZI_A_LO;
          //lcd_gotoxy(0,0); // Kein guter Platz, delay
          //lcd_putint12(laufsekunde);
          if (displaycounter)
          {
             displaycounter=0;
-            update_time();
-/*
-            if (!(substatus & (1<<UHR_OK)))
+            OSZI_B_LO;
+           // update_time();
+            update_screen();
+             OSZI_B_HI;
+            /*
+             if (!(substatus & (1<<UHR_OK)))
+             {
+             
+             OSZI_A_LO;
+             substatus |= 1<<UHR_REFRESH;
+             OSZI_A_HI;
+             }
+             */
+         }
+         if (programmstatus & (1<<EEPROM_TASK))
+         {
+            programmstatus &= ~(1<<EEPROM_TASK);
+            //cli();
+             write_eeprom_zeit();
+            //sei();
+         }
+
+         if (!(substatus & (1<<TASTATUR_READ))) // Bit noch nicht gesetzt, nur einmal in Zyklus
+         {
+            //OSZI_A_LO;
+            //if (mscounter%2)
             {
                
-               OSZI_A_LO;
-               substatus |= 1<<UHR_REFRESH;
-               OSZI_A_HI;
-            }
-*/
-            if (!(substatus & (1<<TASTATUR_OK)))
-            {
+               
                substatus |= (1<< TASTATUR_READ);
+               //OSZI_A_HI;
             }
-          }
-         
- 
+         }
          
       }
- /*
-      if (substatus & 1<<UHR_REFRESH)
-      {
-         substatus &= ~(1<<UHR_REFRESH);
-         //OSZI_A_LO;
-         //update_screen();
-         
-                  substatus |= (1<<UHR_OK);
-         //OSZI_A_HI;
-      
-      }
-  */
-      
       
 		if (loopcount0==0xAFFF)
 		{
@@ -1539,7 +1691,14 @@ int main (void)
         
           if(loopcount1%16 == 0)
          {
+            //write_eeprom_zeit();
+            //lcd_gotoxy(0,0);
+            //lcd_putint(eeprom_read_byte((uint8_t*)(EEPROM_STARTADRESSE+0)));
             
+            //cli();
+            //write_eeprom_zeit();
+            //sei();
+            //lcd_putint(t);
             
             anzeigecounter = 0;
             if (anzeigecounter)
@@ -1751,8 +1910,8 @@ int main (void)
             
             
             // Batteriespannung senden
-            sendbuffer[0x3E] = Batteriespannung & 0x00FF; // LO
-            sendbuffer[0x3F] = (Batteriespannung & 0xFF00) >>8; // HI
+            sendbuffer[0x3E] = batteriespannung & 0x00FF; // LO
+            sendbuffer[0x3F] = (batteriespannung & 0xFF00) >>8; // HI
             
             
             // statusregister schreiben
@@ -2091,8 +2250,8 @@ int main (void)
                    state = 1;
                    */
                  // uint16_t fixstartadresse =  buffer[1] | (buffer[2]<<8);
-                  //lcd_gotoxy(0,0);
-                  //lcd_putc('A');
+                  lcd_gotoxy(0,0);
+                  lcd_putc('M');
                   uint8_t changecode = buffer[3];// Bits fuer zu aendernde kanaele
                   uint8_t modelindex = buffer[4]; // Nummer des models
                   uint16_t fixstartadresse =  TASK_OFFSET + modelindex * SETTINGBREITE; // Startadresse fuer Settings
@@ -2108,7 +2267,7 @@ int main (void)
                      //lcd_putc('A'+kanal);
                      if (changecode & (1<<kanal)) // kanal ist zu aendern
                      {
-                        //lcd_putc('B');
+                        lcd_putc('0'+ kanal);
                         
                         // Level schreiben
                         // Der Wert ist auf (16 + 2* changeposition) an der ungeraden Stelle
@@ -2209,7 +2368,7 @@ int main (void)
                   
                   // Expo lesen
                   readstartadresse = TASK_OFFSET  + EXPO_OFFSET + modelindex*SETTINGBREITE;
-                  //Im Sendbuffer ab pos 0x08 (8)
+                  //Im Sendbuffer ab pos EE_PARTBREITE + 0x08 (8)
                   for (pos=0;pos<8;pos++)
                   {
                      if (buffer[5])
@@ -2223,10 +2382,11 @@ int main (void)
                      }
                   }
                   
+                  
                   // Mix lesen
                   readstartadresse = TASK_OFFSET  + MIX_OFFSET + modelindex*SETTINGBREITE;
                   
-                  //Im Sendbuffer ab pos 0x10 (16)
+                  //Im Sendbuffer ab pos EE_PARTBREITE + 0x10 (16)
                   for (pos=0;pos<8;pos++)
                   {
                      if (buffer[6])
@@ -2244,6 +2404,10 @@ int main (void)
                   sendbuffer[1] = readstartadresse & 0x00FF;
                   sendbuffer[2] = (readstartadresse & 0xFF00)>>8;
                   sendbuffer[3] = modelindex;
+                  sendbuffer[4] = 0xFF;
+                  sendbuffer[5] = buffer[6];
+                  
+                  // code
                   sendbuffer[0] = 0xF5;
                   usb_rawhid_send((void*)sendbuffer, 50);
                 
@@ -2520,12 +2684,12 @@ int main (void)
 		/* ******************** */
 		//		initADC(TASTATURPIN);
 		//		Tastenwert=(uint8_t)(readKanal(TASTATURPIN)>>2);
-      if (substatus & (1<< TASTATUR_READ))
+      if ((substatus & (1<< TASTATUR_READ)) && (mscounter%2))
       {
          
 
          //OSZI_B_LO;
-         substatus &= ~(1<< TASTATUR_READ);
+         //substatus &= ~(1<< TASTATUR_READ);
          // OSZI_B_TOGG;
          Tastenwert=adc_read(TASTATURPIN)>>2;
         // lcd_gotoxy(4,1);
@@ -2549,7 +2713,7 @@ int main (void)
              */
             
             TastaturCount++;
-            if ((TastaturCount>=2) )
+            if ((TastaturCount>=100) )
             {
                substatus |= (1<<TASTATUR_OK);
                               /*
@@ -2565,14 +2729,17 @@ int main (void)
                Taste=Tastenwahl(Tastenwert);
                //lcd_putint2(Taste);
                //lcd_putc(' ');
-               
+               lcd_gotoxy(0,1);
+               //lcd_putint(TastaturCount);
+              // lcd_putc(' ');
+               //lcd_putint2(Taste);
+               //lcd_putc('*');
                TastaturCount=0;
                Tastenwert=0x00;
                //uint8_t i=0;
                //uint8_t pos=0;
-               				lcd_gotoxy(18,1);
-               				lcd_putint2(Taste);
-               //programmstatus |= (1<<UPDATESCREEN);
+               
+               programmstatus |= (1<<UPDATESCREEN);
                
                switch (Taste)
                {
@@ -2592,10 +2759,11 @@ int main (void)
 #pragma mark Taste 1
                      if (manuellcounter)
                      {
-                        senderstatus ^= (1<<MOTOR_ON);
+                        programmstatus ^= (1<<MOTOR_ON);
                         manuellcounter=0;
                         
                      }
+
                   }break;
                      
                   case 2://
@@ -2865,14 +3033,6 @@ int main (void)
                            
                         case MIXSCREEN:
                         {
-                           /*
-                            lcd_gotoxy(5,1);
-                            lcd_puthex(curr_cursorzeile);
-                            lcd_putc('*');
-                            lcd_puthex((blink_cursorpos & 0xFF00)>>8); // Zeile
-                            lcd_putc('*');
-                            //lcd_putc('*');
-                            */
                            if (blink_cursorpos == 0xFFFF && manuellcounter) // Kein Blinken
                            {
                               if (curr_cursorzeile )//
@@ -2890,19 +3050,7 @@ int main (void)
                                  last_cursorzeile =curr_cursorzeile;
                                  
                                  curr_cursorzeile--;
-                                 //lcd_puthex(curr_cursorzeile);
-                                 //lcd_putc('+');
                               }
-                              else
-                              {
-                                 //lcd_puthex(curr_cursorzeile);
-                                 //lcd_putc('-');
-                              }
-                              //lcd_putint2(curr_cursorzeile);
-                              
-                              //lcd_putc(' ');
-                              
-                              
                               manuellcounter=0;
                            }
                            else if (manuellcounter) // blinken ist on
@@ -2996,17 +3144,18 @@ int main (void)
                                     {
                                        case 0: // L_V index 1
                                        {
-                                          if (((curr_funktionarray[1]& 0x70)>>4))
+                                          // Kanalnummer decrement
+                                          if (((curr_devicearray[1]& 0x07)))
                                           {
-                                             curr_funktionarray[1]-= 0x10;
+                                             curr_devicearray[1]-= 0x01;
                                           }
                                        }break;
                                           
-                                       case 1: // R_V
+                                       case 1: // R_V index 3
                                        {
-                                          if (((curr_funktionarray[3]& 0x07)))
+                                          if (((curr_devicearray[3]& 0x07)))
                                           {
-                                             curr_funktionarray[3]-= 0x01;
+                                             curr_devicearray[3]-= 0x01;
                                           }
                                        }break;
                                     }// switch curr_cursorspalte
@@ -3016,29 +3165,180 @@ int main (void)
                                  {
                                     switch (curr_cursorspalte)
                                     {
-                                       case 0: // L_H index 1
+                                       case 0: // L_H index 0
                                        {
-                                          if (((curr_funktionarray[0]& 0x30)>>4))
+                                          if (((curr_devicearray[0]& 0x07)))
                                           {
-                                             curr_funktionarray[0]-= 0x10;
+                                             // Kanalnummer fuer Device decrement
+                                             curr_devicearray[0]-= 0x01;
                                           }
                                        }break;
                                           
-                                       case 1: // R_H
+                                       case 1: // R_H index 2
                                        {
-                                          if (((curr_funktionarray[2]& 0x03)))
+                                          if (((curr_devicearray[2]& 0x07)))
                                           {
-                                             curr_funktionarray[2]-= 0x01;
+                                             curr_devicearray[2]-= 0x01;
+                                          }
+                                       }break;
+                                    }// switch curr_cursorspalte
+                                 }break; // case spalte
+                                    
+                                 case 2: // schieber
+                                 {
+                                    switch (curr_cursorspalte)
+                                    {
+                                       case 0: // S_L index 4
+                                       {
+                                          if (((curr_devicearray[4]& 0x07)))
+                                          {
+                                             // Kanalnummer fuer Device increment
+                                             curr_devicearray[4]-= 0x01;
+                                          }
+                                       }break;
+                                          
+                                       case 1: // S_R index 5
+                                       {
+                                          if (((curr_devicearray[5]& 0x07)))
+                                          {
+                                             curr_devicearray[5]-= 0x01;
                                           }
                                        }break;
                                     }// switch curr_cursorspalte
                                  }break; // case spalte
                                     
                               }//switch curr_cursorzeile
+                              manuellcounter = 0;
                               
+                           } // else if manuellcounter
+                           
+                        }break; // zuteilungscreen
+                           
+                        case AUSGANGSCREEN:
+                        {
+#pragma mark 2 AUSGANGSCREEN
+                           if (blink_cursorpos == 0xFFFF && manuellcounter) // Kein Blinken
+                           {
+                              if (curr_cursorzeile)// noch nicht zuoberst
+                              {
+                                 char_height_mul=1;
+                                 display_cursorweg();
+                                 last_cursorzeile =curr_cursorzeile;
+                                 if ((curr_impuls < 4) || (curr_impuls > 4))
+                                 {
+                                    curr_cursorzeile--;
+                                 }
+                                 else // zurueckscrollen
+                                 {
+                                    curr_cursorzeile = 3;
+                                 }
+                                 
+                                 curr_impuls--;
+                              }
                               manuellcounter=0;
                            }
-                        }break; // zuteilungscreen
+                           else if (manuellcounter) // blinken ist on
+                           {
+                              //funktionarray: bit 0-3: Kanal bit 4-7: Zuteilung an Pitch/Schieber/Schalter
+                              /*
+                               const char funktion0[] PROGMEM = "Seite  \0";
+                               const char funktion1[] PROGMEM = "Hoehe  \0";
+                               const char funktion2[] PROGMEM = "Quer   \0";
+                               const char funktion3[] PROGMEM = "Motor  \0";
+                               const char funktion4[] PROGMEM = "Quer L\0";
+                               const char funktion5[] PROGMEM = "Quer R\0";
+                               const char funktion6[] PROGMEM = "Lande  \0";
+                               const char funktion7[] PROGMEM = "Aux    \0";
+                               */
+                              /*
+                               lcd_gotoxy(0,0);
+                               lcd_puthex(curr_cursorzeile);
+                               lcd_putc(' ');
+                               lcd_puthex(curr_cursorspalte);
+                               lcd_putc(' ');
+                               */
+                              switch (curr_cursorspalte)
+                              {
+                                 case 0: // Kanal
+                                 {
+                                    // Kanalnummer im Devicearray increment
+                                    if (((curr_ausgangarray[curr_cursorzeile]& 0x07)))
+                                    {
+                                       curr_ausgangarray[curr_cursorzeile]-= 0x01;
+                                    }
+                                 }break;
+                                    
+                                 case 1: // Zeile  nach oben verschieben
+                                 {
+                                    if (((curr_ausgangarray[curr_cursorzeile]& 0x07))<8)
+                                    {
+                                       uint8_t tempzeilenwert =curr_ausgangarray[curr_cursorzeile];
+                                       if (curr_impuls) // nicht erste Zeile, auf erster Seite
+                                       {
+                                          if ((curr_cursorzeile < 4) && (curr_impuls < 4)) // Noch vor scrollen, auf erster Seite
+                                          {
+                                             tempzeilenwert =curr_ausgangarray[curr_impuls];
+                                             
+                                             curr_ausgangarray[curr_impuls] =curr_ausgangarray[curr_impuls-1]; // Wert von naechster zeile
+                                             curr_ausgangarray[curr_impuls -1] = tempzeilenwert;
+                                             // cursorzeile verschieben
+                                             display_cursorweg();
+                                             
+                                             curr_cursorzeile--;
+                                             // blink-cursorzeile verschieben
+                                             blink_cursorpos = cursorpos[curr_cursorzeile][curr_cursorspalte];
+                                             
+                                          }
+                                          else  if ((curr_cursorzeile == 1) && (curr_impuls == 4))// zweite Zeile auf Seite 2, scrollen.
+                                          {
+                                             tempzeilenwert =curr_ausgangarray[curr_impuls];
+                                             
+                                             curr_ausgangarray[curr_impuls] =curr_ausgangarray[curr_impuls-1]; // Wert von naechster zeile, noch auf dieser Seite
+                                             curr_ausgangarray[curr_impuls -1] = tempzeilenwert;
+                                             display_cursorweg();
+                                             curr_cursorzeile = 3; // Scroll
+                                             // blink-cursorzeile verschieben
+                                             blink_cursorpos = cursorpos[3][curr_cursorspalte];
+                                          }
+                                          else  if ((curr_cursorzeile) && (curr_impuls >4))// zweite Zeile oder mehr auf zweiter Seite
+                                          {
+                                             tempzeilenwert =curr_ausgangarray[curr_impuls];
+                                             curr_ausgangarray[curr_impuls] =curr_ausgangarray[curr_impuls-1]; // Wert von naechster zeile
+                                             curr_ausgangarray[curr_impuls -1] = tempzeilenwert;
+                                             // cursorzeile verschieben
+                                             display_cursorweg();
+                                             
+                                             curr_cursorzeile--;
+                                             // blink-cursorzeile verschieben
+                                             blink_cursorpos = cursorpos[curr_cursorzeile][curr_cursorspalte];
+                                             
+                                          }
+                                          curr_impuls--;
+                                       }
+                                       else // letzte Zeile, mit erster zeile vertauschen
+                                       {
+                                          /*
+                                           tempzeilenwert =curr_ausgangarray[curr_impuls];
+                                           curr_ausgangarray[curr_impuls] =curr_ausgangarray[0]; // Wert von erster zeile
+                                           curr_ausgangarray[0] = tempzeilenwert;
+                                           display_cursorweg();
+                                           curr_cursorzeile=0;
+                                           curr_impuls =0;
+                                           blink_cursorpos = cursorpos[0][curr_cursorspalte];
+                                           */
+                                       }
+                                    }
+                                    
+                                 }break;
+                                    
+                                    
+                              }// switch curr_cursorspalte
+                              manuellcounter = 0;
+                              
+                           } // else if manuellcounter
+                           
+                        }break; // case ausgang
+                           
                      }// switch
                      
                   }break;
@@ -3048,8 +3348,8 @@ int main (void)
 #pragma mark Taste 3
                      if (manuellcounter)
                      {
-                        senderstatus ^= (1<<STOP_ON);
-                        manuellcounter=0;
+                        programmstatus ^= (1<<STOP_ON);
+                         manuellcounter=0;
                      }
                   }break;
                      
@@ -3061,7 +3361,7 @@ int main (void)
                         case HOMESCREEN: // home
                         {
                            
-                        }break;
+                         }break;
                            
                         case SETTINGSCREEN: // Settings
                         {
@@ -3401,7 +3701,71 @@ int main (void)
                            }
                            
                            
-                        }break;
+                        }break; // case Zuteilungscreen
+                           
+                        case AUSGANGSCREEN: // Ausgang
+                        {
+                           lcd_gotoxy(0,0);
+                           
+                           if (blink_cursorpos == 0xFFFF && manuellcounter) // Kein Blinken
+                           {
+                              if (curr_cursorspalte)
+                              {
+                                 display_cursorweg();
+                                 char_height_mul=1;
+                                 last_cursorspalte =curr_cursorspalte;
+                                 
+                                 curr_cursorspalte--;
+                                 lcd_puthex(curr_cursorzeile);
+                                 lcd_putc(' ');
+                                 lcd_puthex(curr_cursorspalte);
+                                 lcd_putc(' ');
+                                 lcd_puthex(posregister[curr_cursorzeile][curr_cursorspalte+1]);
+                              }
+                              manuellcounter=0;
+                              
+                           }
+                           else if (manuellcounter)
+                           {
+                              switch(curr_cursorzeile) // zeile
+                              {
+                                 case 0: // Kanaltext
+                                 {
+                                    switch (curr_cursorspalte) // cursorspalte
+                                    {
+                                       case 0: // Kanalnummer
+                                       {
+                                          
+                                       }   break;
+                                    }
+                                    // blink_cursorpos =  cursorpos[0][1]; // richtungcursor
+                                    
+                                    
+                                 }break;
+                                    
+                                    
+                                 case  1:
+                                 {
+                                    //blink_cursorpos =  cursorpos[1][1]; // settingcursor
+                                 }break;
+                                    
+                                 case  2:
+                                 {
+                                    
+                                 }break;
+                                 case  3:
+                                 {
+                                    
+                                 }break;
+                                    //
+                                    
+                              }// switch
+                              manuellcounter=0;
+                           }
+                           
+                           
+                        }break; // case Ausgangscreen
+                           
                            
                            
                      }// switch curr_screen
@@ -3414,16 +3778,59 @@ int main (void)
 #pragma mark Taste 5
                      switch (curr_screen)
                      {
+                           /*
+                        case HOMESCREEN:
+                        {
+                           if (startcounter == 0) // Settings sind nicht aktiv
+                           {
+                              programmstatus |= (1<< SETTINGWAIT);
+                              settingstartcounter++;
+                           }
+                           else if (startcounter > 5) // Irrtum, kein Umschalten
+                           {
+                              programmstatus &= ~(1<< SETTINGWAIT);
+                              settingstartcounter=0;
+                              startcounter=0;
+                              manuellcounter = 0;
+                           }
+                           else
+                           {
+                              if (programmstatus & (1<< SETTINGWAIT)) // Umschaltvorgang noch aktiv
+                              {
+                                 settingstartcounter++; // counter fuer klicks
+                                 if (settingstartcounter > 2)
+                                 {
+                                    programmstatus &= ~(1<< SETTINGWAIT);
+                                    settingstartcounter=0;
+                                    startcounter=0;
+                                    
+                                    // Umschalten
+                                    display_clear();
+                                    setsettingscreen();
+                                    curr_screen = SETTINGSCREEN;
+                                    curr_cursorspalte=0;
+                                    curr_cursorzeile=0;
+                                    last_cursorspalte=0;
+                                    last_cursorzeile=0;
+                                    blink_cursorpos=0xFFFF;
+                                    manuellcounter = 0;
+                                    
+                                 } // if settingcounter <
+                              }
+                           }
+                        }break;
+                           */
                         case HOMESCREEN:
                         {
                            
                				lcd_putint2(startcounter);
-
-                           if (startcounter == 0) // Settings sind nicht aktiv
+                           lcd_putc('*');
+                           if ((startcounter == 0)&& (manuellcounter > 1)) // Settings sind nicht aktiv
                            {
                               lcd_putc('A');
                               programmstatus |= (1<< SETTINGWAIT);
                               settingstartcounter++;
+                              manuellcounter = 0;
                            }
                            else if (startcounter > 5) // Irrtum, kein Umschalten
                            {
@@ -3435,22 +3842,24 @@ int main (void)
                            }
                            else
                            {
-                              if (programmstatus & (1<< SETTINGWAIT)) // Umschaltvorgang noch aktiv
+                              if ((programmstatus & (1<< SETTINGWAIT))&& (manuellcounter > 1)) // Umschaltvorgang noch aktiv
                               {
                                  lcd_putc('B');
+                                 
                                  settingstartcounter++; // counter fuer klicks
                                  if (settingstartcounter > 2)
                                  {
                                     lcd_putc('C');
                                     programmstatus &= ~(1<< SETTINGWAIT);
+                                    programmstatus |=(1<<UPDATESCREEN);
                                     settingstartcounter=0;
                                     startcounter=0;
-                                    /*
+                                    
                                     // Umschalten
                                     display_clear();
-                                    lcd_putc('D');
+                                    //lcd_putc('D');
                                     setsettingscreen();
-                                    lcd_putc('E');
+                                    //lcd_putc('E');
                                     curr_screen = SETTINGSCREEN;
                                     curr_cursorspalte=0;
                                     curr_cursorzeile=0;
@@ -3458,7 +3867,7 @@ int main (void)
                                     last_cursorzeile=0;
                                     blink_cursorpos=0xFFFF;
                                     manuellcounter = 0;
-                                    */
+                                    
                                  } // if settingcounter <
                               }
                            }
@@ -3466,6 +3875,7 @@ int main (void)
                            
                         case SETTINGSCREEN: // setting
                         {
+                           #pragma mark  5 SETTINGSCREEN
                            if (manuellcounter)
                            {
                               switch (curr_cursorzeile)
@@ -3566,6 +3976,25 @@ int main (void)
                                     
                                  }break;
                                     
+                                 case 4: // Ausgang
+                                 {
+                                    //zu Zuteilung-Screen
+                                    if (manuellcounter)
+                                    {
+                                       display_clear();
+                                       
+                                       curr_screen = AUSGANGSCREEN;
+                                       blink_cursorpos=0xFFFF;
+                                       curr_cursorspalte=0;
+                                       curr_cursorzeile=0;
+                                       last_cursorspalte=0;
+                                       last_cursorzeile=0;
+                                       setausgangscreen();
+                                       manuellcounter=0;
+                                    }
+                                    
+                                 }break;
+                                    
                                     
                               }// switch curr_cursorzeile
                            } // if manuellcounter
@@ -3574,6 +4003,7 @@ int main (void)
                            
                         case KANALSCREEN: // Kanal
                         {
+                           #pragma mark  5 KANALSCREEN
                            if (manuellcounter)
                            {
                               blink_cursorpos =  cursorpos[curr_cursorzeile][curr_cursorspalte];
@@ -3687,6 +4117,7 @@ int main (void)
                            
                         case MIXSCREEN: // Mixing
                         {
+                           #pragma mark  5 MIXSCREEN
                            if (manuellcounter)
                            {
                               blink_cursorpos =  cursorpos[curr_cursorzeile][curr_cursorspalte];
@@ -3774,7 +4205,9 @@ int main (void)
                         }break; // case mixscreen
                            
                         case ZUTEILUNGSCREEN: // Zuteilung
+                        case AUSGANGSCREEN:
                         {
+                           #pragma mark  5 AUSGANGSCREEN
                            if (manuellcounter)
                            {
                               blink_cursorpos =  cursorpos[curr_cursorzeile][curr_cursorspalte];
@@ -4030,6 +4463,70 @@ int main (void)
                            
                         }break;
                            
+                           
+                        case AUSGANGSCREEN: // Ausgang
+                        {
+                           lcd_gotoxy(0,0);
+                           lcd_puthex(curr_cursorzeile);
+                           lcd_putc(' ');
+                           lcd_puthex(curr_cursorspalte);
+                           lcd_putc(' ');
+                           
+                           if (blink_cursorpos == 0xFFFF && manuellcounter) // Kein Blinken
+                           {
+                              if (posregister[curr_cursorzeile][curr_cursorspalte+1]< 0xFFFF)
+                              {
+                                 display_cursorweg();
+                                 char_height_mul=1;
+                                 last_cursorspalte =curr_cursorspalte;
+                                 
+                                 curr_cursorspalte++;
+                                 
+                                 lcd_puthex(posregister[curr_cursorzeile][curr_cursorspalte+1]);
+                              }
+                              manuellcounter=0;
+                              
+                           }
+                           else
+                           {
+                              switch(curr_cursorzeile) // zeile
+                              {
+                                 case 0: // Kanaltext
+                                 {
+                                    switch (curr_cursorspalte) // cursorspalte
+                                    {
+                                       case 0: // Kanalnummer
+                                       {
+                                          
+                                       }   break;
+                                    }
+                                    // blink_cursorpos =  cursorpos[0][1]; // richtungcursor
+                                    
+                                    
+                                 }break;
+                                    
+                                    
+                                 case  1:
+                                 {
+                                    //blink_cursorpos =  cursorpos[1][1]; // settingcursor
+                                 }break;
+                                    
+                                 case  2:
+                                 {
+                                    
+                                 }break;
+                                 case  3:
+                                 {
+                                    
+                                 }break;
+                                    //
+                                    
+                              }// switch
+                           }
+                           
+                           
+                        }break;
+                           
                      }// switch
                      
                      manuellcounter=0;
@@ -4082,27 +4579,6 @@ int main (void)
                               {
                                  
                                  blink_cursorpos = 0xFFFF;
-                                 switch((blink_cursorpos & 0xFF00)>>8) //
-                                 {
-                                    case MODELLCURSOR: // modell
-                                    {
-                                       
-                                    }break;
-                                    case  SETCURSOR:
-                                    {
-                                       
-                                    }break;
-                                    case  KANALCURSOR:
-                                    {
-                                       
-                                    }break;
-                                    case  MIXCURSOR:
-                                    {
-                                       
-                                    }break;
-                                       //
-                                       
-                                 }// switch
                                  manuellcounter=0;
                               }
                               
@@ -4133,29 +4609,7 @@ int main (void)
                               }
                               else if (manuellcounter)
                               {
-                                 
                                  blink_cursorpos = 0xFFFF;
-                                 switch((blink_cursorpos & 0xFF00)>>8) //
-                                 {
-                                    case 1: //
-                                    {
-                                       
-                                    }break;
-                                    case  2:
-                                    {
-                                       
-                                    }break;
-                                    case  3:
-                                    {
-                                       
-                                    }break;
-                                    case  4:
-                                    {
-                                       
-                                    }break;
-                                       //
-                                       
-                                 }// switch
                                  manuellcounter=0;
                               }
                            }break;
@@ -4181,27 +4635,6 @@ int main (void)
                               {
                                  
                                  blink_cursorpos = 0xFFFF;
-                                 switch((blink_cursorpos & 0xFF00)>>8) //
-                                 {
-                                    case 0: // Titel
-                                    {
-                                       
-                                    }break;
-                                    case  1:
-                                    {
-                                       
-                                    }break;
-                                    case  2:
-                                    {
-                                       
-                                    }break;
-                                    case  3:
-                                    {
-                                       
-                                    }break;
-                                       //
-                                       
-                                 }// switch
                                  manuellcounter=0;
                               }
                               
@@ -4227,27 +4660,6 @@ int main (void)
                               {
                                  
                                  blink_cursorpos = 0xFFFF;
-                                 switch((blink_cursorpos & 0xFF00)>>8) //
-                                 {
-                                    case 0: // Titel
-                                    {
-                                       
-                                    }break;
-                                    case  1:
-                                    {
-                                       
-                                    }break;
-                                    case  2:
-                                    {
-                                       
-                                    }break;
-                                    case  3:
-                                    {
-                                       
-                                    }break;
-                                       //
-                                       
-                                 }// switch
                                  manuellcounter=0;
                               }
                               
@@ -4280,32 +4692,12 @@ int main (void)
                               {
                                  
                                  blink_cursorpos = 0xFFFF;
-                                 switch((blink_cursorpos & 0xFF00)>>8) //
-                                 {
-                                    case 1: //
-                                    {
-                                       
-                                    }break;
-                                    case  2:
-                                    {
-                                       
-                                    }break;
-                                    case  3:
-                                    {
-                                       
-                                    }break;
-                                    case  4:
-                                    {
-                                       
-                                    }break;
-                                       //
-                                       
-                                 }// switch
                                  manuellcounter=0;
                               }
                            }break;
                               
                            case ZUTEILUNGSCREEN: // Settings
+                              
                            {
                               if ((blink_cursorpos == 0xFFFF) && manuellcounter)
                               {
@@ -4332,27 +4724,39 @@ int main (void)
                               {
                                  
                                  blink_cursorpos = 0xFFFF;
-                                 switch((blink_cursorpos & 0xFF00)>>8) //
+                                 manuellcounter=0;
+                              }
+                           }break;
+                              
+                           case AUSGANGSCREEN: // Settings
+                              
+                           {
+                              if ((blink_cursorpos == 0xFFFF) && manuellcounter)
+                              {
+                                 manuellcounter=0;
+                                 
+                                 blink_cursorpos = 0xFFFF;
+                                 //
+                                 if (curr_cursorspalte==0) // position am linken Rand
                                  {
-                                    case 1: //
-                                    {
-                                       
-                                    }break;
-                                    case  2:
-                                    {
-                                       
-                                    }break;
-                                    case  3:
-                                    {
-                                       
-                                    }break;
-                                    case  4:
-                                    {
-                                       
-                                    }break;
-                                       //
-                                       
-                                 }// switch
+                                    
+                                    display_clear();
+                                    curr_cursorzeile=0;
+                                    last_cursorspalte=0;
+                                    last_cursorzeile=0;
+                                    curr_screen=SETTINGSCREEN;
+                                    setsettingscreen();
+                                 }
+                                 else
+                                 {
+                                    
+                                 }
+                                 manuellcounter=0;
+                              }
+                              else if (manuellcounter)
+                              {
+                                 
+                                 blink_cursorpos = 0xFFFF;
                                  manuellcounter=0;
                               }
                            }break;
@@ -4363,8 +4767,9 @@ int main (void)
                      {
                         if (manuellcounter) // kurz warten
                         {
-                           senderstatus &= ~(1<<MOTOR_ON);
+                           programmstatus &= ~(1<<MOTOR_ON);
                            motorsekunde=0;
+                           motorminute=0;
                            manuellcounter=0; // timeout zuruecksetzen
                         }
                      }
@@ -4718,6 +5123,7 @@ int main (void)
                            
                         case ZUTEILUNGSCREEN:
                         {
+#pragma mark 8 ZUTEILUNGSCREEN
                            if (blink_cursorpos == 0xFFFF && manuellcounter) // Kein Blinken
                            {
                               if (posregister[curr_cursorzeile+1][curr_cursorspalte]<0xFFFF)//
@@ -4752,13 +5158,13 @@ int main (void)
                                const char funktion7[] PROGMEM = "Aux    \0";
                                
                                */
-                              /*
-                               lcd_gotoxy(0,0);
-                               lcd_puthex(curr_cursorzeile);
-                               lcd_putc(' ');
-                               lcd_puthex(curr_cursorspalte);
-                               lcd_putc(' ');
-                               */
+                              
+                              lcd_gotoxy(0,0);
+                              lcd_puthex(curr_cursorzeile);
+                              lcd_putc(' ');
+                              lcd_puthex(curr_cursorspalte);
+                              lcd_putc(' ');
+                              
                               switch (curr_cursorzeile)
                               {
                                  case 0: // pitch vertikal
@@ -4767,7 +5173,7 @@ int main (void)
                                     {
                                        case 0: // L_V index 1
                                        {
-                                          // Kanalnummer increment
+                                          // Kanalnummer im Devicearray increment
                                           if (((curr_devicearray[1]& 0x07))<8)
                                           {
                                              curr_devicearray[1]+= 0x01;
@@ -4794,7 +5200,6 @@ int main (void)
                                           {
                                              // Kanalnummer fuer Device increment
                                              curr_devicearray[0]+= 0x01;
-                                             // curr_funktionarray[curr_devicearray[0]]
                                           }
                                        }break;
                                           
@@ -4820,7 +5225,6 @@ int main (void)
                                           {
                                              // Kanalnummer fuer Device increment
                                              curr_devicearray[4]+= 0x01;
-                                             // curr_funktionarray[curr_devicearray[0]]
                                           }
                                        }break;
                                           
@@ -4837,11 +5241,138 @@ int main (void)
                               }//switch curr_cursorzeile
                               manuellcounter = 0;
                               
-                           }
+                           } // else if manuellcounter
                            
-                        }break;
+                        }break; // case zuteilung
+                           
+                        case AUSGANGSCREEN:
+                        {
+#pragma mark 8 AUSGANGSCREEN
+                           if (blink_cursorpos == 0xFFFF && manuellcounter) // Kein Blinken
+                           {
+                              if (posregister[curr_cursorzeile+1][curr_cursorspalte]<0xFFFF)//
+                              {
+                                 char_height_mul=1;
+                                 display_cursorweg();
+                                 last_cursorzeile =curr_cursorzeile;
+                                 if ((curr_cursorzeile < 3) || (curr_impuls > 3)) // Noch vor scrollen oder nach umschalten
+                                 {
+                                    curr_cursorzeile++;
+                                 }
+                                 else
+                                 {
+                                    curr_cursorzeile = 1; // Scroll
+                                 }
+                                 curr_impuls++;
+                              }
+                              
+                              manuellcounter=0;
+                           }
+                           else if (manuellcounter) // blinken ist on
+                           {
+                              //funktionarray: bit 0-3: Kanal bit 4-7: Zuteilung an Pitch/Schieber/Schalter
+                              /*
+                               const char funktion0[] PROGMEM = "Seite  \0";
+                               const char funktion1[] PROGMEM = "Hoehe  \0";
+                               const char funktion2[] PROGMEM = "Quer   \0";
+                               const char funktion3[] PROGMEM = "Motor  \0";
+                               const char funktion4[] PROGMEM = "Quer L\0";
+                               const char funktion5[] PROGMEM = "Quer R\0";
+                               const char funktion6[] PROGMEM = "Lande  \0";
+                               const char funktion7[] PROGMEM = "Aux    \0";
+                               */
+                              
+                              lcd_gotoxy(0,0);
+                              lcd_puthex(curr_cursorzeile);
+                              lcd_putc(' ');
+                              lcd_puthex(curr_cursorspalte);
+                              lcd_putc(' ');
+                              
+                              switch (curr_cursorspalte)
+                              {
+                                 case 0: // Kanal
+                                 {
+                                    // Kanalnummer im Devicearray increment
+                                    if (((curr_ausgangarray[curr_cursorzeile]& 0x07))<8)
+                                    {
+                                       curr_ausgangarray[curr_cursorzeile]+= 0x01;
+                                    }
+                                 }break;
+                                    
+                                 case 1: // Zeile nach unten verschieben
+                                 {
+                                    if (((curr_ausgangarray[curr_cursorzeile]& 0x07))<8)
+                                    {
+                                       uint8_t tempzeilenwert =curr_ausgangarray[curr_cursorzeile];
+                                       if (curr_impuls < 7) // nicht letzte Zeile
+                                       {
+                                          if ((curr_cursorzeile < 3) && (curr_impuls < 3)) // Noch vor scrollen, auf erster Seite
+                                          {
+                                             tempzeilenwert =curr_ausgangarray[curr_impuls];
+                                             
+                                             curr_ausgangarray[curr_impuls] =curr_ausgangarray[curr_impuls+1]; // Wert von naechster zeile
+                                             curr_ausgangarray[curr_impuls +1] = tempzeilenwert;
+                                             // cursorzeile verschieben
+                                             display_cursorweg();
+                                             
+                                             curr_cursorzeile++;
+                                             // blink-cursorzeile verschieben
+                                             blink_cursorpos = cursorpos[curr_cursorzeile][curr_cursorspalte];
+                                             
+                                          }
+                                          else  if ((curr_cursorzeile == 3) && (curr_impuls == 3))// zweitunterste Zeile, scrollen.
+                                          {
+                                             tempzeilenwert =curr_ausgangarray[curr_impuls];
+                                             curr_ausgangarray[curr_impuls] =curr_ausgangarray[curr_impuls+1]; // Wert von naechster zeile, noch auf dieser Seite
+                                             curr_ausgangarray[curr_impuls +1] = tempzeilenwert;
+                                             display_cursorweg();
+                                             curr_cursorzeile = 1; // Scroll
+                                             // blink-cursorzeile verschieben
+                                             blink_cursorpos = cursorpos[1][curr_cursorspalte];
+                                          }
+                                          else  if ((curr_cursorzeile < 4) && (curr_impuls >3))// zweite Zeile oder mehr auf zweiter Seite
+                                          {
+                                             tempzeilenwert =curr_ausgangarray[curr_impuls];
+                                             curr_ausgangarray[curr_impuls] =curr_ausgangarray[curr_impuls+1]; // Wert von naechster zeile
+                                             curr_ausgangarray[curr_impuls +1] = tempzeilenwert;
+                                             // cursorzeile verschieben
+                                             display_cursorweg();
+                                             
+                                             curr_cursorzeile++;
+                                             // blink-cursorzeile verschieben
+                                             blink_cursorpos = cursorpos[curr_cursorzeile][curr_cursorspalte];
+                                             
+                                          }
+                                          curr_impuls++;
+                                       }
+                                       else // letzte Zeile, mit erster zeile vertauschen
+                                       {
+                                          /*
+                                           tempzeilenwert =curr_ausgangarray[curr_impuls];
+                                           curr_ausgangarray[curr_impuls] =curr_ausgangarray[0]; // Wert von erster zeile
+                                           curr_ausgangarray[0] = tempzeilenwert;
+                                           display_cursorweg();
+                                           curr_cursorzeile=0;
+                                           curr_impuls =0;
+                                           blink_cursorpos = cursorpos[0][curr_cursorspalte];
+                                           */
+                                       }
+                                    }
+                                    
+                                 }break;
+                                    
+                                    
+                              }// switch curr_cursorspalte
+                              manuellcounter = 0;
+                              
+                           } // else if manuellcounter
+                           
+                        }break; // case ausgang
                            
                      }// switch
+                     
+                     
+                     
                      
                   }break; // case 8
                      
@@ -4850,8 +5381,10 @@ int main (void)
 #pragma mark Taste 9
                      if (manuellcounter) // kurz warten
                      {
-                        senderstatus &= ~(1<<STOP_ON);
+                        programmstatus &= ~(1<<STOP_ON);
                         stopsekunde=0;
+                        stopminute=0;
+                        
                         manuellcounter=0; // timeout zuruecksetzen
                      }
                      

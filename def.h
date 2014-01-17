@@ -119,12 +119,13 @@
 
 #define MANUELLPIN		3	// Pin 6 von PORT D fuer Anzeige Manuell
 
-#define MANUELLTIMEOUT	200 // Loopled-counts bis Manuell zurueckgesetzt wird. 02FF: ca. 100 s
+#define MANUELLTIMEOUT	100 // Loopled-counts bis Manuell zurueckgesetzt wird. 02FF: ca. 100 s
 
 
 // programmstatus
-#define MS_DIV          4	// Pin 4 von Status. Gesetzt wenn neue Schalterposition eingestellt
+#define EEPROM_TASK     3
 
+#define MS_DIV          4	// Pin 4 von Status. Gesetzt wenn 1s abgelaufen
 #define UPDATESCREEN    5 // Pin in status wird gesetzt wenn eine Taste gedrueckt ist, reset wenn update ausgefuerht
 
 #define SETTINGWAIT     6  // Pin in status wird gesetzt bis Taste 5 3* gedrueckt ist
@@ -222,6 +223,13 @@
 #define MASTER_EN_PIN            7 // Eingang fur PinChange-Interrupt
 
 #define SUB_BUSY_PIN             5 // Ausgang fuer busy-Meldung des Sub an Master
+
+#define POWER_OFF_PORT            PORTD   //
+#define POWER_OFF_DDR             DDRD    //
+#define POWER_OFF_PIN             PIND    //
+
+#define POWER_OFF_DETECT_PIN               3
+
 
 #define SUB_READ_EEPROM_BIT      5 // Sub soll EEPROM lesen
 

@@ -34,8 +34,8 @@ extern volatile uint8_t       curr_levelarray[8];
 extern volatile uint8_t       curr_expoarray[8];
 extern volatile uint8_t       curr_mixarray[8];
 extern volatile uint8_t       curr_funktionarray[8];
-extern volatile uint8_t       curr_devicearray[8];
-extern volatile uint8_t       curr_ausgangarray[8];
+extern  volatile uint8_t       curr_devicearray[8];
+extern  volatile uint8_t       curr_ausgangarray[8];
 
 extern volatile uint8_t       curr_screen;
 extern volatile uint8_t       curr_page; // aktuelle page
@@ -59,11 +59,13 @@ extern volatile uint8_t       last_cursorzeile; // letzte zeile des cursors
 extern volatile uint8_t       last_cursorspalte; // letzte colonne des cursors
 extern volatile uint16_t      blink_cursorpos;
 
-extern volatile uint16_t      laufsekunde;
+//extern volatile uint16_t      laufsekunde;
 extern volatile uint8_t      laufstunde;
 extern volatile uint8_t      laufminute;
 extern volatile uint16_t      motorsekunde;
 extern volatile uint16_t      stopsekunde;
+extern volatile uint16_t      motorminute;
+extern volatile uint16_t      stopminute;
 extern volatile uint16_t      batteriespannung;
 
 extern volatile uint16_t  posregister[8][8]; // Aktueller screen: werte fuer page und daraufliegende col fuer Menueintraege (hex). geladen aus progmem
@@ -193,13 +195,33 @@ void sethomescreen(void)
    char_y= (posregister[2][0] & 0xFF00)>>8;
    display_write_str(titelbuffer,2);
    
+   // Stoppzeit schreiben
+   char_y= (posregister[2][1] & 0xFF00)>>8;
+   char_x = posregister[2][1] & 0x00FF;
+   char_height_mul = 2;
+   char_width_mul = 2;
+   display_write_stopzeit(stopsekunde,stopminute, 2);
+   char_height_mul = 1;
+   char_width_mul = 1;
+
+   
    // Motorzeit schreiben
    strcpy_P(titelbuffer, (PGM_P)pgm_read_word(&(TitelTable[3]))); // Text Motorzeit
    char_x = posregister[1][0] & 0x00FF;
    char_y= ((posregister[1][0] & 0xFF00)>>8);
    char_height_mul = 1;
    display_write_str(titelbuffer,2);
+   char_height_mul = 2;
+   char_width_mul = 2;
+
+   char_y= (posregister[1][1] & 0xFF00)>>8;
+   char_x = posregister[1][1] & 0x00FF;
+   // display_write_min_sek(motorsekunde,2);
+   display_write_stopzeit(motorsekunde,motorminute, 2);
    
+   char_height_mul = 1;
+   char_width_mul = 1;
+
    
    // Modell schreiben
    strcpy_P(titelbuffer, (PGM_P)pgm_read_word(&(ModelTable[curr_model])));
@@ -961,16 +983,17 @@ void update_time(void)
    char_x = posregister[2][1] & 0x00FF;
    char_height_mul = 2;
    char_width_mul = 2;
-   display_write_min_sek(stopsekunde,2);
-   
+   //display_write_min_sek(stopsekunde,2);
+   display_write_stopzeit(stopsekunde,stopminute, 2);
    
    // Motorzeit aktualisieren
    char_height_mul = 2;
    char_width_mul = 2;
    char_y= (posregister[1][1] & 0xFF00)>>8;
    char_x = posregister[1][1] & 0x00FF;
-   display_write_min_sek(motorsekunde,2);
-   
+   //display_write_min_sek(motorsekunde,2);
+   display_write_stopzeit(motorsekunde,motorminute, 2);
+
    // Batteriespannung aktualisieren
    char_y= (posregister[3][1] & 0xFF00)>>8;
    char_x = posregister[3][1] & 0x00FF;
@@ -1004,22 +1027,27 @@ uint8_t update_screen(void)
          char_y= (posregister[0][0] & 0xFF00)>>8;
          char_height_mul = 1;
          char_width_mul = 1;
-         display_write_min_sek(laufsekunde, 2);
-         
-         // Stoppzeit aktualisieren
+         display_write_zeit(laufsekunde&0xFF,laufminute,laufstunde, 2);
+
+         //display_write_min_sek(laufsekunde, 2);
+          // Stoppzeit aktualisieren
          char_y= (posregister[2][1] & 0xFF00)>>8;
          char_x = posregister[2][1] & 0x00FF;
          char_height_mul = 2;
          char_width_mul = 2;
-         display_write_min_sek(stopsekunde,2);
-         
+ //        if (programmstatus &(1<<STOP_ON)) // loescht nicht bei reset
+         {
+            display_write_stopzeit(stopsekunde,stopminute, 2);
+         }
          
          // Motorzeit aktualisieren
-         char_height_mul = 2;
-         char_width_mul = 2;
+//         char_height_mul = 2;
+//         char_width_mul = 2;
          char_y= (posregister[1][1] & 0xFF00)>>8;
          char_x = posregister[1][1] & 0x00FF;
-         display_write_min_sek(motorsekunde,2);
+         {
+            display_write_stopzeit(motorsekunde,motorminute, 2);
+         }
          
          // Batteriespannung aktualisieren
          char_y= (posregister[3][1] & 0xFF00)>>8;
@@ -2984,6 +3012,20 @@ void display_write_zeit(uint8_t sekunde,uint8_t minute,uint8_t stunde,uint8_t pr
       stdbuffer[3] = '\0';
       display_write_str(stdbuffer,prop);
    }
+   tempbuffer[0] =minute/10+'0';
+   tempbuffer[1] =minute%10+'0';
+   tempbuffer[2] =':';
+   tempbuffer[3] =sekunde/10+'0';
+   tempbuffer[4] =sekunde%10+'0';
+   tempbuffer[5] = '\0';
+   display_write_str(tempbuffer,prop);
+   
+}
+
+void display_write_stopzeit(uint8_t sekunde,uint8_t minute,uint8_t prop)
+{
+   
+   char tempbuffer[6]={};
    tempbuffer[0] =minute/10+'0';
    tempbuffer[1] =minute%10+'0';
    tempbuffer[2] =':';

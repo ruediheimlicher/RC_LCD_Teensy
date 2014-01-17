@@ -51,6 +51,7 @@ struct adcwert16 readKanal16Bit(uint8_t kanal)
 
 void initADC(uint8_t derKanal)
 {
+   //ADCSRA = (1<<ADEN) |(1<<ADPS2) | (1<<ADPS0);
    ADCSRA = (1<<ADEN) | ADC_PRESCALER;       // Frequenzvorteiler auf 32 setzen und ADC aktivieren
    ADCSRB = (1<<ADHSM) | (derKanal & 0x20);  // high speed mode
    ADMUX = aref | (derKanal & 0x1F);         // configure mux input und Ÿbergebenen Kanal waehlen
@@ -69,15 +70,22 @@ void initADC(uint8_t derKanal)
 
 int16_t adc_read(uint8_t derKanal)
 {
-   uint8_t low;
+   uint16_t result = 0;
+   uint8_t low, i ;
+   ADCSRA = (1<<ADEN) | ADC_PRESCALER;             // enable ADC  f/64
    
-   ADCSRA = (1<<ADEN) | ADC_PRESCALER;             // enable ADC
    ADCSRB = (1<<ADHSM) | (derKanal & 0x20);             // high speed mode
    ADMUX = aref | (derKanal & 0x1F);                    // configure mux input
-   ADCSRA = (1<<ADEN) | (1<<ADPS2) | (1<<ADPS0) | (1<<ADSC); // start the conversion
-   while (ADCSRA & (1<<ADSC)) ;                    // wait for result
-   low = ADCL;                                     // must read LSB first
-   return (ADCH << 8) | low;                       // must read MSB only once!
+   
+   for(i=0;i<4;i++)
+   {
+      ADCSRA = (1<<ADEN) | (1<<ADPS2) | (1<<ADPS0) | (1<<ADSC); // start the conversion
+      while (ADCSRA & (1<<ADSC)) ;                    // wait for result
+      low = ADCL;                                     // must read LSB first
+      result +=(ADCH << 8) | low;
+   }
+   result /= 4;                     // Summe durch vier teilen = arithm. Mittelwert
+   return result;
 }
 
 
