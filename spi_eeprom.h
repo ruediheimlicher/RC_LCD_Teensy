@@ -12,10 +12,18 @@
  Copyright (C) 2011 David DiPaola
  https://github.com/rememberthe8bit/AVR-libraries/tree/master/23K256
  ***/
+
+/*
 #define SPI_EE_DDR            DDRE    //DDR E
 #define SPI_EE_PORT           PORTE   //PORT E
 
 #define SPI_EE_CS_PIN                         6
+*/
+
+#define SPI_EE_DDR            DDRD    //DDR D
+#define SPI_EE_PORT           PORTD   //PORT D
+
+#define SPI_EE_CS_PIN                         2
 
 
 // unabh. von Prozessor
