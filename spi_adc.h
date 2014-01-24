@@ -18,8 +18,8 @@
 #define SingleEnd    0x01        // set to Single-End A/D input
 #define Differential 0x00        // set to Differential A/D input
 
-#define SPI_DDR            DDRB    //DDRB
-#define SPI_PORT           PORTB   //PORTB
+#define SPI_DDR                  DDRB    //DDRB
+#define SPI_PORT                 PORTB   //PORTB
 #define SPI_SS_PIN                 0
 #define SPI_SCK_PIN                1
 #define SPI_MOSI_PIN               2

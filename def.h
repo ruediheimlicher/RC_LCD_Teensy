@@ -113,8 +113,7 @@
 #define DOGM_CS_PIN   2
 #define DOGM_CMD_PIN	3
 
-#define MOTOR_ON     1
-#define STOP_ON     2
+
 
 
 #define MANUELLPIN		3	// Pin 6 von PORT D fuer Anzeige Manuell
@@ -122,8 +121,11 @@
 #define MANUELLTIMEOUT	100 // Loopled-counts bis Manuell zurueckgesetzt wird. 02FF: ca. 100 s
 
 
-// programmstatus
-#define EEPROM_TASK     3
+// bits von programmstatus
+
+#define MOTOR_ON        1
+#define STOP_ON         2
+#define EEPROM_TASK     3  // Daten in EEPROM sichern
 
 #define MS_DIV          4	// Pin 4 von Status. Gesetzt wenn 1s abgelaufen
 #define UPDATESCREEN    5 // Pin in status wird gesetzt wenn eine Taste gedrueckt ist, reset wenn update ausgefuerht
@@ -193,19 +195,29 @@
 #define  POT_READ          0x10  //Bit 4
 #define  HALT_BIT              7 //Bit 7
 
-#define ADC_START 0  //    Start Messung Batteriespannung mit internem ADC
+// Bits von eepromstatus
+#define READ_EEPROM_START  0  // Beim Start gesetzt. Soll einmaliges Lesen der Settings beim Update des Masters ausloesen
 
-#define POT_START 0  //    Start Messung Potentiometer
 
-#define SPI_START 2  //    Start SPI auf diesem device
 
-#define SPI_END   3  //    End SPI auf diesem device
+// Bits von displaystatus
 
-#define POT_MITTE 7  //    Mittelwerte der Potentiometer speichern
+#define UHR_UPDATE         0
+#define BATTERIE_UPDATE    1
 
-#define ANZ_POT   6
+#define ADC_START          0  //    Start Messung Batteriespannung mit internem ADC
 
-#define POT_FAKTOR 1.20
+#define POT_START          0  //    Start Messung Potentiometer
+
+#define SPI_START          2  //    Start SPI auf diesem device
+
+#define SPI_END            3  //    End SPI auf diesem device
+
+#define POT_MITTE          7  //    Mittelwerte der Potentiometer speichern
+
+#define ANZ_POT            6
+
+#define POT_FAKTOR         1.20
 
 
 #define EE_WREN   0

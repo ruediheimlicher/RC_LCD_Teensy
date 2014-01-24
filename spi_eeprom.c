@@ -177,7 +177,7 @@ uint8_t spieeprom_rdbyte(uint16_t addr)
 {
     EE_CS_LO;
    uint8_t result = 0x00;
- //  _delay_us(EEDELAY);
+   _delay_us(EE_READ_DELAY);
    //send read instruction
    
    spi_send(0x03);

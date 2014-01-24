@@ -21,6 +21,7 @@ void spiadc_init()
    
 }
 
+/* in Master
 void MCP3208_init(void)
 {
    // Set MOSI, SCK and SS output, all other input
@@ -36,6 +37,7 @@ void MCP3208_init(void)
    SPI_PORT |= (1<<(SPI_MISO_PIN));  //setbitHigh MOSI Pin
    SPI_PORT |= (1<<(SPI_SCK_PIN));   //setbitHigh CLK  Pin
 }
+ 
 
 unsigned char MCP3208_spiWrite(char cData)
 {
@@ -46,6 +48,7 @@ unsigned char MCP3208_spiWrite(char cData)
       ;
    return SPDR;
 }
+ 
 
 unsigned int MCP3208_spiRead(unsigned char AD_type,unsigned char ADchanel)
 {
@@ -69,6 +72,6 @@ unsigned int MCP3208_spiRead(unsigned char AD_type,unsigned char ADchanel)
    return (((gReciveHighByte & 0x0F)<<8)|gReciveLowByte);  // return 16bit variable (12bit A/D data)
 }
 
-
+*/
 
 

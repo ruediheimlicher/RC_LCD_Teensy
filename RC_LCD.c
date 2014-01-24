@@ -79,6 +79,8 @@ volatile uint8_t timer0startwert=TIMER0_STARTWERT;
 void delay_ms(unsigned int ms);
 
 static volatile uint8_t             displaystatus=0x00; // Tasks fuer Display
+
+
 static volatile uint16_t                   displaycounter=0;
 
 
@@ -89,7 +91,7 @@ static volatile uint8_t             substatus=0x00; // Tasks fuer Sub
 // Task fuer sub
 #define TASTATUR_READ   0
 #define TASTATUR_OK     1
-
+#define SETTINGS_READ    2
 
 
 #define SCREEN_OK       4
@@ -125,8 +127,8 @@ volatile uint16_t Pot_Array[SPI_BUFSIZE];
 
 volatile uint16_t Mitte_Array[8];
 
-volatile uint8_t Level_Array[8]; // Levels fuer Kanaele, 1 byte pro kanal
-volatile uint8_t Expo_Array[8]; // Levels fuer Kanaele, 1 byte pro kanal
+//volatile uint8_t Level_Array[8]; // Levels fuer Kanaele, 1 byte pro kanal
+//volatile uint8_t Expo_Array[8]; // Levels fuer Kanaele, 1 byte pro kanal
 
 volatile uint16_t Mix_Array[8];// Mixings, 2 8-bit-bytes pro Mixing
 
@@ -193,7 +195,7 @@ volatile uint8_t levelb=0x12;
 volatile uint8_t expowert=0;
 volatile uint8_t expob=0;
 
-
+/*
 volatile uint8_t                 default_settingarray[8][2]=
 {
    {0x12,0x21},
@@ -205,7 +207,7 @@ volatile uint8_t                 default_settingarray[8][2]=
    {0x00,0x00},
    {0x00,0x00}
 };
-
+*/
 volatile uint8_t                 default_levelarray[8]=
 {
    0x12,
@@ -235,10 +237,10 @@ volatile uint8_t                 default_mixarray[8]=
 {
    // index gerade  :  mixa(parallel) mit (0x70)<<4, mixb(opposite) mit 0x07
    // index ungerade: typ mit 0x03
-   0x10,
-   0x01,
-   0x23,
-   0x02,
+   0x00, // V-mix
+   0x88, // OFF
+   0x00,
+   0x88,
    0x00,
    0x00,
    0x00,
@@ -290,7 +292,7 @@ volatile uint8_t                 default_ausgangarray[8]=
 
 volatile uint8_t              curr_levelarray[8];
 volatile uint8_t              curr_expoarray[8];
-volatile uint8_t              curr_mixarray[8];
+volatile uint8_t              curr_mixarray[8]={};
 volatile uint8_t              curr_funktionarray[8];
  volatile uint8_t              curr_devicearray[8] = {};
  volatile uint8_t              curr_ausgangarray[8];
@@ -309,11 +311,14 @@ volatile uint8_t                 last_cursorspalte=0; // letzte colonne des curs
 
 
 volatile uint8_t                 curr_model=0; // aktuelles modell
+uint8_t              EEMEM       speichermodel=0;
 volatile uint8_t                 curr_kanal=0; // aktueller kanal
 volatile uint8_t                 curr_richtung=0; // aktuelle richtung
 
 
 volatile uint8_t                 curr_setting=0; // aktuelles Setting fuer Modell
+uint8_t              EEMEM       speichersetting=0;
+
 
 volatile uint16_t                posregister[8][8]={}; // Aktueller screen: werte fuer page und daraufliegende col fuer Menueintraege (hex). geladen aus progmem
 
@@ -491,6 +496,7 @@ void spi_start(void) // SPI-Pins aktivieren
    SPI_PORT &= ~(1<<SPI_MISO_PIN); // LO
    
    SPI_DDR |= (1<<SPI_MOSI_PIN);
+   SPI_PORT &= ~(1<<SPI_MOSI_PIN); // LO
    
    SPI_DDR |= (1<<SPI_SCK_PIN);
    SPI_PORT &= ~(1<<SPI_SCK_PIN); // LO
@@ -673,7 +679,9 @@ ISR (TIMER0_OVF_vect)
    
    if (mscounter > 2*CLOCK_DIV) // 0.5s
    {
-      displaycounter++;
+     // displaycounter++;
+      
+      
       //OSZI_A_TOGG;
       programmstatus ^= (1<<MS_DIV); // Teilung /2
       mscounter=0;
@@ -760,7 +768,7 @@ ISR (PCINT0_vect)
    }
    else // HIGH to LOW pin change, Sub ON
    {
-      
+      displaystatus |= (1<<UHR_UPDATE);
       //masterstatus &= ~(1<<SUB_TASK_BIT);
    }
    
@@ -810,9 +818,13 @@ uint8_t eeprombytelesen(uint16_t readadresse) // 300 us ohne lcd_anzeige
    //OSZI_B_LO;
    cli();
    MEM_EN_PORT &= ~(1<<MEM_EN_PIN);
+   _delay_us(EE_READ_DELAY);
    spi_start();
+   _delay_us(EE_READ_DELAY);
    SPI_PORT_Init();
+   _delay_us(EE_READ_DELAY);
    spieeprom_init();
+   _delay_us(EE_READ_DELAY);
    
    
    //lcd_gotoxy(1,0);
@@ -821,17 +833,19 @@ uint8_t eeprombytelesen(uint16_t readadresse) // 300 us ohne lcd_anzeige
    //lcd_putc('*');
    
    eeprom_indata = 0xaa;
-   uint8_t readdata=0;
+   uint8_t readdata=0xaa;
    
    // Byte  read 270 us
    EE_CS_LO;
    _delay_us(EE_READ_DELAY);
-   
+   OSZI_D_LO;
    readdata = (uint8_t)spieeprom_rdbyte(readadresse);
-   
+   OSZI_D_HI;
    _delay_us(EE_READ_DELAY);
+   _delay_us(10);
    EE_CS_HI;
-   
+  
+   /*
    sendbuffer[0] = 0xD5;
    
    sendbuffer[1] = readadresse & 0x00FF;
@@ -846,7 +860,7 @@ uint8_t eeprombytelesen(uint16_t readadresse) // 300 us ohne lcd_anzeige
    // wird fuer Darstellung der Read-Ergebnisse im Interface benutzt.
    
 //   usb_rawhid_send((void*)sendbuffer, 50);
-   
+   */
    sei();
    //OSZI_B_HI;
    //lcd_putc('*');
@@ -874,9 +888,9 @@ uint8_t eepromverbosebytelesen(uint16_t readadresse) // 300 us ohne lcd_anzeige
    // Byte  read 270 us
    EE_CS_LO;
    _delay_us(EE_READ_DELAY);
-   
+   OSZI_D_LO;
    readdata = (uint8_t)spieeprom_rdbyte(readadresse);
-   
+   OSZI_D_HI;
    _delay_us(EE_READ_DELAY);
    EE_CS_HI;
    
@@ -886,7 +900,7 @@ uint8_t eepromverbosebytelesen(uint16_t readadresse) // 300 us ohne lcd_anzeige
    sendbuffer[2] = (readadresse & 0xFF00)>>8;
    sendbuffer[3] = readdata;
    
-   eepromstatus &= ~(1<<EE_WRITE);
+  // eepromstatus &= ~(1<<EE_WRITE);
    usbtask &= ~(1<<EEPROM_READ_BYTE_TASK);
    
    abschnittnummer =0;
@@ -945,7 +959,7 @@ uint8_t eeprompartlesen(uint16_t readadresse) //   us ohne lcd_anzeige
    sendbuffer[3] = readdata;
    sendbuffer[4] = 0xDB;
    
-   eepromstatus &= ~(1<<EE_WRITE);
+   //eepromstatus &= ~(1<<EE_WRITE);
    usbtask &= ~(1<<EEPROM_READ_BYTE_TASK);
    
    abschnittnummer =0;
@@ -1049,7 +1063,7 @@ uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_w
    sendbuffer[9] = 0xFA;
    
    sendbuffer[0] = code;
-   eepromstatus &= ~(1<<EE_WRITE);
+   //eepromstatus &= ~(1<<EE_WRITE);
    usbtask &= ~(1<<EEPROM_WRITE_BYTE_TASK);
    
    //lcd_putc('+');
@@ -1272,41 +1286,132 @@ uint8_t readRAMbyteAnAdresse(uint16_t adresse)
 
 
 // MARK: readSettings
-void readSettings(void)
+void read_Ext_EEPROM_Settings(void)
 {
-   RAM_CS_LO;
-   _delay_us(RAMDELAY);
-   /*
-    modelindex = buffer[3]; // welches model soll gelesen werden
+   //EE_CS_LO;
+   _delay_us(LOOPDELAY);
+   uint16_t readstartadresse=0;
+   uint8_t modelindex = curr_model; // welches model soll gelesen werden
     uint8_t pos=0;
-    
+   
     // Level lesen
-    uint16_t readstartadresse = TASK_OFFSET  + LEVEL_OFFSET + modelindex*SETTINGBREITE;
+   cli();
+    readstartadresse = TASK_OFFSET  + LEVEL_OFFSET + modelindex*SETTINGBREITE;
+   sei();
     // startadresse fuer Settings des models
     for (pos=0;pos<8;pos++)
     {
-    sendbuffer[EE_PARTBREITE + pos] = eeprombytelesen(readstartadresse+pos);
+       curr_levelarray[pos] = eeprombytelesen(readstartadresse+pos);
+        
     }
-    
+    _delay_us(100);
+   
     // Expo lesen
     readstartadresse = TASK_OFFSET  + EXPO_OFFSET + modelindex*SETTINGBREITE;
     for (pos=0;pos<8;pos++)
     {
-    sendbuffer[EE_PARTBREITE + 0x08 + pos] = eeprombytelesen(readstartadresse+pos);
+       curr_expoarray[pos] = eeprombytelesen(readstartadresse+pos);
+       
     }
-    
-    // Mix lesen
+    _delay_us(100);
+   
+   
+   // Mix lesen
+   cli();
     readstartadresse = TASK_OFFSET  + MIX_OFFSET + modelindex*SETTINGBREITE;
+   sei();
+   /*
+   lcd_gotoxy(0,0);
+   //lcd_putc('+');
+   //lcd_putint1(modelindex);
+   //lcd_putc('+');
+   lcd_putint12(readstartadresse);
+   lcd_putc('*');
+   lcd_puthex((readstartadresse & 0xFF00)>>8);
+   lcd_puthex((readstartadresse & 0x00FF));
+ */
+   
     for (pos=0;pos<8;pos++)
     {
-    sendbuffer[EE_PARTBREITE + 0x10 + pos] = eeprombytelesen(readstartadresse+pos);
-    
+       if (pos==0)
+       {
+       //OSZI_D_LO;
+       }
+       cli();
+       curr_mixarray[pos] = eeprombytelesen(readstartadresse+pos);
+       //OSZI_D_HI;
+
     }
-    */
+   
    _delay_us(RAMDELAY);
    
-   RAM_CS_HI;
+   //EE_CS_HI;
 }
+
+void write_Ext_EEPROM_Settings(void)
+{
+   //EE_CS_LO;
+   _delay_us(LOOPDELAY);
+   uint16_t readstartadresse=0;
+   uint8_t modelindex = curr_model; // welches model soll gelesen werden
+   uint8_t pos=0;
+   
+   // Level schreiben
+   cli();
+   readstartadresse = TASK_OFFSET  + LEVEL_OFFSET + modelindex*SETTINGBREITE;
+   sei();
+   // startadresse fuer Settings des models
+   for (pos=0;pos<8;pos++)
+   {
+      eeprombyteschreiben(0xF5,readstartadresse+pos,curr_levelarray[pos]);
+      
+   }
+   _delay_us(100);
+   
+   // Expo lesen
+   readstartadresse = TASK_OFFSET  + EXPO_OFFSET + modelindex*SETTINGBREITE;
+   for (pos=0;pos<8;pos++)
+   {
+      eeprombyteschreiben(0xF5,readstartadresse+pos,curr_expoarray[pos]);
+
+      
+   }
+   _delay_us(100);
+   
+   
+   // Mix lesen
+   cli();
+   readstartadresse = TASK_OFFSET  + MIX_OFFSET + modelindex*SETTINGBREITE;
+   sei();
+   /*
+    lcd_gotoxy(0,0);
+    //lcd_putc('+');
+    //lcd_putint1(modelindex);
+    //lcd_putc('+');
+    lcd_putint12(readstartadresse);
+    lcd_putc('*');
+    lcd_puthex((readstartadresse & 0xFF00)>>8);
+    lcd_puthex((readstartadresse & 0x00FF));
+    */
+   
+   for (pos=0;pos<8;pos++)
+   {
+      if (pos==0)
+      {
+         //OSZI_D_LO;
+      }
+      cli();
+      eeprombyteschreiben(0xF5,readstartadresse+pos,curr_mixarray[pos]);
+      //OSZI_D_HI;
+      
+   }
+   sei();
+   _delay_us(RAMDELAY);
+   
+   //EE_CS_HI;
+}
+
+
 
 uint8_t Tastenwahl(uint8_t Tastaturwert)
 {
@@ -1411,6 +1516,20 @@ unsigned char EEPROM_read(unsigned int uiAddress)
    
 }
 
+void write_eeprom_status(void)
+{
+   eeprom_write_byte(&speichermodel, curr_model);
+   eeprom_write_byte(&speichersetting, curr_setting);
+   
+}
+
+void read_eeprom_status(void)
+{
+   
+   curr_model = eeprom_read_byte(&speichermodel);
+   curr_setting = eeprom_read_byte(&speichersetting);
+
+}
 
 
 void write_eeprom_zeit(void)
@@ -1590,15 +1709,24 @@ int main (void)
    char_x=0;
    char_y = 5;
 	lcd_gotoxy(1,2);
-	lcd_puts("graphstarter\0");
+	lcd_puts("RC_LCD\0");
    delay_ms(1000);
    lcd_cls();
+   //substatus |= (1<<SETTINGS_READ);; // Settings beim Start lesen
+   eepromstatus |= (1<<READ_EEPROM_START);
+   read_eeprom_zeit();
+   read_eeprom_status();
+
+   //setdefaultsetting();
    
-   setdefaultsetting();
+
+   
+
+   
    sethomescreen();
+   
    timer0();
    
-   read_eeprom_zeit();
    
    
 // MARK:  while
@@ -1609,7 +1737,7 @@ int main (void)
 		loopcount0+=1;
       if(INTERRUPT_PIN & (1<< MASTER_EN_PIN))
       {
-         OSZI_A_HI;
+         //OSZI_A_HI;
          if (substatus & (1<< TASTATUR_READ)) // Bit noch nicht reset
          {
             //substatus &= ~(1<< TASTATUR_READ);
@@ -1618,16 +1746,16 @@ int main (void)
       }
       else
       {
-         OSZI_A_LO;
+         //OSZI_A_LO;
          //lcd_gotoxy(0,0); // Kein guter Platz, delay
          //lcd_putint12(laufsekunde);
          if (displaycounter)
          {
-            displaycounter=0;
-            OSZI_B_LO;
+            //displaycounter=0;
+            //OSZI_B_LO;
            // update_time();
-            update_screen();
-             OSZI_B_HI;
+           // update_screen();
+            // OSZI_B_HI;
             /*
              if (!(substatus & (1<<UHR_OK)))
              {
@@ -1642,7 +1770,8 @@ int main (void)
          {
             programmstatus &= ~(1<<EEPROM_TASK);
             //cli();
-             write_eeprom_zeit();
+            write_eeprom_zeit();
+            write_eeprom_status();
             //sei();
          }
 
@@ -1675,7 +1804,7 @@ int main (void)
          //lcd_putint12(startcounter);
          }
          
-         if (loopcount1%8 == 0)
+         if (loopcount1%4 == 0) // nach etwas Zeit soll Master die Settings lesen
          {
  
             if (masterstatus & (1<<SUB_READ_EEPROM_BIT)) // beim Start ee lesen
@@ -1684,9 +1813,14 @@ int main (void)
                // Beim Start RAM_SEND_PPM_STATUS schicken
                task_out |= (1<< RAM_SEND_PPM_TASK);
                task_outdata = 0;
+               
+               // Sub soll erst jetzt die Settings lesen. >> in RAM_TASK verschoben
+               //substatus |= (1<<SETTINGS_READ);
+               
             }
-            lcd_gotoxy(0,0);
+            //lcd_gotoxy(0,0);
          }
+         
          
         
           if(loopcount1%16 == 0)
@@ -1784,6 +1918,30 @@ int main (void)
             }
          } //
 
+         
+         
+			if ((manuellcounter > MANUELLTIMEOUT) )
+			{
+				{
+               programmstatus &= ~(1<<MANUELL);
+               manuellcounter=0;
+					//MANUELL_PORT &= ~(1<<MANUELLPIN);
+               
+               if (curr_screen) // nicht homescreen
+               {
+                  display_clear();
+                  curr_screen=0;
+                  curr_cursorspalte=0;
+                  curr_cursorzeile=0;
+                  last_cursorspalte=0;
+                  last_cursorzeile=0;
+                  sethomescreen();
+               }
+               
+				}
+				//
+			}
+
 // MARK:  USB send
          // neue Daten abschicken
 //         if ((usbtask & (1<<EEPROM_WRITE_PAGE_TASK) )) //|| usbtask & (1<<EEPROM_WRITE_BYTE_TASK))
@@ -1815,10 +1973,30 @@ int main (void)
          
       }
       
+      //if (displaycounter)
+      if (displaystatus & (1<<UHR_UPDATE))
+      {
+         displaystatus &= ~(1<<UHR_UPDATE);
+         displaycounter++;
+         if ((displaycounter ==4)&& (curr_screen==0))
+         {
+             //OSZI_A_LO;
+            display_akkuanzeige(batteriespannung);
+             //OSZI_A_HI;
+         }
+         if (displaycounter >8)
+         {
+            //OSZI_B_LO;
+            update_screen();
+            //OSZI_B_HI;
+            displaycounter=0;
+         }
+      }
+
+      
       if ((masterstatus & (1<<SUB_TASK_BIT) ) )//|| (masterstatus & (1<< HALT_BIT)))// SPI starten, in PCINT0 gesetzt
       {
-         
-         if (masterstatus & (1<< HALT_BIT)) // SUB_TASK_BIT nicht zuruecksetzen
+          if (masterstatus & (1<< HALT_BIT)) // SUB_TASK_BIT nicht zuruecksetzen
          {
             //masterstatus &= ~(1<< HALT_BIT);
          }
@@ -1840,8 +2018,36 @@ int main (void)
          
          _delay_us(1);
          SPI_PORT_Init();
-
-/*
+        
+         
+         if (substatus & (1<<SETTINGS_READ))
+         {
+            //OSZI_D_LO;
+            substatus &= ~(1<<SETTINGS_READ);
+            read_Ext_EEPROM_Settings();
+            lcd_clr_line(1);
+            
+            lcd_gotoxy(0,1);
+            lcd_putc('L');
+            //lcd_putc(' ');
+            lcd_puthex(curr_levelarray[0]);
+            lcd_puthex(curr_levelarray[1]);
+            //lcd_putc(' ');
+            lcd_puthex(curr_levelarray[2]);
+            lcd_puthex(curr_levelarray[3]);
+            
+            lcd_putc(' ');
+            lcd_putc('M');
+            //lcd_putc(' ');
+            lcd_puthex(curr_mixarray[0]);
+            lcd_puthex(curr_mixarray[1]);
+            //lcd_putc(' ');
+            lcd_puthex(curr_mixarray[2]);
+            lcd_puthex(curr_mixarray[3]);
+            //OSZI_D_HI;
+            
+         }
+ /*
          if (usbtask & (1<<EEPROM_WRITE_BYTE_TASK))// MARK:  EEPROM_WRITE_BYTE_TASK
          {
             
@@ -1959,7 +2165,16 @@ int main (void)
                   lcd_putc('t');
                    */
                   task_out &= ~(1<<RAM_SEND_PPM_TASK); // Bit reset
-                }
+                  
+                  // Sub soll  beim Start erst jetzt die Settings lesen.
+                  if (eepromstatus & (1<<READ_EEPROM_START))
+                  {
+                     eepromstatus &= ~(1<<READ_EEPROM_START);
+                     substatus |= (1<<SETTINGS_READ);
+                  }
+                  
+
+               }
             
             
             // Fehler ausgeben
@@ -1978,6 +2193,9 @@ int main (void)
             
             // end Daten an RAM
             
+            
+            
+            
             MEM_EN_PORT |= (1<<MEM_EN_PIN);
             
             // EEPROM Test
@@ -1989,11 +2207,13 @@ int main (void)
          spi_end(); // SPI von Sub ausschalten
          
          //         MASTER_PORT |= (1<<SUB_BUSY_PIN); // Sub schickt ende busy an Master
+         
+  
         
       } // end Task
       else
       {
-         
+
       }
       
       /**	END ADC	***********************/
@@ -2009,7 +2229,7 @@ int main (void)
       if (r > 0)
       {
          
-         OSZI_D_LO;
+         //OSZI_D_LO;
          cli();
          uint8_t code = 0x00;
          usbstatus |= (1<<USB_RECV);
@@ -2357,8 +2577,10 @@ int main (void)
                   {
                      if (buffer[4])
                      {
-                        sendbuffer[EE_PARTBREITE + pos] = eepromverbosebytelesen(readstartadresse+pos); // ab 0x20 32
-                        
+                        uint8_t leveldata = eepromverbosebytelesen(readstartadresse+pos); // ab 0x20 32
+                        //sendbuffer[EE_PARTBREITE + pos] = eepromverbosebytelesen(readstartadresse+pos); // ab 0x20 32
+                        sendbuffer[EE_PARTBREITE + pos] = leveldata;
+                        curr_levelarray[pos] = leveldata;
                      }
                      else
                      {
@@ -2391,8 +2613,10 @@ int main (void)
                   {
                      if (buffer[6])
                      {
-                        sendbuffer[EE_PARTBREITE + 0x10 + pos] = eepromverbosebytelesen(readstartadresse+pos); // ab 0x30 48
-                        
+                        uint8_t mixdata = eepromverbosebytelesen(readstartadresse+pos); // ab 0x30 48
+                        //sendbuffer[EE_PARTBREITE + 0x10 + pos] = eepromverbosebytelesen(readstartadresse+pos); // ab 0x30 48
+                        curr_mixarray[pos] = mixdata;
+                        sendbuffer[EE_PARTBREITE + 0x10 + pos] = mixdata;
                      }
                      else
                      {
@@ -2410,7 +2634,26 @@ int main (void)
                   // code
                   sendbuffer[0] = 0xF5;
                   usb_rawhid_send((void*)sendbuffer, 50);
-                
+                  lcd_clr_line(0);
+                  lcd_gotoxy(0,0);
+                  lcd_putc('L');
+                  //lcd_putc(' ');
+                  lcd_puthex(curr_levelarray[0]);
+                  lcd_puthex(curr_levelarray[1]);
+                  //lcd_putc(' ');
+                  lcd_puthex(curr_levelarray[2]);
+                  lcd_puthex(curr_levelarray[3]);
+                  
+                  lcd_putc(' ');
+                  lcd_putc('M');
+                  //lcd_putc(' ');
+                  lcd_puthex(curr_mixarray[0]);
+                  lcd_puthex(curr_mixarray[1]);
+                  //lcd_putc(' ');
+                  lcd_puthex(curr_mixarray[2]);
+                  lcd_puthex(curr_mixarray[3]);
+                  //OSZI_D_HI;
+
                
                
                }break;
@@ -2580,7 +2823,7 @@ int main (void)
          code=0;
          sei();
          
-       OSZI_D_HI;
+       //OSZI_D_HI;
          
 		} // r>0, neue Daten
       else
@@ -2687,14 +2930,14 @@ int main (void)
       if ((substatus & (1<< TASTATUR_READ)) && (mscounter%2))
       {
          
-
+         Tastenwert=0;
          //OSZI_B_LO;
          //substatus &= ~(1<< TASTATUR_READ);
          // OSZI_B_TOGG;
          Tastenwert=adc_read(TASTATURPIN)>>2;
         // lcd_gotoxy(4,1);
          //lcd_putint12(Tastenwert);
-         //Tastenwert=0;
+         //
          if (Tastenwert>5)
          {
             /*
@@ -2773,7 +3016,12 @@ int main (void)
                      {
                         case HOMESCREEN: // home
                         {
-                           
+                           if (manuellcounter > 2)
+                           {
+                           substatus |= (1<<SETTINGS_READ);; // Settings beim Start lesen
+                              manuellcounter=0;
+                           }
+ 
                         }break;
                            
                         case SETTINGSCREEN: // Settings
@@ -3362,6 +3610,20 @@ int main (void)
                         {
                            
                          }break;
+                        case SAVESCREEN: // save
+                        {
+                           if (curr_cursorspalte)
+                           {
+                              display_cursorweg();
+                              
+                              char_height_mul=1;
+                              last_cursorspalte =curr_cursorspalte;
+                              curr_cursorspalte--;
+                              //lcd_putc('+');
+                           }
+                           
+                        }break;
+
                            
                         case SETTINGSCREEN: // Settings
                         {
@@ -3849,7 +4111,8 @@ int main (void)
                                  settingstartcounter++; // counter fuer klicks
                                  if (settingstartcounter > 2)
                                  {
-                                    lcd_putc('C');
+                                    
+                                    //lcd_putc('C');
                                     programmstatus &= ~(1<< SETTINGWAIT);
                                     programmstatus |=(1<<UPDATESCREEN);
                                     settingstartcounter=0;
@@ -3867,11 +4130,42 @@ int main (void)
                                     last_cursorzeile=0;
                                     blink_cursorpos=0xFFFF;
                                     manuellcounter = 0;
+                                    programmstatus |= (1<<MANUELL);
                                     
                                  } // if settingcounter <
                               }
                            }
                         }break;
+                           
+                        case SAVESCREEN:
+                        {
+                           switch (curr_cursorspalte)
+                           {
+                              case 0: // sichern
+                              {
+                                 
+                              }break;
+                                 
+                              case 1: // abbrechen
+                              {
+                                 read_Ext_EEPROM_Settings();// zuruecksetzen
+                              }break;
+
+                           }// switch curr_cursorspalte
+                           
+                           display_clear();
+                           curr_screen=0;
+                           curr_cursorspalte=0;
+                           curr_cursorzeile=0;
+                           last_cursorspalte=0;
+                           last_cursorzeile=0;
+                           blink_cursorpos = 0xFFFF;
+                           
+                           sethomescreen();
+                           
+                           
+                        }break;
+
                            
                         case SETTINGSCREEN: // setting
                         {
@@ -4232,7 +4526,21 @@ int main (void)
                         {
                            
                         }break;
-                           
+
+                        case SAVESCREEN: // save
+                        {
+                           if (posregister[curr_cursorzeile][curr_cursorspalte+1]<0xFFFF)
+                           {
+                               display_cursorweg();
+                              
+                              char_height_mul=1;
+                              last_cursorspalte =curr_cursorspalte;
+                              curr_cursorspalte++;
+                              //lcd_putc('+');
+                           }
+
+                        }break;
+
                         case SETTINGSCREEN: // Settings
                         {
                            if (blink_cursorpos == 0xFFFF && manuellcounter) // Kein Blinken
@@ -4553,14 +4861,19 @@ int main (void)
                               last_cursorspalte=0;
                               last_cursorzeile=0;
                               blink_cursorpos = 0xFFFF;
+                              
+                              //setsavescreen();
+                              
                               sethomescreen();
+                              
+                              
                            }break;
                               
                            case SETTINGSCREEN: // Settings
                            {
                               if ((blink_cursorpos == 0xFFFF) && manuellcounter)
                               {
-                                 manuellcounter=0;
+                                 
                                  display_clear();
                                  curr_screen=HOMESCREEN;
                                  curr_cursorspalte=0;
@@ -4571,7 +4884,9 @@ int main (void)
                                  settingstartcounter=0;
                                  startcounter=0;
                                  
-                                 sethomescreen();
+                                 //sethomescreen();
+                                 
+                                 setsavescreen();
                                  
                                  manuellcounter=0;
                               }

@@ -99,6 +99,7 @@ extern volatile uint16_t              updatecounter; // Zaehler fuer Einschalten
 #define MIXSCREEN       5
 #define ZUTEILUNGSCREEN 6
 #define AUSGANGSCREEN   7
+#define SAVESCREEN      8
 
 #define MODELLCURSOR 2
 #define SETCURSOR    4
@@ -200,7 +201,7 @@ void sethomescreen(void)
    char_x = posregister[2][1] & 0x00FF;
    char_height_mul = 2;
    char_width_mul = 2;
-   display_write_stopzeit(stopsekunde,stopminute, 2);
+   display_write_stopzeit_BM(stopsekunde,stopminute);
    char_height_mul = 1;
    char_width_mul = 1;
 
@@ -968,6 +969,46 @@ void setzuteilungscreen(void)
 
 }// setzuteilungscreen
 
+void setsavescreen(void)
+{
+   resetRegister();
+   blink_cursorpos=0xFFFF;
+   
+   
+   
+   posregister[0][0] =  itemtab[0] |     (3 << 8); // Aenderungen sichern
+   posregister[0][1] =  itemtab[3] |    (3 << 8); //
+   posregister[0][2] =  itemtab[4] |    (3 << 8); // Abbrechen
+   posregister[0][3] =  itemtab[6] |    (3 << 8); //
+   
+   
+   cursorpos[0][0] = cursortab[0] |    (3 << 8); // sichern
+   cursorpos[0][1] = cursortab[4] |    (3 << 8); //  abbrechen
+  
+   strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(SichernTable[0]))); // titel
+   char_y= 1;
+   char_x = itemtab[0] ;
+   char_height_mul = 1;
+   char_width_mul = 1;
+   display_write_str(menubuffer,2);
+
+   char_y= (posregister[0][0] & 0xFF00)>>8;
+   char_x = posregister[0][0] & 0x00FF;
+   strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(SichernTable[1]))); // sichern
+   display_write_str(menubuffer,2);
+
+   char_y= (posregister[0][1] & 0xFF00)>>8;
+   char_x = posregister[0][1] & 0x00FF;
+   strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(SichernTable[2]))); // Abbrechen
+   display_write_str(menubuffer,2);
+
+   blink_cursorpos = cursorpos[0][0];
+
+  
+   
+}
+
+
 void update_time(void)
 {
    char_x = posregister[0][0] & 0x00FF;
@@ -1008,6 +1049,11 @@ void update_time(void)
 
 }
 
+void update_akku(void)
+{
+   
+}
+
 
 uint8_t update_screen(void)
 {
@@ -1020,6 +1066,7 @@ uint8_t update_screen(void)
       case HOMESCREEN: // homescreen
       {
 #pragma mark update HOMESCREEN
+         
          fehler=2;
          updatecounter++;
          //Laufzeit
@@ -1037,18 +1084,19 @@ uint8_t update_screen(void)
          char_width_mul = 2;
  //        if (programmstatus &(1<<STOP_ON)) // loescht nicht bei reset
          {
-            display_write_stopzeit(stopsekunde,stopminute, 2);
+            //display_write_stopzeit(stopsekunde,stopminute, 2);
+            display_write_stopzeit_BM(stopsekunde,stopminute);
          }
-         
+ 
          // Motorzeit aktualisieren
 //         char_height_mul = 2;
 //         char_width_mul = 2;
          char_y= (posregister[1][1] & 0xFF00)>>8;
          char_x = posregister[1][1] & 0x00FF;
          {
-            display_write_stopzeit(motorsekunde,motorminute, 2);
+            display_write_stopzeit_BM(motorsekunde,motorminute);
          }
-         
+ 
          // Batteriespannung aktualisieren
          char_y= (posregister[3][1] & 0xFF00)>>8;
          char_x = posregister[3][1] & 0x00FF;
@@ -1062,7 +1110,7 @@ uint8_t update_screen(void)
          // Akkubalken anzeigen
          char_height_mul = 1;
          char_width_mul = 1;
-         display_akkuanzeige(batteriespannung);
+//         display_akkuanzeige(batteriespannung);
          
       }break;
          
@@ -1343,6 +1391,7 @@ uint8_t update_screen(void)
          //uint8_t delta=6;
          /*
           // index gerade  : mixb mit (0x70)<<4, mixa mit 0x07
+          
           // index ungerade: typ mit 0x03
           default:
           0x01, Kanal 0,1
@@ -3035,6 +3084,201 @@ void display_write_stopzeit(uint8_t sekunde,uint8_t minute,uint8_t prop)
    display_write_str(tempbuffer,prop);
    
 }
+
+void display_write_stopzeit_BM(uint8_t sekunde,uint8_t minute)
+{
+   
+   char tempbuffer[2][64]={};
+   unsigned char col,page,tmp1,tmp2;
+   col=char_x;
+   page = char_y-1;
+   display_go_to(col,page);
+   
+   uint8_t index=0, startposition=0, endposition=10, delta=11, breite=12;
+   
+   // Digit 1 minute zehner
+   //PGM_P pointer = (PGM_P)zahlfont12[minute/10];
+   //uint16_t* pointer = (uint16_t*)zahlfont12[minute/10];
+   for (index=0;index< breite;index++)
+   //for (index = 0;index < 10;index++)
+   {
+      tmp1 = (char)pgm_read_byte(&(zahlfont12[minute/10][2*index])); // byte col, lo
+      tempbuffer[0][startposition+index] = tmp1;
+      tmp2 = (char)pgm_read_byte(&(zahlfont12[minute/10][2*index+1])); // byte col, lo
+      tempbuffer[1][startposition+index] = tmp2;
+      
+  }
+   
+   
+   // Digit 2 minute einer
+   startposition+= delta;
+  // char_x +=delta;
+   //pointer = (PGM_P)zahlfont12[minute%10];
+   
+   for (index=0;index<breite;index++)
+   {
+    tmp1 = (char)pgm_read_byte(&(zahlfont12[minute%10][2*index])); // byte col, lo
+    tempbuffer[0][startposition+index] = tmp1;
+    tmp2 = (char)pgm_read_byte(&(zahlfont12[minute%10][2*index+1])); // byte col, lo
+    tempbuffer[1][startposition+index] = tmp2;
+   }
+   
+   
+   startposition+= delta;
+   
+   // Doppelpunkt
+ 
+   for (index=0;index<4;index++)
+{
+   tmp1 = (char)pgm_read_byte(&(zahlfont12[10][2*index])); // byte col, lo
+   tempbuffer[0][startposition+index] = tmp1;
+   tmp2 = (char)pgm_read_byte(&(zahlfont12[10][2*index+1])); // byte col, lo
+   tempbuffer[1][startposition+index] = tmp2;
+   }
+   
+   
+   startposition+= 5;
+ 
+
+   // Digit 3 sekunde zehner
+   
+   for (index=0;index<breite;index++)
+{
+   tmp1 = (char)pgm_read_byte(&(zahlfont12[sekunde/10][2*index])); // byte col, lo
+   tempbuffer[0][startposition+index] = tmp1;
+   tmp2 = (char)pgm_read_byte(&(zahlfont12[sekunde/10][2*index+1])); // byte col, lo
+   tempbuffer[1][startposition+index] = tmp2;
+   }
+   
+   startposition+= delta;
+    // Digit 4 sekunde zehner
+   
+   for (index=0;index<breite;index++)
+   {
+   tmp1 = (char)pgm_read_byte(&(zahlfont12[sekunde%10][2*index])); // byte col, lo
+   tempbuffer[0][startposition+index] = tmp1;
+   tmp2 = (char)pgm_read_byte(&(zahlfont12[sekunde%10][2*index+1])); // byte col, lo
+   tempbuffer[1][startposition+index] = tmp2;
+   }
+   endposition = 56;
+   for (index=0;index<endposition;index++)
+   {
+      display_write_byte(0,tempbuffer[1][index]);
+   }
+   
+   display_go_to(col,page+1);
+   
+   for (index=0;index<endposition;index++)
+   {
+      display_write_byte(0,tempbuffer[0][index]);
+   }
+   
+   /*
+   tempbuffer[0] =minute/10+'0';
+   tempbuffer[1] =minute%10+'0';
+   tempbuffer[2] =':';
+   tempbuffer[3] =sekunde/10+'0';
+   tempbuffer[4] =sekunde%10+'0';
+   tempbuffer[5] = '\0';
+   display_write_str(tempbuffer,prop);
+   */
+   
+}
+
+void display_write_stopzeit_BM1(uint8_t sekunde,uint8_t minute)
+{
+   
+   char tempbuffer[2][48]={};
+   unsigned char col,page,tmp1,tmp2;
+   
+   col=char_x;
+   page = char_y-1;
+   display_go_to(col,page);
+   uint16_t index=0;
+   
+   // Digit 1 minute zehner
+  // PGM_P pointer = (PGM_P)zahlfont12[minute/10];
+   uint16_t* pointer = (uint16_t*)zahlfont12[minute/10];
+
+   for (index=0;index<10;index++)
+   {
+      //tmp1 = pgm_read_byte(pointer++); // byte col, lo
+     tmp1 = (char)pgm_read_byte(&(zahlfont12[0][2*index])); // byte col, lo
+      tempbuffer[0][index] = tmp1;
+    //  tmp2 = pgm_read_byte(pointer++); // byte col+1, hi
+     tmp2 = (char)pgm_read_byte(&(zahlfont12[0][2*index+1])); // byte col, lo
+      tempbuffer[1][index] = tmp2;
+   }
+   /*
+   // Digit 2 minute einer
+   pointer = (PGM_P)zahlfont12[minute%10];
+   
+   for (index=7;index<14;index++)
+   {
+      tmp1 = pgm_read_byte(pointer++); // byte col, lo
+      tempbuffer[0][index] = tmp1;
+      tmp2 = (pgm_read_byte(pointer++)); // byte col+1, hi
+      tempbuffer[1][index] = tmp2;
+   }
+   char_x++;
+   // Doppelpunkt
+   pointer = (PGM_P)zahlfont12[11];
+   
+   for (index=14;index<19;index++)
+   {
+      tmp1 = pgm_read_byte(pointer++); // byte col, lo
+      tempbuffer[0][index] = tmp1;
+      tmp2 = (pgm_read_byte(pointer++)); // byte col+1, hi
+      tempbuffer[1][index] = tmp2;
+   }
+   char_x++;
+   // Digit 3 sekunde zehner
+   pointer = (PGM_P)zahlfont12[sekunde/10];
+   
+   for (index=17;index<24;index++)
+   {
+      tmp1 = pgm_read_byte(pointer++); // byte col, lo
+      tempbuffer[0][index] = tmp1;
+      tmp2 = (pgm_read_byte(pointer++)); // byte col+1, hi
+      tempbuffer[1][index] = tmp2;
+   }
+   char_x++;
+   // Digit 4 sekunde zehner
+   pointer = (PGM_P)zahlfont12[sekunde%10];
+   
+   for (index=24;index<31;index++)
+   {
+      tmp1 = pgm_read_byte(pointer++); // byte col, lo
+      tempbuffer[0][index] = tmp1;
+      tmp2 = (pgm_read_byte(pointer++)); // byte col+1, hi
+      tempbuffer[1][index] = tmp2;
+   }
+   */
+   
+   for (index=0;index<20;index++)
+   {
+      display_write_byte(0,tempbuffer[1][index]);
+   }
+   
+   display_go_to(col,page+1);
+   
+   for (index=0;index<10;index++)
+   {
+      display_write_byte(0,tempbuffer[0][index]);
+   }
+   
+   /*
+    tempbuffer[0] =minute/10+'0';
+    tempbuffer[1] =minute%10+'0';
+    tempbuffer[2] =':';
+    tempbuffer[3] =sekunde/10+'0';
+    tempbuffer[4] =sekunde%10+'0';
+    tempbuffer[5] = '\0';
+    display_write_str(tempbuffer,prop);
+    */
+   
+}
+
 
 
 //##############################################################################################
