@@ -442,8 +442,8 @@ void Master_Init(void)
    
    ADC_DDR &= ~(1<<ADC_AKKUPIN);
    
-   MEM_EN_DDR |= (1<<MEM_EN_PIN);
-   MEM_EN_PORT |= (1<<MEM_EN_PIN);
+   SUB_EN_DDR |= (1<<SUB_EN_PIN);
+   SUB_EN_PORT |= (1<<SUB_EN_PIN);
    
    
 }
@@ -813,7 +813,7 @@ uint8_t eeprombytelesen(uint16_t readadresse) // 300 us ohne lcd_anzeige
 {
    //OSZI_B_LO;
    cli();
-   MEM_EN_PORT &= ~(1<<MEM_EN_PIN);
+   SUB_EN_PORT &= ~(1<<SUB_EN_PIN);
    _delay_us(EE_READ_DELAY);
    spi_start();
    _delay_us(EE_READ_DELAY);
@@ -865,7 +865,7 @@ uint8_t eepromverbosebytelesen(uint16_t readadresse) // 300 us ohne lcd_anzeige
 {
    //OSZI_B_LO;
    cli();
-   MEM_EN_PORT &= ~(1<<MEM_EN_PIN);
+   SUB_EN_PORT &= ~(1<<SUB_EN_PIN);
    spi_start();
    SPI_PORT_Init();
    spieeprom_init();
@@ -913,7 +913,7 @@ uint8_t eeprompartlesen(uint16_t readadresse) //   us ohne lcd_anzeige
 {
    //OSZI_B_LO;
    cli();
-   MEM_EN_PORT &= ~(1<<MEM_EN_PIN);
+   SUB_EN_PORT &= ~(1<<SUB_EN_PIN);
    spi_start();
    
    SPI_PORT_Init();
@@ -970,7 +970,7 @@ uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_w
    uint8_t byte_errcount=0;
    uint8_t checkbyte=0;
    cli();
-   MEM_EN_PORT &= ~(1<<MEM_EN_PIN);
+   SUB_EN_PORT &= ~(1<<SUB_EN_PIN);
    spi_start();
    SPI_PORT_Init();
    
@@ -1074,7 +1074,7 @@ uint16_t eeprompartschreiben(void) // 23 ms
 {
    //OSZI_B_LO;
    spi_start();
-   MEM_EN_PORT &= ~(1<<MEM_EN_PIN);
+   SUB_EN_PORT &= ~(1<<SUB_EN_PIN);
    uint16_t result = 0;
    
    eeprom_errcount=0;
@@ -1249,7 +1249,7 @@ uint16_t eeprompartschreiben(void) // 23 ms
    // end Daten an EEPROM
    //OSZI_D_HI ;
    
-  // MEM_EN_PORT |= (1<<MEM_EN_PIN);
+  // SUB_EN_PORT |= (1<<SUB_EN_PIN);
    //OSZI_B_HI;
    return result;
 }
@@ -2111,7 +2111,7 @@ int main (void)
          
          // Daten an RAM oder an EEPROM
          
-         MEM_EN_PORT &= ~(1<<MEM_EN_PIN);
+         SUB_EN_PORT &= ~(1<<SUB_EN_PIN);
          
          _delay_us(1);
          SPI_PORT_Init();
@@ -2376,7 +2376,7 @@ int main (void)
             
             
             
-            MEM_EN_PORT |= (1<<MEM_EN_PIN);
+            SUB_EN_PORT |= (1<<SUB_EN_PIN);
             
             // EEPROM Test
             //

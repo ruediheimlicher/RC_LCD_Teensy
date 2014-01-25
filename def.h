@@ -235,9 +235,9 @@
 #define MASTER_EN_BIT            0 // Master erlaubt SPI
 
 
-#define MEM_EN_PORT              PORTE // CS fuer Memory-Zugriffe  des Sub auf EE und RAM
-#define MEM_EN_DDR               DDRE
-#define MEM_EN_PIN               0
+#define SUB_EN_PORT              PORTE // CS fuer Memory-Zugriffe  des Sub auf EE und RAM
+#define SUB_EN_DDR               DDRE
+#define SUB_EN_PIN               0
 
 
 
