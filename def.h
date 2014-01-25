@@ -31,12 +31,12 @@
 #define LOOPLEDPORT         PORTD   
 #define LOOPLED             6       // fix verdrahtet
 
-#define TASTENDDR           DDRD
-#define TASTENPORT          PORTD
-#define TASTENPIN           PIND
+#define TASTENDDR           DDRE
+#define TASTENPORT          PORTE
+#define TASTENPIN           PINE
 
-#define E_TASTE0				   0 // Einzeltaste
-#define E_TASTE1             1
+#define E_TASTE0				  6 // Einzeltaste
+#define E_TASTE1             7
 
 
 // EEPROM Speicherorte
