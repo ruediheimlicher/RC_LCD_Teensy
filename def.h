@@ -70,9 +70,9 @@
  #define TASTE7		155
  #define TASTE8		186
  #define TASTE9		212
- #define TASTE_L	234
+ #define TASTE_L     234
  #define TASTE0		248
- #define TASTE_R	255
+ #define TASTE_R     255
  */
 /*
 // Atmega328
