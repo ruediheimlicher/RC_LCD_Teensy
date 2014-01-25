@@ -17,13 +17,13 @@
 #define SPI_RAM_DDR            DDRE    //DDR E
 #define SPI_RAM_PORT           PORTE   //PORT E
 
-#define SPI_RAM_CS_PIN                         7
+#define SPI_RAM_CS_PIN                       7
 */
 
-#define SPI_RAM_DDR            DDRE    //DDR D
-#define SPI_RAM_PORT           PORTE   //PORT D
+#define SPI_RAM_DDR            DDRD    //
+#define SPI_RAM_PORT           PORTD   //
 
-#define SPI_RAM_CS_PIN                         0
+#define SPI_RAM_CS_PIN                     1
 
 
 
@@ -33,6 +33,7 @@
 
 #define SPI_RAM_CS_PIN                         3
 */
+
 #define RAM_CS_HI SPI_RAM_PORT |= (1<<SPI_RAM_CS_PIN)
 #define RAM_CS_LO SPI_RAM_PORT &= ~(1<<SPI_RAM_CS_PIN)
 

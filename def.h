@@ -35,9 +35,10 @@
 #define TASTENPORT          PORTE
 #define TASTENPIN           PINE
 
+/*
 #define E_TASTE0				  6 // Einzeltaste
 #define E_TASTE1             7
-
+*/
 
 // EEPROM Speicherorte
 
@@ -103,16 +104,6 @@
 #define TASTE0		178
 #define TASTE_R	194
 
-// Screen
-
-#define DOGM_PORT	PORTD
-#define DOGM_DDR	DDRD
-
-#define DOGM_MOSI_PIN	0
-#define DOGM_SCL_PIN	1
-#define DOGM_CS_PIN   2
-#define DOGM_CMD_PIN	3
-
 
 
 
@@ -159,14 +150,6 @@
 
 #define WDTBIT              7
 
-// CNC12
-#define CMD_PORT            PORTD   
-#define CMD_DDR             DDRD    
-#define CMD_PIN             PIND
-
-
-#define KANAL_PORT            PORTB   //    PORTB
-#define KANAL_DDR             DDRB    //    DDRB
 
 
 
@@ -189,11 +172,11 @@
 #define EEPROM_READ              0x04  //Bit 2
 #define EEPROM_WRITE             0x08  //Bit 3
 
-#define  POT_READ          0x10  //Bit 4
-#define  HALT_BIT              7 //Bit 7
+#define  POT_READ                0x10  //Bit 4
+#define  HALT_BIT                7 //Bit 7
 
 // Bits von eepromstatus
-#define READ_EEPROM_START  0  // Beim Start gesetzt. Soll einmaliges Lesen der Settings beim Update des Masters ausloesen
+#define READ_EEPROM_START        0  // Beim Start gesetzt. Soll einmaliges Lesen der Settings beim Update des Masters ausloesen
 
 
 
@@ -246,9 +229,16 @@
 
 #define MASTER_EN_BIT            0 // Master erlaubt SPI
 
-#define MEM_EN_PORT              PORTC// CS fuer Memory-Zugriffe des Masters
+/*
+#define MEM_EN_PORT              PORTC // CS fuer Memory-Zugriffe des Masters
 #define MEM_EN_DDR               DDRC
 #define MEM_EN_PIN               7
+*/
+
+#define MEM_EN_PORT              PORTE // CS fuer Memory-Zugriffe des Masters
+#define MEM_EN_DDR               DDRE
+#define MEM_EN_PIN               0
+
 
 
 #define TOUCH_AB_PORT            PORTB
@@ -259,9 +249,9 @@
 
 #define EEPROM_WRITE_BYTE_TASK     1
 #define EEPROM_WRITE_PAGE_TASK     2
-#define EEPROM_READ_BYTE_TASK       3
-#define EEPROM_READ_PAGE_TASK       4
-#define EEPROM_AUSGABE_TASK         5
+#define EEPROM_READ_BYTE_TASK      3
+#define EEPROM_READ_PAGE_TASK      4
+#define EEPROM_AUSGABE_TASK        5
 
 #define EEPROM_WRITE_START_OK    0xB0
 

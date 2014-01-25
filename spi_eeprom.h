@@ -26,10 +26,12 @@
 #define SPI_EE_CS_PIN                         2
 */
 
+
+
 #define SPI_EE_DDR            DDRD    //
 #define SPI_EE_PORT           PORTD   //
 
-#define SPI_EE_CS_PIN                         1
+#define SPI_EE_CS_PIN                         2
 
 
 // unabh. von Prozessor

@@ -22,14 +22,22 @@
 #define LINE2				1
 
 
-
+/*
 #define DOG_A0       0
 #define DOG_RST      1
-
 #define DOG_CS       2
-
 #define DOG_SCL      3
 #define DOG_DATA     5
+*/
+
+#define DOG_CS       0
+#define DOG_RST      1
+#define DOG_A0       2
+#define DOG_SCL      3
+#define DOG_DATA     4
+
+
+
 
 #define MAXSPANNUNG  756
 #define MINSPANNUNG  500

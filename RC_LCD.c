@@ -427,17 +427,14 @@ void Master_Init(void)
    EIMSK |= (1<<INTF3); // Interrupt en
    
    
-   INTERRUPT_DDR &= ~(1 << MASTER_EN_PIN); // Clear the PB7 pin
-   // PB7 (PCINT7 pin) are now inputs
+   INTERRUPT_DDR &= ~(1 << MASTER_EN_PIN); // Eingang fur PinChange-Interrupt
    
    INTERRUPT_PORT |= (1 << MASTER_EN_PIN) ; // turn On the Pull-up
-   // PB7 are now inputs with pull-up enabled
+   
    
    MASTER_DDR |= (1 << SUB_BUSY_PIN); // BUSY-Pin als Ausgang
-   // PB7 (PCINT7 pin) are now inputs
    
    MASTER_PORT |= (1 << SUB_BUSY_PIN) ; // turn On the Pull-up
-   // PB7 are now inputs with pull-up enabled
    
 	//LCD
 	LCD_DDR |= (1<<LCD_RSDS_PIN);		// PIN als Ausgang fuer LCD
@@ -760,7 +757,7 @@ ISR (PCINT0_vect)
    
    if(INTERRUPT_PIN & (1<< MASTER_EN_PIN))// LOW to HIGH pin change, Sub ON
    {
-      OSZI_C_LO;
+      //OSZI_C_LO;
      
       masterstatus |= (1<<SUB_TASK_BIT); // Zeitfenster fuer Task offen
       adc_counter ++; // loest adc aus
@@ -838,9 +835,7 @@ uint8_t eeprombytelesen(uint16_t readadresse) // 300 us ohne lcd_anzeige
    // Byte  read 270 us
    EE_CS_LO;
    _delay_us(EE_READ_DELAY);
-   OSZI_D_LO;
    readdata = (uint8_t)spieeprom_rdbyte(readadresse);
-   OSZI_D_HI;
    _delay_us(EE_READ_DELAY);
    _delay_us(10);
    EE_CS_HI;
@@ -888,9 +883,7 @@ uint8_t eepromverbosebytelesen(uint16_t readadresse) // 300 us ohne lcd_anzeige
    // Byte  read 270 us
    EE_CS_LO;
    _delay_us(EE_READ_DELAY);
-   OSZI_D_LO;
    readdata = (uint8_t)spieeprom_rdbyte(readadresse);
-   OSZI_D_HI;
    _delay_us(EE_READ_DELAY);
    EE_CS_HI;
    
@@ -914,6 +907,7 @@ uint8_t eepromverbosebytelesen(uint16_t readadresse) // 300 us ohne lcd_anzeige
    //lcd_putc('*');
    return readdata;
 }
+
 
 
 uint8_t eeprompartlesen(uint16_t readadresse) //   us ohne lcd_anzeige
@@ -1288,11 +1282,17 @@ uint8_t readRAMbyteAnAdresse(uint16_t adresse)
 // MARK: readSettings
 void read_Ext_EEPROM_Settings(void)
 {
+   uint8_t modelindex =0;
+   modelindex = buffer[3]; // welches model soll gelesen werden
+   uint16_t readstartadresse=0;
+
+   uint8_t pos=0, verbose=buffer[4];
+   
    //EE_CS_LO;
    _delay_us(LOOPDELAY);
-   uint16_t readstartadresse=0;
-   uint8_t modelindex = curr_model; // welches model soll gelesen werden
-    uint8_t pos=0;
+  // uint16_t readstartadresse=0;
+   //uint8_t modelindex = curr_model; // welches model soll gelesen werden
+   // uint8_t pos=0;
    
     // Level lesen
    cli();
@@ -1302,7 +1302,7 @@ void read_Ext_EEPROM_Settings(void)
     for (pos=0;pos<8;pos++)
     {
        curr_levelarray[pos] = eeprombytelesen(readstartadresse+pos);
-        
+       
     }
     _delay_us(100);
    
@@ -1337,7 +1337,7 @@ void read_Ext_EEPROM_Settings(void)
        {
        //OSZI_D_LO;
        }
-       cli();
+       //cli();
        curr_mixarray[pos] = eeprombytelesen(readstartadresse+pos);
        //OSZI_D_HI;
 
@@ -1347,6 +1347,104 @@ void read_Ext_EEPROM_Settings(void)
    
    //EE_CS_HI;
 }
+
+
+
+void read_Ext_EEPROM_Level(void)
+{
+   uint8_t modelindex =0;
+   modelindex = buffer[3]; // welches model soll gelesen werden
+   uint16_t readstartadresse=0;
+   
+   uint8_t pos=0, verbose=buffer[4];
+   
+   //EE_CS_LO;
+   _delay_us(LOOPDELAY);
+   // uint16_t readstartadresse=0;
+   //uint8_t modelindex = curr_model; // welches model soll gelesen werden
+   // uint8_t pos=0;
+   
+   // Level lesen
+   cli();
+   readstartadresse = TASK_OFFSET  + LEVEL_OFFSET + modelindex*SETTINGBREITE;
+   sei();
+   // startadresse fuer Settings des models
+   for (pos=0;pos<8;pos++)
+   {
+      curr_levelarray[pos] = eeprombytelesen(readstartadresse+pos);
+      
+   }
+   
+   //EE_CS_HI;
+}
+
+void read_Ext_EEPROM_Expo(void)
+{
+   uint8_t modelindex =0;
+   modelindex = buffer[3]; // welches model soll gelesen werden
+   uint16_t readstartadresse=0;
+   
+   uint8_t pos=0, verbose=buffer[4];
+   
+   //EE_CS_LO;
+   _delay_us(LOOPDELAY);
+   
+   // Expo lesen
+   readstartadresse = TASK_OFFSET  + EXPO_OFFSET + modelindex*SETTINGBREITE;
+   for (pos=0;pos<8;pos++)
+   {
+      curr_expoarray[pos] = eeprombytelesen(readstartadresse+pos);
+      
+   }
+   _delay_us(100);
+   
+   
+     //EE_CS_HI;
+}
+
+void read_Ext_EEPROM_Mix(void)
+{
+   uint8_t modelindex =0;
+   modelindex = buffer[3]; // welches model soll gelesen werden
+   uint16_t readstartadresse=0;
+   
+   uint8_t pos=0, verbose=buffer[4];
+   
+   //EE_CS_LO;
+   _delay_us(LOOPDELAY);
+   
+   // Mix lesen
+   cli();
+   readstartadresse = TASK_OFFSET  + MIX_OFFSET + modelindex*SETTINGBREITE;
+   sei();
+   /*
+    lcd_gotoxy(0,0);
+    //lcd_putc('+');
+    //lcd_putint1(modelindex);
+    //lcd_putc('+');
+    lcd_putint12(readstartadresse);
+    lcd_putc('*');
+    lcd_puthex((readstartadresse & 0xFF00)>>8);
+    lcd_puthex((readstartadresse & 0x00FF));
+    */
+   
+   for (pos=0;pos<8;pos++)
+   {
+      if (pos==0)
+      {
+         //OSZI_D_LO;
+      }
+      //cli();
+      curr_mixarray[pos] = eeprombytelesen(readstartadresse+pos);
+      //OSZI_D_HI;
+      
+   }
+   
+   _delay_us(RAMDELAY);
+   
+   //EE_CS_HI;
+}
+
 
 void write_Ext_EEPROM_Settings(void)
 {
@@ -1806,7 +1904,7 @@ int main (void)
          
          if (loopcount1%4 == 0) // nach etwas Zeit soll Master die Settings lesen
          {
- 
+            
             if (masterstatus & (1<<SUB_READ_EEPROM_BIT)) // beim Start ee lesen
             {
                masterstatus &= ~(1<<SUB_READ_EEPROM_BIT);
@@ -2005,7 +2103,7 @@ int main (void)
             masterstatus &= ~(1<<SUB_TASK_BIT); // SUB nur fuer Fenster vom Master oeffnen
          }
          
-         OSZI_C_HI;
+         //OSZI_C_HI;
          _delay_us(1);
          uint8_t i=0;
          
@@ -2022,14 +2120,24 @@ int main (void)
          
          if (substatus & (1<<SETTINGS_READ))
          {
-            //OSZI_D_LO;
+            OSZI_D_LO;
             substatus &= ~(1<<SETTINGS_READ);
-            read_Ext_EEPROM_Settings();
-            lcd_clr_line(1);
             
-            lcd_gotoxy(0,1);
+            masterstatus |= (1<<HALT_BIT); // Halt-Bit aktiviert Task bei ausgeschaltetem Slave
+            MASTER_PORT &= ~(1<<SUB_BUSY_PIN);
+
+            read_Ext_EEPROM_Settings();
+            //read_Ext_EEPROM_Level();
+            masterstatus &= ~(1<<HALT_BIT); // Halt-Bit aktiviert Task bei ausgeschaltetem Slave
+            MASTER_PORT |= (1<<SUB_BUSY_PIN);
+
+            OSZI_D_HI;
+            
+            lcd_gotoxy(0,0);
+            
             lcd_putc('L');
             //lcd_putc(' ');
+            
             lcd_puthex(curr_levelarray[0]);
             lcd_puthex(curr_levelarray[1]);
             //lcd_putc(' ');
@@ -2037,24 +2145,41 @@ int main (void)
             lcd_puthex(curr_levelarray[3]);
             
             lcd_putc(' ');
+            
             lcd_putc('M');
             //lcd_putc(' ');
             lcd_puthex(curr_mixarray[0]);
             lcd_puthex(curr_mixarray[1]);
             //lcd_putc(' ');
+            
             lcd_puthex(curr_mixarray[2]);
             lcd_puthex(curr_mixarray[3]);
+            
+            lcd_gotoxy(0,1);
+            
+            lcd_putc('E');
+            //lcd_putc(' ');
+            
+            lcd_puthex(curr_expoarray[0]);
+            lcd_puthex(curr_expoarray[1]);
+            lcd_putc(' ');
+            lcd_puthex(curr_expoarray[2]);
+            lcd_puthex(curr_expoarray[3]);
+            lcd_putc(' ');
+            lcd_puthex(curr_expoarray[4]);
+            lcd_puthex(curr_expoarray[5]);
+            
             //OSZI_D_HI;
             
          }
  /*
          if (usbtask & (1<<EEPROM_WRITE_BYTE_TASK))// MARK:  EEPROM_WRITE_BYTE_TASK
          {
-            
+  
          }
          else if (usbtask & (1<<EEPROM_READ_BYTE_TASK))// MARK:  EEPROM_READ_BYTE_TASK
          {
-            
+  
          }
 
           else// MARK:  SPI_RAM
@@ -2094,7 +2219,7 @@ int main (void)
             
             for (i=0;i<8;i++)
             {
-               sendbuffer[EE_PARTBREITE+i] = readRAMbyteAnAdresse(teststartadresse+i);
+            //   sendbuffer[EE_PARTBREITE+i] = readRAMbyteAnAdresse(teststartadresse+i);
             
             }
 
@@ -2141,41 +2266,94 @@ int main (void)
             // MARK: task_out
             
             
+
             if (task_out & (1<<RAM_SEND_PPM_TASK)) // task an PPM senden
+            {
+               OSZI_A_LO;
+               RAM_CS_LO;
+               _delay_us(LOOPDELAY);
+               //      OSZI_A_LO;
+               spiram_wrbyte(WRITE_TASKADRESSE, task_out);
+               //     OSZI_A_HI;
+               RAM_CS_HI;
+               RAM_CS_LO;
+               _delay_us(LOOPDELAY);
+               //      OSZI_A_LO;
+               spiram_wrbyte(WRITE_TASKDATA, task_outdata);
+               //     OSZI_A_HI;
+               RAM_CS_HI;
+               _delay_us(1);
+               
+               /*
+                lcd_gotoxy(0,1);
+                lcd_puthex(task_out);
+                lcd_putc('t');
+                lcd_puthex(task_outdata);
+                lcd_putc('t');
+                */
+               task_out &= ~(1<<RAM_SEND_PPM_TASK); // Bit reset
+               
+               // Sub soll  beim Start erst jetzt die Settings lesen.
+               if (eepromstatus & (1<<READ_EEPROM_START))
                {
-                   RAM_CS_LO;
-                   _delay_us(LOOPDELAY);
-                   //      OSZI_A_LO;
-                   spiram_wrbyte(WRITE_TASKADRESSE, task_out);
-                   //     OSZI_A_HI;
-                   RAM_CS_HI;
-                   RAM_CS_LO;
-                   _delay_us(LOOPDELAY);
-                   //      OSZI_A_LO;
-                   spiram_wrbyte(WRITE_TASKDATA, task_outdata);
-                   //     OSZI_A_HI;
-                   RAM_CS_HI;
-                   _delay_us(1);
+                  OSZI_B_LO;
+                  eepromstatus &= ~(1<<READ_EEPROM_START);
+                  substatus |= (1<<SETTINGS_READ); // wird in loop abgearbeitet
+                  
+                  //read_Ext_EEPROM_Settings();
+                  /*
+                   read_Ext_EEPROM_Level();
+                   read_Ext_EEPROM_Expo();
+                   read_Ext_EEPROM_Mix();
+                   */
+                  
+                  
+                  OSZI_B_HI;
                   
                   /*
+                  lcd_clr_line(0);
+                  
+                  lcd_gotoxy(0,0);
+                  
+                  lcd_putc('L');
+                  //lcd_putc(' ');
+                  
+                  lcd_puthex(curr_levelarray[0]);
+                  lcd_puthex(curr_levelarray[1]);
+                  //lcd_putc(' ');
+                  lcd_puthex(curr_levelarray[2]);
+                  lcd_puthex(curr_levelarray[3]);
+                  
+                  lcd_putc(' ');
+                  
+                  lcd_putc('M');
+                  //lcd_putc(' ');
+                  lcd_puthex(curr_mixarray[0]);
+                  lcd_puthex(curr_mixarray[1]);
+                  //lcd_putc(' ');
+                  
+                  lcd_puthex(curr_mixarray[2]);
+                  lcd_puthex(curr_mixarray[3]);
+                  
                   lcd_gotoxy(0,1);
-                  lcd_puthex(task_out);
-                  lcd_putc('t');
-                  lcd_puthex(task_outdata);
-                  lcd_putc('t');
-                   */
-                  task_out &= ~(1<<RAM_SEND_PPM_TASK); // Bit reset
                   
-                  // Sub soll  beim Start erst jetzt die Settings lesen.
-                  if (eepromstatus & (1<<READ_EEPROM_START))
-                  {
-                     eepromstatus &= ~(1<<READ_EEPROM_START);
-                     substatus |= (1<<SETTINGS_READ);
-                  }
+                  lcd_putc('E');
+                  //lcd_putc(' ');
                   
-
+                  lcd_puthex(curr_expoarray[0]);
+                  lcd_puthex(curr_expoarray[1]);
+                  lcd_putc(' ');
+                  lcd_puthex(curr_expoarray[2]);
+                  lcd_puthex(curr_expoarray[3]);
+                  lcd_putc(' ');
+                  lcd_puthex(curr_expoarray[4]);
+                  lcd_puthex(curr_expoarray[5]);
+                  */
                }
+               OSZI_A_HI;
+            }
             
+
             
             // Fehler ausgeben
             if (outcounter%0x40 == 0)
@@ -2584,7 +2762,12 @@ int main (void)
                      }
                      else
                      {
-                     sendbuffer[EE_PARTBREITE + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x20 32
+                        //sendbuffer[EE_PARTBREITE + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x20 32
+                        uint8_t leveldata = eeprombytelesen(readstartadresse+pos); // ab 0x20 32
+                        //sendbuffer[EE_PARTBREITE + pos] = eepromverbosebytelesen(readstartadresse+pos); // ab 0x20 32
+                        sendbuffer[EE_PARTBREITE + pos] = leveldata;
+                        curr_levelarray[pos] = leveldata;
+
                      }
                   }
                   
@@ -2595,12 +2778,19 @@ int main (void)
                   {
                      if (buffer[5])
                      {
-                        sendbuffer[EE_PARTBREITE + 0x08 + pos] = eepromverbosebytelesen(readstartadresse+pos); // ab 0x28 40
+                        uint8_t expodata =eepromverbosebytelesen(readstartadresse+pos); // ab 0x28 40
+                        //sendbuffer[EE_PARTBREITE + 0x08 + pos] = eepromverbosebytelesen(readstartadresse+pos); // ab 0x28 40
+                        curr_expoarray[pos] = expodata;
+                        sendbuffer[EE_PARTBREITE + 0x08 + pos] = expodata;
                      }
                      else
                      {
-                        sendbuffer[EE_PARTBREITE + 0x08 + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x28 40
-                        
+                        //sendbuffer[EE_PARTBREITE + 0x08 + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x28 40
+                        uint8_t expodata =eeprombytelesen(readstartadresse+pos); // ab 0x28 40
+                        //sendbuffer[EE_PARTBREITE + 0x08 + pos] = eepromverbosebytelesen(readstartadresse+pos); // ab 0x28 40
+                        curr_expoarray[pos] = expodata;
+                        sendbuffer[EE_PARTBREITE + 0x08 + pos] = expodata;
+                       
                      }
                   }
                   
@@ -2620,7 +2810,12 @@ int main (void)
                      }
                      else
                      {
-                        sendbuffer[EE_PARTBREITE + 0x10 + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x30 48
+                        
+                        //sendbuffer[EE_PARTBREITE + 0x10 + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x30 48
+                        uint8_t mixdata = eeprombytelesen(readstartadresse+pos); // ab 0x30 48
+                        //sendbuffer[EE_PARTBREITE + 0x10 + pos] = eepromverbosebytelesen(readstartadresse+pos); // ab 0x30 48
+                        curr_mixarray[pos] = mixdata;
+                        sendbuffer[EE_PARTBREITE + 0x10 + pos] = mixdata;
                      }
                   }
                   
@@ -2841,7 +3036,7 @@ int main (void)
 		
 		//lcd_gotoxy(16,0);
       //lcd_putint(StepCounterA & 0x00FF);
-		
+/*
 		if (!(TASTENPIN & (1<<E_TASTE0))) // Taste 0
 		{
 			//lcd_gotoxy(8,1);
@@ -2923,6 +3118,7 @@ int main (void)
 			}//	else
 			
 		} // Taste 1
+ */
 		// MARK:  Tastatur
 		/* ******************** */
 		//		initADC(TASTATURPIN);
@@ -4884,9 +5080,9 @@ int main (void)
                                  settingstartcounter=0;
                                  startcounter=0;
                                  
-                                 //sethomescreen();
+                                 sethomescreen();
                                  
-                                 setsavescreen();
+                           //      setsavescreen();
                                  
                                  manuellcounter=0;
                               }
