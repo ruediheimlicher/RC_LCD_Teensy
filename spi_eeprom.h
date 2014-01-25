@@ -19,11 +19,17 @@
 
 #define SPI_EE_CS_PIN                         6
 */
-
+/*
 #define SPI_EE_DDR            DDRD    //DDR D
 #define SPI_EE_PORT           PORTD   //PORT D
 
 #define SPI_EE_CS_PIN                         2
+*/
+
+#define SPI_EE_DDR            DDRE    //
+#define SPI_EE_PORT           PORTE   //
+
+#define SPI_EE_CS_PIN                         0
 
 
 // unabh. von Prozessor
