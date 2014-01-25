@@ -29,7 +29,7 @@
 #define SPI_EE_DDR            DDRE    //
 #define SPI_EE_PORT           PORTE   //
 
-#define SPI_EE_CS_PIN                         0
+#define SPI_EE_CS_PIN                         1
 
 
 // unabh. von Prozessor
