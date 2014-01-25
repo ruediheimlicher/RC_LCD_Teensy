@@ -169,9 +169,6 @@
 #define KANAL_DDR             DDRB    //    DDRB
 
 
-#define KANAL_PIN          4                             // Ausgang fuer Summensignal
-#define KANAL_LO           KANAL_PORT &= ~(1<<KANAL_PIN)
-#define KANAL_HI           KANAL_PORT |= (1<<KANAL_PIN)
 
 
 // ADC
@@ -240,7 +237,7 @@
 #define POWER_OFF_DDR             DDRD    //
 #define POWER_OFF_PIN             PIND    //
 
-#define POWER_OFF_DETECT_PIN               3
+#define POWER_OFF_DETECT_PIN      3
 
 
 #define SUB_READ_EEPROM_BIT      5 // Sub soll EEPROM lesen
@@ -249,9 +246,9 @@
 
 #define MASTER_EN_BIT            0 // Master erlaubt SPI
 
-#define MEM_EN_PORT              PORTE // CS fuer Memory-Zugriffe des Masters
-#define MEM_EN_DDR               DDRE
-#define MEM_EN_PIN               0
+#define MEM_EN_PORT              PORTC// CS fuer Memory-Zugriffe des Masters
+#define MEM_EN_DDR               DDRC
+#define MEM_EN_PIN               7
 
 
 #define TOUCH_AB_PORT            PORTB

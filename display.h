@@ -21,9 +21,6 @@
 	
 #define LINE2				1
 
-// Hardware PINs, bitte anpassen
-//#define DOG_PORT       PORTB
-//#define DOG_DDR        DDRB
 
 
 #define DOG_A0       0
