@@ -433,8 +433,7 @@ void Master_Init(void)
    
    
    MASTER_DDR |= (1 << SUB_BUSY_PIN); // BUSY-Pin als Ausgang
-   
-   MASTER_PORT |= (1 << SUB_BUSY_PIN) ; // turn On the Pull-up
+   MASTER_PORT |= (1 << SUB_BUSY_PIN) ; // HI
    
 	//LCD
 	LCD_DDR |= (1<<LCD_RSDS_PIN);		// PIN als Ausgang fuer LCD
@@ -2123,11 +2122,14 @@ int main (void)
             OSZI_D_LO;
             substatus &= ~(1<<SETTINGS_READ);
             
+            // Halt einschalten
             masterstatus |= (1<<HALT_BIT); // Halt-Bit aktiviert Task bei ausgeschaltetem Slave
             MASTER_PORT &= ~(1<<SUB_BUSY_PIN);
 
             read_Ext_EEPROM_Settings();
             //read_Ext_EEPROM_Level();
+            
+            //Halt reseten
             masterstatus &= ~(1<<HALT_BIT); // Halt-Bit aktiviert Task bei ausgeschaltetem Slave
             MASTER_PORT |= (1<<SUB_BUSY_PIN);
 
@@ -2384,7 +2386,6 @@ int main (void)
          
          spi_end(); // SPI von Sub ausschalten
          
-         //         MASTER_PORT |= (1<<SUB_BUSY_PIN); // Sub schickt ende busy an Master
          
   
         
@@ -2419,7 +2420,6 @@ int main (void)
                   
                case 0xC0: // Write EEPROM Page start
                {
-                  //MASTER_PORT &= ~(1<<SUB_BUSY_PIN);
                   eeprom_errcount=0;
                   abschnittnummer++;
                   eepromstartadresse = buffer[1] | (buffer[2]<<8);
@@ -2447,7 +2447,6 @@ int main (void)
                case 0xC4: // Write EEPROM Byte  // 10 ms
                {
                   //OSZI_A_TOGG;
-                  //MASTER_PORT &= ~(1<<SUB_BUSY_PIN);
                   eeprom_errcount=0;
                   //abschnittnummer++;
                   eepromstartadresse = buffer[1] | (buffer[2]<<8);

@@ -36,7 +36,12 @@
 #define DOG_SCL      3
 #define DOG_DATA     4
 
+//Hintergrundbeleuchtung PWM
+#define HG_PWM_DDR	DDRD
+#define HG_PWM_PORT	PORTD
 
+
+#define HG_PWM_PIN	7
 
 
 #define MAXSPANNUNG  756
@@ -68,54 +73,6 @@
 #define DATA_LO      SOFT_SPI_PORT &= ~(1<<DOG_DATA)
 
 
-//	#if defined (__AVR_ATmega8__)|| defined(__AVR_ATmega168__)
-		//A0 Port
-
-
-		#define PORT_A0  			PORTB
-		#define DDR_A0   			DDRB
-		#define PIN_A0   			0
-
-		//Reset Port
-		#define PORT_RST 			PORTB
-		#define DDR_RST  			DDRB
-		#define PIN_RST  			1
-
-		//SPI Port
-		#define SPI_SS				2	
-		#define SPI_DO				3
-		#define SPI_DI				4
-		#define SPI_Clock			5
-
-		//Hintergrundbeleuchtung PWM
-		#define BRIGHTNESS_PWM_DDR	DDRD
-		#define BRIGHTNESS_PWM_PORT	PORTD
-		#define BRIGHTNESS_PWM_PIN	7
-//	#endif
-/*
-	#if defined (__AVR_ATmega32__) || defined(__AVR_ATmega644__) || defined (__AVR_ATmega644P__)
-		//A0 Port
-		#define PORT_A0  			PORTB
-		#define DDR_A0   			DDRB
-		#define PIN_A0   			2
-
-		//Reset Port
-		#define PORT_RST 			PORTB
-		#define DDR_RST  			DDRB
-		#define PIN_RST  			3
-
-		//SPI Port
-		#define SPI_SS				4	
-		#define SPI_DO				5
-		#define SPI_DI				6			
-		#define SPI_Clock			7			
-
-		//Hintergrundbeleuchtung PWM
-		#define BRIGHTNESS_PWM_DDR	DDRD
-		#define BRIGHTNESS_PWM_PORT	PORTD
-		#define BRIGHTNESS_PWM_PIN	7
-	#endif
-*/
 
 // http://www.cczwei-forum.de/cc2/thread.php?postid=49733#post49733
 #define DISPOFF      0xAE

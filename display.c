@@ -2220,9 +2220,9 @@ void display_write_byte(unsigned cmd_data, unsigned char data)
 //##############################################################################################
 void display_init() 
 {
-   
+   /*
 	//Set TIMER0 (PWM OC2 Pin)
-	BRIGHTNESS_PWM_DDR |= (1<<BRIGHTNESS_PWM_PIN);//PWM PORT auf Ausgang (OC2)
+	HG_PWM_DDR |= (1<<HG_PWM_PIN);//PWM PORT auf Ausgang (OC2)
 	TCCR2A |= (1<<WGM21|1<<WGM20|1<<COM2A1|1<<CS20);
 	OCR2A = 50;
 	
@@ -2254,12 +2254,13 @@ void display_init()
 	display_clear();
 	
 	return;
+    */
 }
 
 void display_soft_init(void)
 {
 	//Set TIMER0 (PWM OC2 Pin)
-	BRIGHTNESS_PWM_DDR |= (1<<BRIGHTNESS_PWM_PIN);//PWM PORT auf Ausgang (OC2)
+	HG_PWM_DDR |= (1<<HG_PWM_PIN);//PWM PORT auf Ausgang (OC2)
 	TCCR2A |= (1<<WGM21|1<<WGM20|1<<COM2A1|1<<CS20);
 	OCR2A = 50;
 	
@@ -2278,9 +2279,6 @@ void display_soft_init(void)
    SOFT_SPI_DDR |= (1<<DOG_DATA);
    SOFT_SPI_PORT &= ~(1<<DOG_DATA);
    
-   //Reset the Display Controller
-	SOFT_SPI_DDR &= ~(1<<PIN_RST);
-	SOFT_SPI_DDR |= (1<<PIN_RST);
 
 	_delay_us(1);
 	//send 11 init commands to Display

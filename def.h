@@ -207,19 +207,24 @@
 #define MASTER_PORT            PORTD   //    
 #define MASTER_DDR             DDRD    //    
 #define MASTER_PIN             PIND    //
+// PIN's
+#define SUB_BUSY_PIN             5 // Ausgang fuer busy-Meldung des Sub an Master
+
+
 
 #define INTERRUPT_PORT            PORTB   //
 #define INTERRUPT_DDR             DDRB    //
 #define INTERRUPT_PIN             PINB    //
-
+// PIN's
 #define MASTER_EN_PIN            7 // Eingang fur PinChange-Interrupt
 
-#define SUB_BUSY_PIN             5 // Ausgang fuer busy-Meldung des Sub an Master
+
+
 
 #define POWER_OFF_PORT            PORTD   //
 #define POWER_OFF_DDR             DDRD    //
 #define POWER_OFF_PIN             PIND    //
-
+// PIN's
 #define POWER_OFF_DETECT_PIN      3
 
 
@@ -229,13 +234,8 @@
 
 #define MASTER_EN_BIT            0 // Master erlaubt SPI
 
-/*
-#define MEM_EN_PORT              PORTC // CS fuer Memory-Zugriffe des Masters
-#define MEM_EN_DDR               DDRC
-#define MEM_EN_PIN               7
-*/
 
-#define MEM_EN_PORT              PORTE // CS fuer Memory-Zugriffe des Masters
+#define MEM_EN_PORT              PORTE // CS fuer Memory-Zugriffe  des Sub auf EE und RAM
 #define MEM_EN_DDR               DDRE
 #define MEM_EN_PIN               0
 
