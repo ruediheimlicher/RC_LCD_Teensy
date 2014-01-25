@@ -29,19 +29,13 @@
 #define DOG_SCL      3
 #define DOG_DATA     5
 */
+#define DOG_PWM      0
+#define DOG_CS       1
+#define DOG_RST      2
+#define DOG_A0       3
+#define DOG_SCL      4
+#define DOG_DATA     5
 
-#define DOG_CS       0
-#define DOG_RST      1
-#define DOG_A0       2
-#define DOG_SCL      3
-#define DOG_DATA     4
-
-//Hintergrundbeleuchtung PWM
-#define HG_PWM_DDR	DDRD
-#define HG_PWM_PORT	PORTD
-
-
-#define HG_PWM_PIN	7
 
 
 #define MAXSPANNUNG  756

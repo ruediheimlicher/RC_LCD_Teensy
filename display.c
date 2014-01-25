@@ -2260,7 +2260,6 @@ void display_init()
 void display_soft_init(void)
 {
 	//Set TIMER0 (PWM OC2 Pin)
-	HG_PWM_DDR |= (1<<HG_PWM_PIN);//PWM PORT auf Ausgang (OC2)
 	TCCR2A |= (1<<WGM21|1<<WGM20|1<<COM2A1|1<<CS20);
 	OCR2A = 50;
 	
@@ -2278,7 +2277,10 @@ void display_soft_init(void)
    
    SOFT_SPI_DDR |= (1<<DOG_DATA);
    SOFT_SPI_PORT &= ~(1<<DOG_DATA);
-   
+
+   SOFT_SPI_DDR |= (1<<DOG_PWM);
+   SOFT_SPI_PORT &= ~(1<<DOG_PWM);
+
 
 	_delay_us(1);
 	//send 11 init commands to Display
