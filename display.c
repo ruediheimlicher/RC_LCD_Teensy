@@ -1123,7 +1123,7 @@ uint8_t update_screen(void)
          // Zeit aktualisieren
          char_y= 1;
          char_x = itemtab[5];
-         display_write_min_sek(laufsekunde,2);
+     //    display_write_min_sek(laufsekunde,2);
          
          char_height_mul = 1;
          if (programmstatus &(1<<UPDATESCREEN))

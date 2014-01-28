@@ -173,7 +173,9 @@ volatile    uint8_t task_outdata=0; // Taskdata an RC_PPM
 
 // Mark Screen
 
-#define CLOCK_DIV 15 // timer0 1 Hz bei Teilung /4 in ISR
+//#define CLOCK_DIV 15 // timer0 1 Hz bei Teilung /4 in ISR 16 MHz
+#define CLOCK_DIV 8 // timer0 1 Hz bei Teilung /4 in ISR 8 MHz
+
 
 
 volatile uint16_t                TastaturCount=0;
@@ -362,7 +364,7 @@ uint16_t eeprompartschreiben(void); // 23 ms
 
 void read_eeprom_zeit(void);
 void write_eeprom_zeit(void);
-
+void write_eeprom_status(void);
 
 void startTimer2(void)
 {
@@ -391,6 +393,7 @@ void Master_Init(void)
 	LOOPLEDDDR |=(1<<LOOPLED);
 	LOOPLEDPORT |= (1<<LOOPLED);	// HI
 	
+   
 	//Pin 0 von   als Ausgang fuer OSZI
 	OSZIPORTDDR |= (1<<OSZI_PULS_A);	//Pin 0 von  als Ausgang fuer LED TWI
    OSZIPORT |= (1<<OSZI_PULS_A);		// HI
@@ -445,11 +448,16 @@ void Master_Init(void)
    SUB_EN_DDR |= (1<<SUB_EN_PIN);
    SUB_EN_PORT |= (1<<SUB_EN_PIN);
    
+   // Analog Comparator
+   ACSR = (1<<ACIE)|(1<<ACBG)|(1<<ACIS0)|(1<<ACIS1);
    
+   OFFDDR &= ~(1<<OFF_DETECT); // Eingang fuer Analog Comp
+   OFFPORT |= (1<<OFF_DETECT); // HI
 }
 
 void SPI_PORT_Init(void) // SPI-Pins aktivieren
 {
+   
    //http://www.atmel.com/dyn/resources/prod_documents/doc2467.pdf  page:165
    //Master init
    // Set MOSI and SCK output, all others input
@@ -464,6 +472,7 @@ void SPI_PORT_Init(void) // SPI-Pins aktivieren
 
 void SPI_ADC_init(void) // SS-Pin fuer EE aktivieren
 {
+   
    SPI_DDR |= (1<<SPI_SS_PIN);
    SPI_PORT |= (1<<SPI_SS_PIN); // HI
 }
@@ -471,6 +480,7 @@ void SPI_ADC_init(void) // SS-Pin fuer EE aktivieren
 
 void SPI_RAM_init(void) // SS-Pin fuer RAM aktivieren
 {
+   
    SPI_RAM_DDR |= (1<<SPI_RAM_CS_PIN); // RAM-CS-PIN Ausgang
    SPI_RAM_PORT |= (1<<SPI_RAM_CS_PIN);// HI
    
@@ -485,6 +495,7 @@ void SPI_EE_init(void) // SS-Pin fuer EE aktivieren
 
 void spi_start(void) // SPI-Pins aktivieren
 {
+   
    //http://www.atmel.com/dyn/resources/prod_documents/doc2467.pdf  page:165
    //Master init
    // Set MOSI and SCK output, all others input
@@ -789,7 +800,32 @@ ISR (INT3_vect) // Interrupt bei powerOff
    //eeprom_update_byte ((uint8_t*)2, laufstunde);
    
    programmstatus |= (1<<EEPROM_TASK);
+   write_eeprom_zeit();
+   write_eeprom_status();
 }
+
+ISR( ANALOG_COMP_vect )
+{
+   lcd_gotoxy(16,1);
+   lcd_putc('+');
+   lcd_putint(laufsekunde);
+
+	programmstatus |= (1<<EEPROM_TASK);
+//   write_eeprom_zeit();
+//   write_eeprom_status();
+   
+//   EICRA = 0x00;
+//   EICRB = 0x00;
+ //  EIMSK = 0x00;
+//   MCUCR |= (1<<SM1) | (0<<SM0) | (1<<SE);
+
+	// disable interrupts and shutdown MCU
+//	GIMSK = 0x00;
+//	MCUCR |= (1<<SM1) | (0<<SM0) | (1<<SE);
+//	sleep_cpu();		// power down...
+//	sleep_disable();
+}
+
 
 
 
@@ -1631,19 +1667,19 @@ void read_eeprom_status(void)
 
 void write_eeprom_zeit(void)
 {
-   eeprom_write_byte(&speichersekunde, laufsekunde);
+   eeprom_update_byte(&speichersekunde, laufsekunde);
    //lcd_gotoxy(0,0);
    //lcd_putc('*');
    //lcd_putint(eeprom_read_byte(&speichersekunde));
-   eeprom_write_byte(&speicherminute, laufminute);
-   eeprom_write_byte(&speicherstunde, laufstunde);
+   eeprom_update_byte(&speicherminute, laufminute);
+   eeprom_update_byte(&speicherstunde, laufstunde);
 
    
-   eeprom_write_byte(&speichermotorsekunde, motorsekunde);
-   eeprom_write_byte(&speichermotorminute, motorminute);
+   eeprom_update_byte(&speichermotorsekunde, motorsekunde);
+   eeprom_update_byte(&speichermotorminute, motorminute);
 
-   eeprom_write_byte(&speicherstopsekunde, stopsekunde);
-   eeprom_write_byte(&speicherstopminute, stopminute);
+   eeprom_update_byte(&speicherstopsekunde, stopsekunde);
+   eeprom_update_byte(&speicherstopminute, stopminute);
 
 }
 
@@ -1694,20 +1730,27 @@ int main (void)
    uint16_t count=0;
    
 	// set for 16 MHz clock
-	CPU_PRESCALE(0);
+	CPU_PRESCALE(CPU_8MHz);
+   
    
 	// Initialize the USB, and then wait for the host to set configuration.
 	// If the Teensy is powered without a PC connected to the USB port,
 	// this will wait forever.
-	usb_init();
+   
+   sei();
+	Master_Init();
+   
+   
+
+   usb_init();
 	while (!usb_configured()) /* wait */ ;
    
 	// Wait an extra second for the PC's operating system to load drivers
 	// and do whatever it does to actually be ready for input
 	_delay_ms(100);
    
-	sei();
-	Master_Init();
+   
+   
    
    volatile    uint8_t outcounter=0;
    volatile    uint8_t testdata =0x00;
@@ -1867,8 +1910,17 @@ int main (void)
          {
             programmstatus &= ~(1<<EEPROM_TASK);
             //cli();
+            
+            // in ISR verschoben
+            
             write_eeprom_zeit();
             write_eeprom_status();
+            /*
+            EICRA = 0x00;
+            EICRB = 0x00;
+            EIMSK = 0x00;
+            MCUCR |= (1<<SM1) | (0<<SM0) | (1<<SE);
+             */
             //sei();
          }
 
@@ -3122,7 +3174,10 @@ int main (void)
 		/* ******************** */
 		//		initADC(TASTATURPIN);
 		//		Tastenwert=(uint8_t)(readKanal(TASTATURPIN)>>2);
-      if ((substatus & (1<< TASTATUR_READ)) && (mscounter%2))
+      
+ //     if ((substatus & (1<< TASTATUR_READ)) && (mscounter%2)) // 16 MHz
+     if ((substatus & (1<< TASTATUR_READ))) // 8 MHz
+         
       {
          
          Tastenwert=0;
@@ -3151,7 +3206,8 @@ int main (void)
              */
             
             TastaturCount++;
-            if ((TastaturCount>=100) )
+     //       if ((TastaturCount>=100) ) // 16 MHz
+            if ((TastaturCount>=50) ) // 8 MHz
             {
                substatus |= (1<<TASTATUR_OK);
                               /*
@@ -4280,10 +4336,11 @@ int main (void)
                         case HOMESCREEN:
                         {
                            
-               				lcd_putint2(startcounter);
-                           lcd_putc('*');
+               				//lcd_putint2(startcounter);
+                           //lcd_putc('*');
                            if ((startcounter == 0)&& (manuellcounter > 1)) // Settings sind nicht aktiv
                            {
+                              lcd_gotoxy(16,1);
                               lcd_putc('A');
                               programmstatus |= (1<< SETTINGWAIT);
                               settingstartcounter++;
@@ -4291,6 +4348,7 @@ int main (void)
                            }
                            else if (startcounter > 5) // Irrtum, kein Umschalten
                            {
+                              lcd_gotoxy(16,1);
                               lcd_putc('X');
                               programmstatus &= ~(1<< SETTINGWAIT);
                               settingstartcounter=0;
@@ -4301,13 +4359,14 @@ int main (void)
                            {
                               if ((programmstatus & (1<< SETTINGWAIT))&& (manuellcounter > 1)) // Umschaltvorgang noch aktiv
                               {
+                                 lcd_gotoxy(16,1);
                                  lcd_putc('B');
-                                 
+                                 lcd_putint2(settingstartcounter);
                                  settingstartcounter++; // counter fuer klicks
                                  if (settingstartcounter > 2)
                                  {
-                                    
-                                    //lcd_putc('C');
+                                    lcd_gotoxy(16,1);
+                                    lcd_putc('S');
                                     programmstatus &= ~(1<< SETTINGWAIT);
                                     programmstatus |=(1<<UPDATESCREEN);
                                     settingstartcounter=0;

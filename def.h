@@ -1,3 +1,6 @@
+#define CPU_16MHz       0x00
+#define CPU_8MHz        0x01
+
 //Oszi
 #define OSZIPORT           PORTA
 #define OSZIPORTDDR        DDRA
@@ -36,13 +39,19 @@
 #define TASTENPIN           PINE
 
 /*
-#define E_TASTE0				  6 // Einzeltaste
-#define E_TASTE1             7
+#define E_TASTE0				  6 // Einzeltaste //
+#define E_TASTE1             7 // Analog Comparator
 */
+
+#define OFFDDR           DDRE
+#define OFFPORT          PORTE
+#define OFFPIN           PINE
+
+#define OFF_DETECT             7 // Analog Comparator
 
 // EEPROM Speicherorte
 
-#define TASK_OFFSET       0x2000 // Ort fuer Einstellungen
+#define TASK_OFFSET        0x2000 // Ort fuer Einstellungen
 
 #define SETTINGBREITE      0x100; // 256 Bytes, Breite des Settingblocks fuer ein model
 

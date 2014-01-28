@@ -154,3 +154,6 @@ uint16_t readKanalOrig(uint8_t derKanal, uint8_t num) //Unsere Funktion zum ADC-
  
   return result;
 }
+
+
+

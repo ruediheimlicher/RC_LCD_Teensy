@@ -245,6 +245,10 @@ static struct descriptor_list_struct {
 // zero when we are not configured, non-zero when enumerated
 static volatile uint8_t usb_configuration=0;
 
+// zero when we are not suspended, non-zero when suspended
+static volatile uint8_t usb_suspended=0;
+
+
 // these are a more reliable timeout than polling the
 // frame counter (UDFNUML)
 static volatile uint8_t rx_timeout_count=0;
@@ -292,6 +296,17 @@ uint8_t usb_configured(void)
 {
 	return usb_configuration;
 }
+
+void usb_shutdown(void)
+{
+   UDIEN = 0;      // disable interrupts
+   UDCON = 1;      // disconnect attach resistor
+   USBCON = 0;     // shut off USB periperal
+   PLLCSR = 0;     // shut off PLL
+   usb_configuration = 0;
+   usb_suspended = 1;
+}
+
 
 
 // receive a packet, with timeout
@@ -818,9 +833,9 @@ static inline void usb_ack_out(void)
 //
 ISR(USB_COM_vect)
 {
-        uint8_t intbits;
+   uint8_t intbits;
 	const uint8_t *list;
-        const uint8_t *cfg;
+   const uint8_t *cfg;
 	uint8_t i, n, len, en;
 	uint8_t bmRequestType;
 	uint8_t bRequest;
@@ -830,23 +845,26 @@ ISR(USB_COM_vect)
 	uint16_t desc_val;
 	const uint8_t *desc_addr;
 	uint8_t	desc_length;
-
-        UENUM = 0;
+   
+   UENUM = 0;
 	intbits = UEINTX;
-        if (intbits & (1<<RXSTPI)) {
-                bmRequestType = UEDATX;
-                bRequest = UEDATX;
-                wValue = UEDATX;
-                wValue |= (UEDATX << 8);
-                wIndex = UEDATX;
-                wIndex |= (UEDATX << 8);
-                wLength = UEDATX;
-                wLength |= (UEDATX << 8);
-                UEINTX = ~((1<<RXSTPI) | (1<<RXOUTI) | (1<<TXINI));
-                if (bRequest == GET_DESCRIPTOR) {
+   if (intbits & (1<<RXSTPI))
+   {
+      bmRequestType = UEDATX;
+      bRequest = UEDATX;
+      wValue = UEDATX;
+      wValue |= (UEDATX << 8);
+      wIndex = UEDATX;
+      wIndex |= (UEDATX << 8);
+      wLength = UEDATX;
+      wLength |= (UEDATX << 8);
+      UEINTX = ~((1<<RXSTPI) | (1<<RXOUTI) | (1<<TXINI));
+      if (bRequest == GET_DESCRIPTOR) {
 			list = (const uint8_t *)descriptor_list;
-			for (i=0; ; i++) {
-				if (i >= NUM_DESC_LIST) {
+			for (i=0; ; i++)
+         {
+				if (i >= NUM_DESC_LIST)
+            {
 					UECONX = (1<<STALLRQ)|(1<<EPEN);  //stall
 					return;
 				}
@@ -884,7 +902,7 @@ ISR(USB_COM_vect)
 				usb_send_in();
 			} while (len || n == ENDPOINT0_SIZE);
 			return;
-                }
+      }
 		if (bRequest == SET_ADDRESS) {
 			usb_send_in();
 			usb_wait_in_ready();
@@ -904,8 +922,8 @@ ISR(USB_COM_vect)
 					UECFG1X = pgm_read_byte(cfg++);
 				}
 			}
-        		UERST = 0x1E;
-        		UERST = 0;
+         UERST = 0x1E;
+         UERST = 0;
 			return;
 		}
 		if (bRequest == GET_CONFIGURATION && bmRequestType == 0x80) {
@@ -914,7 +932,7 @@ ISR(USB_COM_vect)
 			usb_send_in();
 			return;
 		}
-
+      
 		if (bRequest == GET_STATUS) {
 			usb_wait_in_ready();
 			i = 0;
@@ -929,7 +947,7 @@ ISR(USB_COM_vect)
 			return;
 		}
 		if ((bRequest == CLEAR_FEATURE || bRequest == SET_FEATURE)
-		  && bmRequestType == 0x02 && wValue == 0) {
+          && bmRequestType == 0x02 && wValue == 0) {
 			i = wIndex & 0x7F;
 			if (i >= 1 && i <= MAX_ENDPOINT) {
 				usb_send_in();
