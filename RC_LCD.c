@@ -1953,7 +1953,7 @@ int main (void)
          //lcd_putint12(startcounter);
          }
          
-         if (loopcount1%4 == 0) // nach etwas Zeit soll Master die Settings lesen
+         if (loopcount1%2 == 0) // nach etwas Zeit soll Master die Settings lesen
          {
             
             if (masterstatus & (1<<SUB_READ_EEPROM_BIT)) // beim Start ee lesen
@@ -2338,13 +2338,13 @@ int main (void)
                RAM_CS_HI;
                _delay_us(1);
                
-               /*
-                lcd_gotoxy(0,1);
+               
+                lcd_gotoxy(15,1);
                 lcd_puthex(task_out);
                 lcd_putc('t');
                 lcd_puthex(task_outdata);
                 lcd_putc('t');
-                */
+               
                task_out &= ~(1<<RAM_SEND_PPM_TASK); // Bit reset
                
                // Sub soll  beim Start erst jetzt die Settings lesen.
