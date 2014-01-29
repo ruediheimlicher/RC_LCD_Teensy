@@ -43,9 +43,9 @@
 #define E_TASTE1             7 // Analog Comparator
 */
 
-#define OFFDDR           DDRE
-#define OFFPORT          PORTE
-#define OFFPIN           PINE
+#define OFF_DDR           DDRE
+#define OFF_PORT          PORTE
+#define OFF_PIN           PINE
 
 #define OFF_DETECT             7 // Analog Comparator
 
@@ -64,9 +64,6 @@
 #define DEVICE_OFFSET      0x70 // 122
 #define AUSGANG_OFFSET     0x80 // 128
 
-#define MITTE_TASK         0x01 // Mitte lesen
-#define KANAL_TASK         0x02 // Level und Expo lesen
-#define MIX_TASK           0x03 // Mix lesen
 
 // Tastatur
 // Atmega168
@@ -116,25 +113,21 @@
 
 
 
-#define MANUELLPIN		3	// Pin 6 von PORT D fuer Anzeige Manuell
 
 #define MANUELLTIMEOUT	100 // Loopled-counts bis Manuell zurueckgesetzt wird. 02FF: ca. 100 s
 
 
-// bits von programmstatus
-
-#define MOTOR_ON        1
-#define STOP_ON         2
-#define EEPROM_TASK     3  // Daten in EEPROM sichern
-
-#define MS_DIV          4	// Pin 4 von Status. Gesetzt wenn 1s abgelaufen
-#define UPDATESCREEN    5 // Pin in status wird gesetzt wenn eine Taste gedrueckt ist, reset wenn update ausgefuerht
-
-#define SETTINGWAIT     6  // Pin in status wird gesetzt bis Taste 5 3* gedrueckt ist
-
-#define MANUELL			7	// Bit 7 von Status
+//#define MITTE_TASK         0x01 // Mitte lesen
+//#define KANAL_TASK         0x02 // Level und Expo lesen
+//#define MIX_TASK           0x03 // Mix lesen
 
 
+#define MS_DIV          4	// Bit 4 von Status. Gesetzt wenn 1s abgelaufen
+#define UPDATESCREEN    5 // Bit in status wird gesetzt wenn eine Taste gedrueckt ist, reset wenn update ausgefuehrt
+
+#define SETTINGWAIT     6  // Bit in status wird gesetzt bis Taste 5 3* gedrueckt ist
+
+//#define MANUELL			7	// Bit 7 von Status
 
 #define MINWAIT         3 // Anzahl loops von loopcount1 bis einschalten
 
@@ -164,7 +157,6 @@
 
 
 // ADC
-// CNC12
 #define ADC_PORT            PORTF   //    PORTF
 #define ADC_DDR             DDRF    //    DDRF
 #define ADC_PIN             PINF    //    PINF
@@ -174,44 +166,44 @@
 
 // Bit
 
-// Masterstatus
 
-#define RAM_READ                 0x01  //Bit 0
-#define RAM_WRITE                0x02  //Bit 1
-#define EEPROM_READ              0x04  //Bit 2
-#define EEPROM_WRITE             0x08  //Bit 3
+// bits von programmstatus
 
-#define  POT_READ                0x10  //Bit 4
+#define MOTOR_ON        1
+#define STOP_ON         2
+#define EEPROM_TASK     3  // Daten in EEPROM sichern
+
+
+// Bits von masterstatus
+#define  SUB_TASK_BIT             4 // Sub hat Aufgaben
+#define  SUB_READ_EEPROM_BIT      5 // Sub soll EEPROM lesen
 #define  HALT_BIT                7 //Bit 7
 
 // Bits von eepromstatus
 #define READ_EEPROM_START        0  // Beim Start gesetzt. Soll einmaliges Lesen der Settings beim Update des Masters ausloesen
 
 
-
 // Bits von displaystatus
-
 #define UHR_UPDATE         0
 #define BATTERIE_UPDATE    1
 
-#define ADC_START          0  //    Start Messung Batteriespannung mit internem ADC
 
-#define POT_START          0  //    Start Messung Potentiometer
+// Task fuer substatus
+#define TASTATUR_READ   0
+#define TASTATUR_OK     1
+#define SETTINGS_READ    2
 
-#define SPI_START          2  //    Start SPI auf diesem device
-
-#define SPI_END            3  //    End SPI auf diesem device
-
-#define POT_MITTE          7  //    Mittelwerte der Potentiometer speichern
-
-#define ANZ_POT            6
-
-#define POT_FAKTOR         1.20
+#define SCREEN_OK       4
+#define SCREEN_REFRESH  5
+#define UHR_OK          6
+#define UHR_REFRESH     7
 
 
-#define EE_WREN   0
-#define EE_WRITE  1
-#define EE_READ   2
+
+#define ANZ_POT            6 // Anzahl zu lesender Potis
+
+#define POT_FAKTOR         1.20 // Korrekturfaktor fuer Potentiometerstellung
+
 
 #define MASTER_PORT            PORTD   //    
 #define MASTER_DDR             DDRD    //    
@@ -219,41 +211,27 @@
 // PIN's
 #define SUB_BUSY_PIN             5 // Ausgang fuer busy-Meldung des Sub an Master
 
-
-
 #define INTERRUPT_PORT            PORTB   //
 #define INTERRUPT_DDR             DDRB    //
 #define INTERRUPT_PIN             PINB    //
 // PIN's
-#define MASTER_EN_PIN            7 // Eingang fur PinChange-Interrupt
+#define MASTER_EN_PIN            7 // Eingang fur PinChange-Interrupt vom Master
 
-
-
-
-#define POWER_OFF_PORT            PORTD   //
-#define POWER_OFF_DDR             DDRD    //
-#define POWER_OFF_PIN             PIND    //
+#define SUB_EN_PORT              PORTE // Gate-Zugang zu EE und RAM fuer Memory-Zugriffe  des Sub
+#define SUB_EN_DDR               DDRE  // mit RAM_CS_HI, EE_CS_HI
 // PIN's
-#define POWER_OFF_DETECT_PIN      3
-
-
-#define SUB_READ_EEPROM_BIT      5 // Sub soll EEPROM lesen
-
-#define SUB_TASK_BIT             4 // Sub hat Aufgaben
-
-#define MASTER_EN_BIT            0 // Master erlaubt SPI
-
-
-#define SUB_EN_PORT              PORTE // CS fuer Memory-Zugriffe  des Sub auf EE und RAM
-#define SUB_EN_DDR               DDRE
 #define SUB_EN_PIN               0
 
+#define USB_PORT            PORTD   //
+#define USB_DDR             DDRD    //
+#define USB_PIN             PIND    //
+// PIN's
+#define USB_DETECT_PIN      3
 
 
-#define TOUCH_AB_PORT            PORTB
-#define TOUCH_AB_DDR             DDRB
-#define TOUCH_XY_PORT            PORTF
-#define TOUCH_XY_DDR             DDRF
+
+
+
 
 
 #define EEPROM_WRITE_BYTE_TASK     1

@@ -88,16 +88,7 @@ static volatile uint16_t                   displaycounter=0;
 
 
 static volatile uint8_t             substatus=0x00; // Tasks fuer Sub
-// Task fuer sub
-#define TASTATUR_READ   0
-#define TASTATUR_OK     1
-#define SETTINGS_READ    2
 
-
-#define SCREEN_OK       4
-#define SCREEN_REFRESH  5
-#define UHR_OK          6
-#define UHR_REFRESH     7
 
 
 
@@ -422,12 +413,14 @@ void Master_Init(void)
    PCICR |= (1<<PCIE0);
 	PCMSK0 |= (1<<PCINT7);
   
-   // POWER_OFF
+   // USB_Attach
    
-   POWER_OFF_DDR &= ~(1<<POWER_OFF_DETECT_PIN); // Eingang fuer Power_off_detection
-   POWER_OFF_PORT |= (1<<POWER_OFF_DETECT_PIN); // hi
-   EICRA |= (1<<ISC31); // falling edge
+   USB_DDR &= ~(1<<USB_DETECT_PIN); // Eingang fuer USB_detection
+   USB_PORT |= (1<<USB_DETECT_PIN); // hi
+   EICRA |= (1<<ISC31); // rising edge
    EIMSK |= (1<<INTF3); // Interrupt en
+   
+   
    
    
    INTERRUPT_DDR &= ~(1 << MASTER_EN_PIN); // Eingang fur PinChange-Interrupt
@@ -445,14 +438,15 @@ void Master_Init(void)
    
    ADC_DDR &= ~(1<<ADC_AKKUPIN);
    
+   
    SUB_EN_DDR |= (1<<SUB_EN_PIN);
    SUB_EN_PORT |= (1<<SUB_EN_PIN);
    
    // Analog Comparator
    ACSR = (1<<ACIE)|(1<<ACBG)|(1<<ACIS0)|(1<<ACIS1);
    
-   OFFDDR &= ~(1<<OFF_DETECT); // Eingang fuer Analog Comp
-   OFFPORT |= (1<<OFF_DETECT); // HI
+   OFF_DDR &= ~(1<<OFF_DETECT); // Eingang fuer Analog Comp
+   OFF_PORT |= (1<<OFF_DETECT); // HI
 }
 
 void SPI_PORT_Init(void) // SPI-Pins aktivieren
@@ -781,7 +775,6 @@ ISR (PCINT0_vect)
    
 }
 
-#pragma mark POWER_OFF
 ISR (INT3_vect) // Interrupt bei powerOff
 {
    /*
@@ -804,7 +797,10 @@ ISR (INT3_vect) // Interrupt bei powerOff
    write_eeprom_status();
 }
 
-ISR( ANALOG_COMP_vect )
+
+#pragma mark POWER_OFF
+
+ISR( ANALOG_COMP_vect ) // Power-OFF detektieren
 {
    lcd_gotoxy(16,1);
    lcd_putc('+');
@@ -2072,9 +2068,7 @@ int main (void)
 			if ((manuellcounter > MANUELLTIMEOUT) )
 			{
 				{
-               programmstatus &= ~(1<<MANUELL);
                manuellcounter=0;
-					//MANUELL_PORT &= ~(1<<MANUELLPIN);
                
                if (curr_screen) // nicht homescreen
                {
@@ -2226,18 +2220,7 @@ int main (void)
             //OSZI_D_HI;
             
          }
- /*
-         if (usbtask & (1<<EEPROM_WRITE_BYTE_TASK))// MARK:  EEPROM_WRITE_BYTE_TASK
-         {
-  
-         }
-         else if (usbtask & (1<<EEPROM_READ_BYTE_TASK))// MARK:  EEPROM_READ_BYTE_TASK
-         {
-  
-         }
-
-          else// MARK:  SPI_RAM
-*/
+         // MARK:  SPI_RAM
          {
             substatus &= ~(1<<UHR_OK);
             
@@ -2250,9 +2233,8 @@ int main (void)
             spiram_init();
             
             _delay_us(1);
-// MARK: F0
+            // MARK: F0
             // Daten von Potentiometern vom RAM lesen und senden
-            
             
             sendbuffer[0] = 0xF0;
             for (i=0;i< 8;i++)
@@ -2271,7 +2253,7 @@ int main (void)
             
             // Testdaten lesen
             
-            for (i=0;i<8;i++)
+           // for (i=0;i<8;i++)
             {
             //   sendbuffer[EE_PARTBREITE+i] = readRAMbyteAnAdresse(teststartadresse+i);
             
@@ -2318,13 +2300,12 @@ int main (void)
             _delay_us(1);
 
             // MARK: task_out
-            
-            
 
             if (task_out & (1<<RAM_SEND_PPM_TASK)) // task an PPM senden
             {
                OSZI_A_LO;
                RAM_CS_LO;
+               
                _delay_us(LOOPDELAY);
                //      OSZI_A_LO;
                spiram_wrbyte(WRITE_TASKADRESSE, task_out);
@@ -2338,13 +2319,13 @@ int main (void)
                RAM_CS_HI;
                _delay_us(1);
                
-               
+               /*
                 lcd_gotoxy(15,1);
                 lcd_puthex(task_out);
                 lcd_putc('t');
                 lcd_puthex(task_outdata);
                 lcd_putc('t');
-               
+               */
                task_out &= ~(1<<RAM_SEND_PPM_TASK); // Bit reset
                
                // Sub soll  beim Start erst jetzt die Settings lesen.
@@ -2353,14 +2334,6 @@ int main (void)
                   OSZI_B_LO;
                   eepromstatus &= ~(1<<READ_EEPROM_START);
                   substatus |= (1<<SETTINGS_READ); // wird in loop abgearbeitet
-                  
-                  //read_Ext_EEPROM_Settings();
-                  /*
-                   read_Ext_EEPROM_Level();
-                   read_Ext_EEPROM_Expo();
-                   read_Ext_EEPROM_Mix();
-                   */
-                  
                   
                   OSZI_B_HI;
                   
@@ -3241,7 +3214,6 @@ int main (void)
                   case 0:// Schalter auf Null-Position
                   {
                      
-                     if (programmstatus & (1<<MANUELL))
                      {
                         manuellcounter=0;
                      }
@@ -4384,7 +4356,6 @@ int main (void)
                                     last_cursorzeile=0;
                                     blink_cursorpos=0xFFFF;
                                     manuellcounter = 0;
-                                    programmstatus |= (1<<MANUELL);
                                     
                                  } // if settingcounter <
                               }
