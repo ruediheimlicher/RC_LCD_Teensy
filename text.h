@@ -134,7 +134,7 @@ const char device5[] PROGMEM = "S-R\0"; // Schieber rechts
 const char device6[] PROGMEM = "Sch\0"; // Schalter
 const char device7[] PROGMEM = "Aux\0";
 
-PGM_P const DispatchTable[] PROGMEM = {device0, device1, device2, device3, device4, device5, device6, device7};
+PGM_P const DeviceTable[] PROGMEM = {device0, device1, device2, device3, device4, device5, device6, device7};
 
 
 

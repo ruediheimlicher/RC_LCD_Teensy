@@ -657,36 +657,7 @@ void setausgangscreen(void)
    char_x = spaltenarray[3];
    display_write_str(menubuffer,1);
    
-   /*
-   uint8_t impulsindex;
-   uint8_t startindex = 0, endindex=5;
-   char_y= 3;
-   
-   for (impulsindex=startindex;impulsindex<endindex;impulsindex++)
-   {
-      // Impulsnummer in Summensignal
-      char_x = spaltenarray[0];
-      display_write_int(impulsindex,1);
-      
-      // Kanalnummer
-      char_x = spaltenarray[1];
-      uint8_t canalnummer = curr_ausgangarray[impulsindex]&0x07;
-      display_write_int(canalnummer,1);
-
-      // Devicenummer
-      char_x = spaltenarray[1];
-      display_write_int((curr_funktionarray[canalnummer]&0x70)>>4,1);
-
-      // Funktion
-      char_x = spaltenarray[3];
-      uint8_t funktionnummer =(curr_funktionarray[canalnummer]&0x07);
-      strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(FunktionTable[funktionnummer])));
-      display_write_str(menubuffer,1);
-      
-      char_y++;
-   }
-   */
-
+  
 
    //
   }
@@ -764,45 +735,6 @@ void setmixscreen(void)
     0x23, Kanal 2,3
     0x02, Typ 2: Butterfly
 */
-   /*
-   uint8_t mixtyp = curr_mixarray[1]& 0x03; // von ungeradem Index
-   strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(MixTable[mixtyp]))); // Leveltext
-   
-   char_y= (posregister[2][0] & 0xFF00)>>8;
-   char_x = posregister[2][0] & 0x00FF;
-   display_write_str(menubuffer,1); // Mix-Typ
-   
-   //Kanal A
-   char_y= (posregister[2][2] & 0xFF00)>>8;
-   char_x = posregister[2][2] & 0x00FF;
-   
-   display_write_int(((curr_mixarray[0] & 0x70)>>4),1); // Kanalnummer A, von geradem Index
-   display_write_str(":\0",1);
-   
-   // Funktion anzeigen
-   // Funktion fuer Seite A:
-   uint8_t canalnummera = ((curr_mixarray[0] & 0x70)>>4);
-   // index in curr_funktionarray: Kanalnummer von Seite A: (curr_mixarray[0] & 0x70)>>4]], Bit 4,5
-   strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(FunktionTable[canalnummera]))); // Funktion
-   
-   display_write_str(menubuffer,1);
-   
-   //Kanal B
-   char_y= (posregister[2][5] & 0xFF00)>>8;
-   char_x = (posregister[2][5] & 0x00FF)+delta;
-   
-   display_write_int((curr_mixarray[0] & 0x07),1);// Kanalnummer B, von geradem Index
-   display_write_str(":\0",1);
-   
-   
-   // Funktion anzeigen
-   // Funktion fuer Seite B:
-   uint8_t canalnummerb = (curr_mixarray[0] & 0x07);
-   // index in curr_funktionarray: Kanalnummer von Seite B: (curr_mixarray[0] & 0x70)]], Bit 0,1
-   
-   strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(FunktionTable[canalnummerb]))); // Funktion
-    display_write_str(menubuffer,1);
-  */
 }
 
 void setzuteilungscreen(void)
@@ -920,42 +852,42 @@ void setzuteilungscreen(void)
 
    }
    /*
-   strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(DispatchTable[1]))); // L_V
+   strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(DeviceTable[1]))); // L_V
    char_y= (posregister[0][0] & 0xFF00)>>8;;
    char_x = posregister[0][0] & 0x00FF ;
    char_height_mul = 1;
    char_width_mul = 1;
    display_write_str(menubuffer,1);
 
-   strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(DispatchTable[3]))); // R_V
+   strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(DeviceTable[3]))); // R_V
    char_y= (posregister[0][2] & 0xFF00)>>8;;
    char_x = posregister[0][2] & 0x00FF ;
    char_height_mul = 1;
    char_width_mul = 1;
    display_write_str(menubuffer,1);
   
-   strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(DispatchTable[2]))); // L_H
+   strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(DeviceTable[2]))); // L_H
    char_y= (posregister[1][0] & 0xFF00)>>8;;
    char_x = posregister[1][0] & 0x00FF ;
    char_height_mul = 1;
    char_width_mul = 1;
    display_write_str(menubuffer,1);
 
-   strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(DispatchTable[0]))); // L_R
+   strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(DeviceTable[0]))); // L_R
    char_y= (posregister[1][2] & 0xFF00)>>8;;
    char_x = posregister[1][2] & 0x00FF ;
    char_height_mul = 1;
    char_width_mul = 1;
    display_write_str(menubuffer,1);
  
-   strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(DispatchTable[4]))); // S_L
+   strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(DeviceTable[4]))); // S_L
    char_y= (posregister[2][0] & 0xFF00)>>8;;
    char_x = posregister[2][0] & 0x00FF ;
    char_height_mul = 1;
    char_width_mul = 1;
    display_write_str(menubuffer,1);
 
-   strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(DispatchTable[5]))); // S_R
+   strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(DeviceTable[5]))); // S_R
    char_y= (posregister[2][2] & 0xFF00)>>8;;
    char_x = posregister[2][2] & 0x00FF ;
    char_height_mul = 1;
@@ -1245,7 +1177,9 @@ uint8_t update_screen(void)
             
             
             // Funktion anzeigen // Bit 0-2 !!
-            strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(FunktionTable[((curr_funktionarray[curr_kanal]&0x07))]))); // !! Funktion ist bit 0-2 , Steuerdevice ist bit 4-6!!
+            // !! Funktion ist bit 0-2 , Steuerdevice ist bit 4-6!!
+            strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(FunktionTable[(curr_funktionarray[curr_kanal]&0x07)])));
+            
             
             char_y= (posregister[0][4] & 0xFF00)>>8;
             char_x = posregister[0][4] & 0x00FF;
@@ -1282,11 +1216,10 @@ uint8_t update_screen(void)
             char_y= (posregister[0][3] & 0xFF00)>>8;
             char_x = posregister[0][3] & 0x00FF;
             
-            //if (curr_kanal%2 ==0) // gerade, waagrecht
-            if (curr_funktionarray[curr_kanal]%2 ==0)
+            if (curr_funktionarray[curr_kanal]%2 ==0) // gerade Kanalnummer
             {
                //if (curr_settingarray[curr_kanal][1] & 0x80)
-               if (curr_expoarray[curr_kanal] & 0x80)
+               if (curr_expoarray[curr_kanal] & 0x80) // Bit fuer Richtung
                {
                   //display_write_symbol(richtungright);
                   display_write_propsymbol(proprichtungright);
@@ -1301,7 +1234,7 @@ uint8_t update_screen(void)
             else // senkrecht
             {
                // if (curr_settingarray[curr_kanal][1] & 0x80)
-               if  (curr_expoarray[curr_kanal] & 0x80)
+               if  (curr_expoarray[curr_kanal] & 0x80) // Bit fuer Richtung
                {
                   //display_write_symbol(richtungup);
                   display_write_propsymbol(proprichtungup);
@@ -1314,8 +1247,6 @@ uint8_t update_screen(void)
                }
                
             }
-            
-            
             // Typ anzeigen
             char_y= (posregister[3][1] & 0xFF00)>>8;
             char_x = posregister[3][1] & 0x00FF;
@@ -1771,7 +1702,7 @@ uint8_t update_screen(void)
                
                //display_write_int(devicenummer,1);
  
-               strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(DispatchTable[devicenummer])));
+               strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(DeviceTable[devicenummer])));
                display_write_str(menubuffer,1);
                
                // Funktion

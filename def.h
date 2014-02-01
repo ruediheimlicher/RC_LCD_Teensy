@@ -172,6 +172,8 @@
 #define MOTOR_ON        1
 #define STOP_ON         2
 #define EEPROM_TASK     3  // Daten in EEPROM sichern
+#define USB_ATTACH_TASK  4  // USB initiieren
+
 
 
 // Bits von masterstatus
@@ -198,6 +200,11 @@
 #define UHR_OK          6
 #define UHR_REFRESH     7
 
+
+// Bits fuer usbstatus
+#define USB_RECV  0
+
+#define USB_ATTACH 1 // USB_Spannung detektiert
 
 
 #define ANZ_POT            6 // Anzahl zu lesender Potis

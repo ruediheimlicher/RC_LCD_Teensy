@@ -103,7 +103,7 @@ static volatile uint8_t             impulscounter=0x00;
 
 static volatile uint8_t             masterstatus = 0;
 
-#define USB_RECV  0
+
 
 volatile uint8_t status=0;
 
@@ -416,8 +416,9 @@ void Master_Init(void)
    // USB_Attach
    
    USB_DDR &= ~(1<<USB_DETECT_PIN); // Eingang fuer USB_detection
-   USB_PORT |= (1<<USB_DETECT_PIN); // hi
-   EICRA |= (1<<ISC31); // rising edge
+   USB_PORT &= ~(1<<USB_DETECT_PIN); // LO
+   EICRA |= (1<<ISC30)|(1<<ISC31); // rising edge
+   EIMSK=0;
    EIMSK |= (1<<INTF3); // Interrupt en
    
    
@@ -774,28 +775,21 @@ ISR (PCINT0_vect)
    }
    
 }
+#pragma mark USB_ATTACH
 
-ISR (INT3_vect) // Interrupt bei powerOff
+ISR(INT3_vect) // Interrupt bei USB_ATTACH, rising edge
 {
-   /*
-   lcd_gotoxy(0,0);
-   lcd_putc('+');
-   lcd_putint(laufminute);
-   eeprom_update_byte ((uint8_t*)0, (laufsekunde));
    
-   eeprom_update_byte ((uint8_t*)1, laufminute);
-   laufminute=0;
-   laufminute = eeprom_read_byte((uint8_t*)1);
-    */
-   //lcd_putc(' ');
-   //lcd_putint(laufminute);
+//   lcd_gotoxy(16,1);
+//   lcd_putc('+');
+ //  lcd_putint2(laufsekunde);
    
-   //eeprom_update_byte ((uint8_t*)2, laufstunde);
-   
-   programmstatus |= (1<<EEPROM_TASK);
-   write_eeprom_zeit();
-   write_eeprom_status();
-}
+//   if (!(usb_configured()))
+   {
+      usbstatus |= (1<<USB_ATTACH_TASK);
+     
+   }
+ }
 
 
 #pragma mark POWER_OFF
@@ -1738,8 +1732,8 @@ int main (void)
    
    
 
-   usb_init();
-	while (!usb_configured()) /* wait */ ;
+ //  usb_init();
+//	while (!usb_configured()) /* wait */ ;
    
 	// Wait an extra second for the PC's operating system to load drivers
 	// and do whatever it does to actually be ready for input
@@ -1853,11 +1847,8 @@ int main (void)
    read_eeprom_zeit();
    read_eeprom_status();
 
-   //setdefaultsetting();
+   setdefaultsetting();
    
-
-   
-
    
    sethomescreen();
    
@@ -1871,6 +1862,32 @@ int main (void)
       //OSZI_B_LO;
 		//Blinkanzeige
 		loopcount0+=1;
+      
+      
+       if ((usbstatus & (1<<USB_ATTACH_TASK))|| (USB_PIN & (1<<USB_DETECT_PIN))) // USB init
+       {
+          usbstatus &= ~(1<<USB_ATTACH_TASK);
+           OSZI_C_TOGG;
+         if (!(usb_configured()))
+         {
+            lcd_gotoxy(16,1);
+            lcd_putc('U');
+            usb_init();
+            while (!usb_configured()) ;//  wait
+            _delay_ms(100);
+         }
+       }
+      else if (!(USB_PIN & (1<<USB_DETECT_PIN)))
+      {
+         if ((usb_configured()))
+         {
+            lcd_gotoxy(16,1);
+            lcd_putc('D');
+            usb_shutdown();
+         }
+      }
+      
+      
       if(INTERRUPT_PIN & (1<< MASTER_EN_PIN))
       {
          //OSZI_A_HI;
@@ -1934,7 +1951,7 @@ int main (void)
          
       }
       
-		if (loopcount0==0xAFFF)
+		if (loopcount0==0x4FFF)
 		{
          
          //batteriespannung = adc_read(0); // ca. 6V
@@ -2135,6 +2152,8 @@ int main (void)
             displaycounter=0;
          }
       }
+      
+      
 
       
       if ((masterstatus & (1<<SUB_TASK_BIT) ) )//|| (masterstatus & (1<< HALT_BIT)))// SPI starten, in PCINT0 gesetzt
@@ -3094,7 +3113,6 @@ int main (void)
                {
                   //sendbuffer[0]=loopcount1;
                   //sendbuffer[1]=0xAB;
-                  //usbstatus |= (1<<USB_RECV);
                   //lcd_gotoxy(2,1);
                   //lcd_putc('1');
                   
@@ -5960,9 +5978,6 @@ int main (void)
 		//lcd_putint(Tastenwert);
       
 		//OSZI_B_HI;
-      if (usbstatus & (1<< USB_RECV))
-      {
-      }
       
 	}//while
    //free (sendbuffer);

@@ -7,7 +7,7 @@ void usb_init(void);			// initialize everything
 uint8_t usb_configured(void);		// is the USB port configured
 int8_t usb_rawhid_recv(uint8_t *buffer, uint8_t timeout);  // receive a packet, with timeout
 int8_t usb_rawhid_send(const uint8_t *buffer, uint8_t timeout); // send a packet, with timeout
-
+void usb_shutdown(void);
 
 volatile uint8_t hidstatus=0;
 
