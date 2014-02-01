@@ -43,11 +43,11 @@
 #define E_TASTE1             7 // Analog Comparator
 */
 
-#define OFF_DDR           DDRE
-#define OFF_PORT          PORTE
-#define OFF_PIN           PINE
+#define OFF_DDR               DDRE
+#define OFF_PORT              PORTE
+#define OFF_PIN               PINE
 
-#define OFF_DETECT             7 // Analog Comparator
+#define OFF_DETECT            7 // Analog Comparator
 
 // EEPROM Speicherorte
 
@@ -204,12 +204,12 @@
 // Bits fuer usbstatus
 #define USB_RECV  0
 
-#define USB_ATTACH 1 // USB_Spannung detektiert
+#define USB_ATTACH            1 // USB_Spannung detektiert
 
 
-#define ANZ_POT            6 // Anzahl zu lesender Potis
+#define ANZ_POT               6 // Anzahl zu lesender Potis
 
-#define POT_FAKTOR         1.20 // Korrekturfaktor fuer Potentiometerstellung
+#define POT_FAKTOR            1.20 // Korrekturfaktor fuer Potentiometerstellung
 
 
 #define MASTER_PORT            PORTD   //    

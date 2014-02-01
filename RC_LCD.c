@@ -444,10 +444,19 @@ void Master_Init(void)
    SUB_EN_PORT |= (1<<SUB_EN_PIN);
    
    // Analog Comparator
+   //ACSR = (1<<ACIE)|(1<<ACBG)|(1<<ACIS0)|(1<<ACIS1);
+   
+   //OFF_DDR &= ~(1<<OFF_DETECT); // Eingang fuer Analog Comp
+//   OFF_PORT |= (1<<OFF_DETECT); // HI
+}
+
+void analogcomp_init(void)
+{
+   // Analog Comparator
    ACSR = (1<<ACIE)|(1<<ACBG)|(1<<ACIS0)|(1<<ACIS1);
    
    OFF_DDR &= ~(1<<OFF_DETECT); // Eingang fuer Analog Comp
-   OFF_PORT |= (1<<OFF_DETECT); // HI
+
 }
 
 void SPI_PORT_Init(void) // SPI-Pins aktivieren
@@ -551,7 +560,6 @@ void delay_ms(unsigned int ms)/* delay for a minimum of <ms> */
 void timer1_init(void)
 {
    /*
-    OSZI_C_LO;
     // Quelle http://www.mikrocontroller.net/topic/103629
     
     OSZI_A_HI ; // Test: data fuer SR
@@ -624,7 +632,6 @@ void timer1_stop(void)
  else
  {
  timer1_stop();
- OSZI_B_HI ;
  
  }
  }
@@ -796,13 +803,24 @@ ISR(INT3_vect) // Interrupt bei USB_ATTACH, rising edge
 
 ISR( ANALOG_COMP_vect ) // Power-OFF detektieren
 {
-   lcd_gotoxy(16,1);
-   lcd_putc('+');
-   lcd_putint(laufsekunde);
+ //  lcd_gotoxy(16,1);
+ //  lcd_putc('+');
+ //  lcd_putint(laufsekunde);
 
-	programmstatus |= (1<<EEPROM_TASK);
-//   write_eeprom_zeit();
-//   write_eeprom_status();
+//	programmstatus |= (1<<EEPROM_TASK);
+   
+   if (usb_configured())
+   {
+      //usb_shutdown();
+   }
+   else
+   {
+      OSZI_C_LO;
+      write_eeprom_zeit();
+      write_eeprom_status();
+      cli();
+      OSZI_C_HI;
+   }
    
 //   EICRA = 0x00;
 //   EICRB = 0x00;
@@ -1727,7 +1745,7 @@ int main (void)
 	// If the Teensy is powered without a PC connected to the USB port,
 	// this will wait forever.
    
-   sei();
+//   sei();
 	Master_Init();
    
    
@@ -1792,7 +1810,7 @@ int main (void)
     */
 	uint8_t i=0;
    
-   sei();
+//   sei();
    
    PWM = 0;
    
@@ -1844,17 +1862,17 @@ int main (void)
    lcd_cls();
    //substatus |= (1<<SETTINGS_READ);; // Settings beim Start lesen
    eepromstatus |= (1<<READ_EEPROM_START);
+   
    read_eeprom_zeit();
    read_eeprom_status();
 
    setdefaultsetting();
    
-   
    sethomescreen();
    
    timer0();
    
-   
+   sei();
    
 // MARK:  while
 	while (1)
@@ -1867,7 +1885,6 @@ int main (void)
        if ((usbstatus & (1<<USB_ATTACH_TASK))|| (USB_PIN & (1<<USB_DETECT_PIN))) // USB init
        {
           usbstatus &= ~(1<<USB_ATTACH_TASK);
-           OSZI_C_TOGG;
          if (!(usb_configured()))
          {
             lcd_gotoxy(16,1);
@@ -1926,8 +1943,9 @@ int main (void)
             
             // in ISR verschoben
             
-            write_eeprom_zeit();
-            write_eeprom_status();
+            //write_eeprom_zeit();
+            //write_eeprom_status();
+            //OSZI_B_HI;
             /*
             EICRA = 0x00;
             EICRB = 0x00;
@@ -2198,6 +2216,9 @@ int main (void)
             masterstatus &= ~(1<<HALT_BIT); // Halt-Bit aktiviert Task bei ausgeschaltetem Slave
             MASTER_PORT |= (1<<SUB_BUSY_PIN);
 
+            // Analog-Comparator einschalten. Verhindert loeschen der Zeit beim Start mit USB
+            analogcomp_init();
+            
             OSZI_D_HI;
             
             lcd_gotoxy(0,0);
