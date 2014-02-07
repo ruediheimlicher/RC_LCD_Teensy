@@ -2837,10 +2837,11 @@ int main (void)
                   sendbuffer[0] = 0xE7;
                   usb_rawhid_send((void*)sendbuffer, 50);
                   lcd_clr_line(0);
-                  lcd_gotoxy(0,0);
+                  lcd_gotoxy(10,0);
                   lcd_putc('F');
                   lcd_putc('7');
-                  //lcd_putc(' ');
+                  lcd_putc(' ');
+                  lcd_putint1(modelindex);
                   /*
                   lcd_puthex(curr_levelarray[0]);
                   lcd_puthex(curr_levelarray[1]);
@@ -2870,18 +2871,12 @@ int main (void)
                case 0xE6: // Fix FunktionSettings Funktion, Device, Ausgang
                {
                   /*
-                   pro Kanal:
-                   art = 0;      Offset: 2   EXPO_OFFSET
-                   expoa = 0;    Offset: 0
-                   expob = 2;    Offset: 4
-                   go = 1;
-                   kanal = 0;
-                   levela = 1;   Offset: 0   LEVEL_OFFSET
-                   levelb = 1;   Offset: 4
+                   pro Index:
+                   funktionnummer   :  bit 0-2
+                   funktion: Name aus default_funktionarray @"L_H",@"L_V",@"R_H"...
                    
-                   nummer = 0;
-                   richtung = 0; Offset: 7
-                   state = 1;
+                   devicenummer  :  bit 4-6
+                   device: Bezeichnung auf dem Sender aus default_devicearray @"Seite",@"Hoehe",@"Quer"...
                    */
                   // uint16_t fixstartadresse =  buffer[1] | (buffer[2]<<8);
                   lcd_gotoxy(0,1);
