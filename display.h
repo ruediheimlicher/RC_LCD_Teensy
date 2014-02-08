@@ -148,6 +148,9 @@ uint8_t display_kanaldiagramm (uint8_t char_x, uint8_t char_y, uint8_t level, ui
 void display_cursorweg(void);
 
 
+
+
+
 	#define display_write(format, args...)   display_write_P(PSTR(format) , ## args)
 
 	volatile unsigned char char_x,char_y,char_height_mul,char_width_mul;

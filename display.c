@@ -48,6 +48,7 @@ extern volatile uint8_t       curr_kanal; // aktueller kanal
 extern volatile uint8_t       curr_richtung; // aktuelle richtung
 extern volatile uint8_t       curr_impuls; // aktuelle richtung
 
+extern volatile uint8_t             eepromsavestatus;
 extern volatile uint8_t       programmstatus;
 
 
@@ -908,27 +909,33 @@ void setsavescreen(void)
    
    
    
-   posregister[0][0] =  itemtab[0] |     (3 << 8); // Aenderungen sichern
-   posregister[0][1] =  itemtab[3] |    (3 << 8); //
-   posregister[0][2] =  itemtab[4] |    (3 << 8); // Abbrechen
-   posregister[0][3] =  itemtab[6] |    (3 << 8); //
+   posregister[0][0] =  itemtab[0] |     (4 << 8); // Aenderungen sichern
+   posregister[0][1] =  itemtab[3] |    (4 << 8); //
+//   posregister[0][2] =  itemtab[4] |    (3 << 8); // Abbrechen
+//   posregister[0][3] =  itemtab[6] |    (3 << 8); //
    
    
-   cursorpos[0][0] = cursortab[0] |    (3 << 8); // sichern
-   cursorpos[0][1] = cursortab[4] |    (3 << 8); //  abbrechen
+   cursorpos[0][0] = cursortab[0] |    (4 << 8); // sichern
+   cursorpos[0][1] = cursortab[3] |    (4 << 8); //  abbrechen
   
    strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(SichernTable[0]))); // titel
    char_y= 1;
    char_x = itemtab[0] ;
-   char_height_mul = 1;
+   char_height_mul = 2;
    char_width_mul = 1;
+   //display_write_propchar('V',2);
+   //display_write_propchar('?',2);
+   //display_write_propchar(60,2);
    display_write_str(menubuffer,2);
+   display_write_symbol(fragezeichen);
 
    char_y= (posregister[0][0] & 0xFF00)>>8;
    char_x = posregister[0][0] & 0x00FF;
    strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(SichernTable[1]))); // sichern
+   char_height_mul = 1;
    display_write_str(menubuffer,2);
-
+   
+   
    char_y= (posregister[0][1] & 0xFF00)>>8;
    char_x = posregister[0][1] & 0x00FF;
    strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(SichernTable[2]))); // Abbrechen
@@ -1758,6 +1765,59 @@ uint8_t update_screen(void)
          char_height_mul = 1;
 
       }break;
+
+#pragma mark update SAVESCREEN
+
+      case SAVESCREEN: // Kanal
+      {
+         if (blink_cursorpos == 0xFFFF) // Kein Blinken des Cursors
+         {
+            char_y= (cursorposition & 0xFF00)>>8;
+            char_x = cursorposition & 0x00FF;
+            if ((curr_cursorspalte <=3)&& (curr_cursorzeile<=2)) //Erste Zeile, Kanalnummer
+            {
+               char_height_mul = 1;
+            }
+            else
+            {
+               char_height_mul = 1;
+            }
+            
+            display_write_symbol(pfeilvollrechts);
+            
+         }
+         else // Cursor blinkt an blink_cursorpos
+         {
+            
+            char_y= (blink_cursorpos & 0xFF00)>>8;
+            char_x = blink_cursorpos & 0x00FF;
+            if ((curr_cursorspalte <=1)&& (curr_cursorzeile==1)) //Erste Zeile, Kanalnummer
+            {
+               char_height_mul = 1;
+            }
+            else
+            {
+               char_height_mul = 1;
+            }
+
+            if (laufsekunde%2)
+            {
+               display_write_symbol(pfeilvollrechts);
+            }
+            else
+            {
+               display_write_symbol(pfeilwegrechts);
+            }
+            
+         }
+         char_height_mul = 1;
+         char_y= 5;
+         char_x = 10;
+         display_write_int(eepromsavestatus,2);
+         
+         
+      }break;
+
    }
    return fehler;
 }

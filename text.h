@@ -89,13 +89,11 @@ const char zuteilungtitel[] PROGMEM = "Zuteilung";
 PGM_P const ZuteilungTable[] PROGMEM = {zuteilungtitel};
 
 // Sichern
-const char frage[] PROGMEM = "Aenderungen sichern?";
+const char frage[] PROGMEM = "Aenderungen sichern";
 const char sichern[] PROGMEM = "Sichern";
 const char abbrechen[] PROGMEM = "Abbrechen";
 
 PGM_P const SichernTable[] PROGMEM = {frage,sichern,abbrechen};
-
-
 
 // Funktion
 
