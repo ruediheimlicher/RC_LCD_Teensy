@@ -187,6 +187,7 @@
 // Bits von masterstatus
 #define  SUB_TASK_BIT             4 // Sub hat Aufgaben
 #define  SUB_READ_EEPROM_BIT      5 // Sub soll EEPROM lesen
+#define  DOGM_BIT                6 // Master soll EE lesen nach Aenderungen im DOGM
 #define  HALT_BIT                7 //Bit 7
 
 // Bits von eepromstatus
@@ -260,12 +261,15 @@
 
 // RAM-Tasks
 
-#define READ_TASKADRESSE         0x1FA     // RAM_Adresse fuer  Task-Auftrag an RC_LCD
+#define READ_TASKADRESSE         0x1FA     // RAM_Adresse fuer  Task-Auftrag von PPM an RC_LCD
 #define READ_TASKDATA            0x1FB  
 
-#define WRITE_TASKADRESSE        0x1F0     // RAM_Adresse fuer Task-Auftrag von RC_LCD
+#define WRITE_TASKADRESSE        0x1F0     // RAM_Adresse fuer Task-Auftrag von RC_LCD an PPM
 #define WRITE_TASKDATA           0x1F1
 
 #define RAM_SEND_PPM_TASK         2 // PPM soll Status lesen (Auftrag AN PPM)
 #define RAM_RECV_PPM_TASK         1 // LCD soll Status lesen (Auftrag VON PPM)
+
+#define RAM_SEND_DOGM_TASK 3
+
 #define RAM_TASK_OK           7 // PPM hat Task gelesen

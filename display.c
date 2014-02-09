@@ -1361,33 +1361,48 @@ uint8_t update_screen(void)
                char_y= (posregister[0][2] & 0xFF00)>>8;
                char_x = posregister[0][2] & 0x00FF;
                
-               canalnummera = ((curr_mixarray[0] & 0x70)>>4);
-               display_write_int(canalnummera,2); // Kanalnummer A, von geradem Index
-               display_write_str(": \0",2);
-               
                // Funktion anzeigen
                // Funktion fuer Seite A:
+               canalnummera = ((curr_mixarray[0] & 0xF0)>>4);
+                // index in curr_funktionarray: Kanalnummer von Seite A: (curr_mixarray[0] & 0x70)>>4]], Bit 4,5
+              
+               if (canalnummera < 8)
+               {
+                  display_write_int(canalnummera,2); // Kanalnummer A, von geradem Index
+                  display_write_str(": \0",2);
                
-               // index in curr_funktionarray: Kanalnummer von Seite A: (curr_mixarray[0] & 0x70)>>4]], Bit 4,5
-               strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(FunktionTable[canalnummera]))); // Funktion
-               
-               display_write_str(menubuffer,1);
+                  strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(FunktionTable[canalnummera]))); // Funktion
+                  display_write_str(menubuffer,1);
+               }
+               else
+               {
+                  display_write_str(" - ",1);
+                  display_write_str("  OFF \0",1);
+               }
+
                
                //Kanal B
                char_y= (posregister[0][5] & 0xFF00)>>8;
                char_x = (posregister[0][5] & 0x00FF);
                
-               display_write_int((curr_mixarray[0] & 0x07),2);// Kanalnummer B, von geradem Index
-               display_write_str(": \0",2);
-               
-               
                // Funktion anzeigen
                // Funktion fuer Seite B:
-               canalnummerb = (curr_mixarray[0] & 0x07);
+               canalnummerb = (curr_mixarray[0] & 0x0F);
                // index in curr_funktionarray: Kanalnummer von Seite B: (curr_mixarray[0] & 0x70)]], Bit 0,1
+               if (canalnummerb < 8)
+               {
+                  display_write_int((curr_mixarray[0] & 0x0F),2);// Kanalnummer B, von geradem Index
+                  display_write_str(": \0",2);
+
+                  strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(FunktionTable[canalnummerb]))); // Funktion
+                  display_write_str(menubuffer,1);
+               }
+               else
+               {
+                  display_write_str(" - ",1);
+                  display_write_str("  OFF \0",1);
+               }
                
-               strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(FunktionTable[canalnummerb]))); // Funktion
-               display_write_str(menubuffer,1);
             }
             else // Mix 0 ist OFF
             {
@@ -1418,33 +1433,47 @@ uint8_t update_screen(void)
                char_y= (posregister[1][2] & 0xFF00)>>8;
                char_x = posregister[1][2] & 0x00FF;
                
-               
-               display_write_int(((curr_mixarray[2] & 0x70)>>4),2); // Kanalnummer A, von geradem Index
-               display_write_str(": \0",2);
-               
                // Funktion anzeigen
                // Funktion fuer Seite A:
-               canalnummera = ((curr_mixarray[2] & 0x70)>>4);
+               canalnummera = ((curr_mixarray[2] & 0xF0)>>4);
+               if (canalnummera < 8)
+               {
+                  display_write_int(((curr_mixarray[2] & 0xF0)>>4),2); // Kanalnummer A, von geradem Index
+                  display_write_str(": ",2);
+                  
                // index in curr_funktionarray: Kanalnummer von Seite A: (curr_mixarray[0] & 0x70)>>4]], Bit 4,5
-               strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(FunktionTable[canalnummera]))); // Funktion
+                  strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(FunktionTable[canalnummera]))); // Funktion
+                  display_write_str(menubuffer,1);
+               }
+               else
+               {
+                  display_write_str(" - ",1);
+                  display_write_str("  OFF \0",1);
+               }
                
-               display_write_str(menubuffer,1);
                
                //Kanal B
                char_y= (posregister[1][5] & 0xFF00)>>8;
                char_x = (posregister[1][5] & 0x00FF);
-               
-               display_write_int((curr_mixarray[2] & 0x07),2);// Kanalnummer B, von geradem Index
-               display_write_str(": \0",2);
-               
+               canalnummerb = (curr_mixarray[2] & 0x0F);
                
                // Funktion anzeigen
                // Funktion fuer Seite B:
-               canalnummerb = (curr_mixarray[2] & 0x07);
-               // index in curr_funktionarray: Kanalnummer von Seite B: (curr_mixarray[0] & 0x70)]], Bit 0,1
                
-               strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(FunktionTable[canalnummerb]))); // Funktion
-               display_write_str(menubuffer,1);
+               // index in curr_funktionarray: Kanalnummer von Seite B: (curr_mixarray[0] & 0x70)]], Bit 0,1
+               if (canalnummerb<8)
+               {
+                  display_write_int((curr_mixarray[2] & 0x0F),2);// Kanalnummer B, von geradem Index
+                  display_write_str(": ",2);
+
+                  strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(FunktionTable[canalnummerb]))); // Funktion
+                  display_write_str(menubuffer,1);
+               }
+               else
+               {
+                  display_write_str(" - ",1);
+                  display_write_str("  OFF ",1);
+               }
             }
             else // Mix 1 ist OFF
             {

@@ -84,7 +84,8 @@ static volatile uint8_t             displaystatus=0x00; // Tasks fuer Display
 
 static volatile uint16_t            displaycounter=0;
 
-
+volatile uint8_t                    in_taskcounter=0;
+volatile uint8_t                    out_taskcounter=0;
 
 
 
@@ -1018,12 +1019,12 @@ uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_w
    SUB_EN_PORT &= ~(1<<SUB_EN_PIN);
    spi_start();
    SPI_PORT_Init();
-   
+   /*
       lcd_gotoxy(3,0);
       lcd_putc('w');
       lcd_putint12(writeadresse);
       lcd_putc('*');
-   
+   */
    spieeprom_init();
    
    // Test 131210
@@ -1598,7 +1599,7 @@ void write_Ext_EEPROM_Settings(void)
    // Halt einschalten
    masterstatus |= (1<<HALT_BIT); // Halt-Bit aktiviert Task bei ausgeschaltetem Slave
    MASTER_PORT &= ~(1<<SUB_BUSY_PIN);
-
+   
    
    lcd_clr_line(1);
    lcd_putint(eepromsavestatus);
@@ -1632,7 +1633,10 @@ void write_Ext_EEPROM_Settings(void)
       eepromsavestatus &= ~(1<<SAVE_EXPO);
       
       // Expo schreiben
+      cli();
       writestartadresse = TASK_OFFSET  + EXPO_OFFSET + modelindex*SETTINGBREITE;
+      sei();
+      
       for (pos=0;pos<8;pos++)
       {
          eeprombyteschreiben(0xB0,writestartadresse+pos,curr_expoarray[pos]);
@@ -1709,9 +1713,22 @@ void write_Ext_EEPROM_Settings(void)
    }
    //EE_CS_HI;
    //Halt reseten
+   // RAM_SEND_PPM_STATUS schicken: Daten haben geaendert
+   
+   
+
    masterstatus &= ~(1<<HALT_BIT); // Halt-Bit aktiviert Task bei ausgeschaltetem Slave
    MASTER_PORT |= (1<<SUB_BUSY_PIN);
+   _delay_us(100);
+   
+   masterstatus |= (1<<DOGM_BIT);
+   
+   // Lšst in der loop das Setzen von task_out aus.
+   // UmstŠndlich, aber sonst nicht machbar.
 
+   // das ist in loop verschoben
+   //task_out |= (1<< RAM_SEND_DOGM_TASK);
+   //task_outdata = curr_model;//modelindex;
 }
 
 
@@ -2132,19 +2149,13 @@ int main (void)
 		if (loopcount0==0x4FFF)
 		{
          
-         //batteriespannung = adc_read(0); // ca. 6V
   
 			loopcount0=0;
 			loopcount1+=1;
 			LOOPLEDPORT ^=(1<<LOOPLED);
          
-         if (programmstatus & (1<<SETTINGWAIT))
-         {
-         //lcd_gotoxy(14,0); // Kein guter Platz, delay
-         //lcd_putint12(startcounter);
-         }
          
-         if (loopcount1%2 == 0) // nach etwas Zeit soll Master die Settings lesen
+         if (loopcount1 && (loopcount1%2 == 0)) // nach etwas Zeit soll Master die Settings lesen
          {
             
             if (masterstatus & (1<<SUB_READ_EEPROM_BIT)) // beim Start ee lesen
@@ -2158,10 +2169,18 @@ int main (void)
                //substatus |= (1<<SETTINGS_READ);
                
             }
+            
+            
             //lcd_gotoxy(0,0);
          }
          
-         
+        if ( masterstatus & (1<<DOGM_BIT))
+            {
+               task_out |= (1<< RAM_SEND_DOGM_TASK);
+               task_outdata = curr_model;//modelindex;
+               masterstatus &= ~(1<<DOGM_BIT);
+            }
+
         
           if(loopcount1%16 == 0)
          {
@@ -2381,6 +2400,7 @@ int main (void)
             
             OSZI_D_HI;
             
+            /*
             lcd_gotoxy(0,0);
             
             lcd_putc('L');
@@ -2418,10 +2438,10 @@ int main (void)
             lcd_puthex(curr_expoarray[5]);
             
             //OSZI_D_HI;
-            
+            */
          }
          // MARK:  SPI_RAM
-         {
+         {//a
             substatus &= ~(1<<UHR_OK);
             
             substatus &= ~(1<< TASTATUR_READ);
@@ -2472,9 +2492,21 @@ int main (void)
             _delay_us(LOOPDELAY);
             RAM_CS_LO;
             _delay_us(LOOPDELAY);
-            task_indata = spiram_rdbyte(READ_TASKDATA); // Task AData
+            uint8_t new_task_indata = spiram_rdbyte(READ_TASKDATA); // Task Data
             RAM_CS_HI;
             
+            if (!(task_indata == new_task_indata))
+            {
+               in_taskcounter++;
+               lcd_gotoxy(10,1);
+               lcd_putc('i');
+               lcd_puthex(task_in);
+               lcd_putc('t');
+               lcd_puthex(new_task_indata);
+               lcd_putc('c');
+               lcd_puthex(in_taskcounter);
+               task_indata = new_task_indata;
+            }
             
             // Batteriespannung senden
             sendbuffer[0x3E] = batteriespannung & 0x00FF; // LO
@@ -2500,6 +2532,40 @@ int main (void)
             _delay_us(1);
 
             // MARK: task_out
+            
+            sendbuffer[0x3B] =task_out;
+            if (task_out & (1<<RAM_SEND_DOGM_TASK))
+               
+            {
+               OSZI_A_LO;
+               RAM_CS_LO;
+               
+               _delay_us(LOOPDELAY);
+               //      OSZI_A_LO;
+               spiram_wrbyte(WRITE_TASKADRESSE, task_out);
+               //     OSZI_A_HI;
+               RAM_CS_HI;
+               RAM_CS_LO;
+               _delay_us(LOOPDELAY);
+               //      OSZI_A_LO;
+               spiram_wrbyte(WRITE_TASKDATA, task_outdata);
+               //     OSZI_A_HI;
+               RAM_CS_HI;
+               _delay_us(1);
+
+               out_taskcounter++;
+               lcd_gotoxy(0,0);
+               lcd_putc('D');
+               lcd_puthex(task_out);
+               lcd_putc('+');
+               lcd_puthex(out_taskcounter);
+               lcd_putc('+');
+               task_out &= ~(1<<RAM_SEND_DOGM_TASK);
+               
+            }
+
+            
+            
 
             if (task_out & (1<<RAM_SEND_PPM_TASK)) // task an PPM senden
             {
@@ -2519,14 +2585,16 @@ int main (void)
                RAM_CS_HI;
                _delay_us(1);
                
-               /*
-                lcd_gotoxy(15,1);
-                lcd_puthex(task_out);
-                lcd_putc('t');
-                lcd_puthex(task_outdata);
-                lcd_putc('t');
-               */
-               task_out &= ~(1<<RAM_SEND_PPM_TASK); // Bit reset
+               out_taskcounter++;
+               lcd_gotoxy(10,0);
+               lcd_putc('o');
+               lcd_puthex(task_out);
+               lcd_putc('t');
+               lcd_puthex(task_outdata);
+               lcd_putc('c');
+               lcd_puthex(out_taskcounter);
+               
+               task_out &= ~(1<<RAM_SEND_PPM_TASK); // Task gesendet, Bit reset
                
                // Sub soll  beim Start erst jetzt die Settings lesen.
                if (eepromstatus & (1<<READ_EEPROM_START))
@@ -2538,44 +2606,44 @@ int main (void)
                   OSZI_B_HI;
                   
                   /*
-                  lcd_clr_line(0);
-                  
-                  lcd_gotoxy(0,0);
-                  
-                  lcd_putc('L');
-                  //lcd_putc(' ');
-                  
-                  lcd_puthex(curr_levelarray[0]);
-                  lcd_puthex(curr_levelarray[1]);
-                  //lcd_putc(' ');
-                  lcd_puthex(curr_levelarray[2]);
-                  lcd_puthex(curr_levelarray[3]);
-                  
-                  lcd_putc(' ');
-                  
-                  lcd_putc('M');
-                  //lcd_putc(' ');
-                  lcd_puthex(curr_mixarray[0]);
-                  lcd_puthex(curr_mixarray[1]);
-                  //lcd_putc(' ');
-                  
-                  lcd_puthex(curr_mixarray[2]);
-                  lcd_puthex(curr_mixarray[3]);
-                  
-                  lcd_gotoxy(0,1);
-                  
-                  lcd_putc('E');
-                  //lcd_putc(' ');
-                  
-                  lcd_puthex(curr_expoarray[0]);
-                  lcd_puthex(curr_expoarray[1]);
-                  lcd_putc(' ');
-                  lcd_puthex(curr_expoarray[2]);
-                  lcd_puthex(curr_expoarray[3]);
-                  lcd_putc(' ');
-                  lcd_puthex(curr_expoarray[4]);
-                  lcd_puthex(curr_expoarray[5]);
-                  */
+                   lcd_clr_line(0);
+                   
+                   lcd_gotoxy(0,0);
+                   
+                   lcd_putc('L');
+                   //lcd_putc(' ');
+                   
+                   lcd_puthex(curr_levelarray[0]);
+                   lcd_puthex(curr_levelarray[1]);
+                   //lcd_putc(' ');
+                   lcd_puthex(curr_levelarray[2]);
+                   lcd_puthex(curr_levelarray[3]);
+                   
+                   lcd_putc(' ');
+                   
+                   lcd_putc('M');
+                   //lcd_putc(' ');
+                   lcd_puthex(curr_mixarray[0]);
+                   lcd_puthex(curr_mixarray[1]);
+                   //lcd_putc(' ');
+                   
+                   lcd_puthex(curr_mixarray[2]);
+                   lcd_puthex(curr_mixarray[3]);
+                   
+                   lcd_gotoxy(0,1);
+                   
+                   lcd_putc('E');
+                   //lcd_putc(' ');
+                   
+                   lcd_puthex(curr_expoarray[0]);
+                   lcd_puthex(curr_expoarray[1]);
+                   lcd_putc(' ');
+                   lcd_puthex(curr_expoarray[2]);
+                   lcd_puthex(curr_expoarray[3]);
+                   lcd_putc(' ');
+                   lcd_puthex(curr_expoarray[4]);
+                   lcd_puthex(curr_expoarray[5]);
+                   */
                }
                OSZI_A_HI;
             }
@@ -2607,7 +2675,7 @@ int main (void)
             //
             sei();
            
-         }
+         }//a
          
          spi_end(); // SPI von Sub ausschalten
          
@@ -3041,14 +3109,15 @@ int main (void)
                    levelb = 1;   Offset: 4
                    
                    nummer = 0;
-                   richtung = 0; Offset: 7  
+                   richtung = 0; Offset: 7
                    state = 1;
                    */
-                 // uint16_t fixstartadresse =  buffer[1] | (buffer[2]<<8);
+                  // uint16_t fixstartadresse =  buffer[1] | (buffer[2]<<8);
                   lcd_gotoxy(0,0);
                   lcd_putc('M');
                   uint8_t changecode = buffer[3];// Bits fuer zu aendernde kanaele
                   uint8_t modelindex = buffer[4]; // Nummer des models
+                  
                   uint16_t fixstartadresse =  TASK_OFFSET + modelindex * SETTINGBREITE; // Startadresse fuer Settings
                   
                   uint8_t datastartbyte = 16; // Beginn  der Settings auf dem buffer
@@ -3062,22 +3131,25 @@ int main (void)
                      //lcd_putc('A'+kanal);
                      if (changecode & (1<<kanal)) // kanal ist zu aendern
                      {
-                        lcd_putc('0'+ kanal);
-                        
+                        //lcd_putc('K');
+                        //lcd_putint1(kanal);
                         // Level schreiben
                         // Der Wert ist auf (16 + 2* changeposition) an der ungeraden Stelle
                         uint8_t levelwert = buffer[datastartbyte + 2*changeposition + 1]; // wert an position im buffer // 0x20
-                         //lcd_puthex(levelwert);
+                        //lcd_putc(' ');
+                        //lcd_puthex(levelwert);
+                        //lcd_putc(' ');
                         //lcd_putc('C');
                         //levelwert = 1;
- 
-                     //
-                      errcount0 += eeprombyteschreiben(0xF9,fixstartadresse + LEVEL_OFFSET + kanal,levelwert); // adresse im EEPROM
-               
+                        
+                        //
+                        
+                        errcount0 += eeprombyteschreiben(0xF9,fixstartadresse + LEVEL_OFFSET + kanal,levelwert); // adresse im EEPROM
+                        
                         //       lcd_putint(errcount);
-                  /*
+                        /*
                          sendbuffer[EE_PARTBREITE + 2*kanal+1] = levelwert;
-                        */
+                         */
                         //lcd_putc('A'+kanal);
                         
                         // Expo schreiben
@@ -3085,32 +3157,34 @@ int main (void)
                         uint8_t expowert = buffer[datastartbyte + 2*changeposition];
                         
                         //Test
-                       // expowert= 0;
+                        // expowert= 0;
                         //
                         
-                     errcount1 += eeprombyteschreiben(0xF9,fixstartadresse + EXPO_OFFSET + kanal,expowert); // 0x30
+                        errcount1 += eeprombyteschreiben(0xF9,fixstartadresse + EXPO_OFFSET + kanal,expowert); // 0x30
                         
                         //sendbuffer[EE_PARTBREITE + 2*kanal] = expowert;
                         
                         //lcd_putc('A'+kanal);
                         //lcd_putc('*');
-                        /*
-                        lcd_gotoxy(0,1);
-                        lcd_putc('k');
-                        lcd_putint2(kanal);
-                        lcd_putc('w');
-                        lcd_puthex(levelwert);
-                        lcd_putc('e');
-                        lcd_puthex(expowert);
-                        lcd_putc('*');
-                         */
+                        
+                         lcd_gotoxy(0,changeposition);
+                         lcd_putc('k');
+                         lcd_putint2(kanal);
+                        lcd_putc(' ');
+                         lcd_putc('l');
+                         lcd_puthex(levelwert);
+                        lcd_putc(' ');
+                         lcd_putc('e');
+                         lcd_puthex(expowert);
+                         lcd_putc('*');
+                        
                         //sendbuffer[0x10+2*kanal] = levelwert;
                         //sendbuffer[0x10+2*kanal+1] = expowert;
                         
                         sendbuffer[EE_PARTBREITE+kanal] = levelwert; // EE_PARTBREITE 32
                         sendbuffer[EE_PARTBREITE+0x08+kanal] = expowert;
                         
-
+                        
                         changeposition++;
                      }
                      //lcd_putc('M'+kanal);
@@ -3118,24 +3192,22 @@ int main (void)
                      task_out |= (1<< RAM_SEND_PPM_TASK);
                      task_outdata = modelindex;
                      
+                     
+                     //lcd_putc('C');
+                     sendbuffer[1] = fixstartadresse & 0x00FF;
+                     sendbuffer[2] = (fixstartadresse & 0xFF00)>>8;
+                     sendbuffer[3] = errcount0;
+                     sendbuffer[4] = changecode;
+                     sendbuffer[5] = modelindex;
+                     sendbuffer[6] = task_out;
+                     sendbuffer[7] = task_outdata;
+                     sendbuffer[8] = errcount1;
+                     
+                     sendbuffer[0] = 0xF4;
+                     usb_rawhid_send((void*)sendbuffer, 50);
+                     _delay_ms(2);
+                     //lcd_putc('D');
                   }// for kanal
-                  //lcd_putc('C');
-                  sendbuffer[1] = fixstartadresse & 0x00FF;
-                  sendbuffer[2] = (fixstartadresse & 0xFF00)>>8;
-                  sendbuffer[3] = errcount0;
-                  sendbuffer[4] = changecode;
-                  sendbuffer[5] = modelindex;
-                  sendbuffer[6] = task_out;
-                  sendbuffer[7] = task_outdata;
-                  sendbuffer[8] = errcount1;
-                  
-                  
-
-                  sendbuffer[0] = 0xF4;
-                  usb_rawhid_send((void*)sendbuffer, 50);
-                  
-                  //lcd_putc('D');
-                  
                }break;
                   
 // MARK: F5 read KanalSettings
@@ -3262,6 +3334,8 @@ int main (void)
                   // code
                   sendbuffer[0] = 0xF5;
                   usb_rawhid_send((void*)sendbuffer, 50);
+                  
+                  /*
                   lcd_clr_line(0);
                   lcd_gotoxy(0,0);
                   lcd_putc('L');
@@ -3281,7 +3355,7 @@ int main (void)
                   lcd_puthex(curr_mixarray[2]);
                   lcd_puthex(curr_mixarray[3]);
                   //OSZI_D_HI;
-
+                   */
                
                
                }break;
@@ -3349,6 +3423,13 @@ int main (void)
                         sendbuffer[EE_PARTBREITE + 2*mixing+1] = canalwert;
                         writeposition++;
                         changeposition++;
+                     }
+                     else
+                     {
+                        sendbuffer[EE_PARTBREITE + 2*mixing]=0;
+                        sendbuffer[EE_PARTBREITE + 16 + 2*mixing]=0;
+                        sendbuffer[EE_PARTBREITE + 16 + 2*mixing+1]=0;
+                        sendbuffer[EE_PARTBREITE + 2*mixing+1] =0;
                      }
                      
                   }// for mixing
@@ -3957,7 +4038,7 @@ int main (void)
                                     
                                  case 1: // Kanal A zurueckschalten
                                  {
-                                    uint8_t tempdata =(curr_mixarray[2*curr_cursorzeile] & 0x70)>>4;// kanal a ist auf gerader zeile in bit 4-6
+                                    uint8_t tempdata =(curr_mixarray[2*curr_cursorzeile] & 0xF0)>>4;// kanal a ist auf gerader zeile in bit 4-6, 8 ist OFF
                                     
                                     if (tempdata) //
                                     {
@@ -3969,7 +4050,7 @@ int main (void)
                                     
                                  case 2: // Kanal B zurueckschalten
                                  {
-                                    uint8_t tempdata =(curr_mixarray[2*curr_cursorzeile] & 0x07);// kanal b ist auf gerader zeile in bit 0-2
+                                    uint8_t tempdata =(curr_mixarray[2*curr_cursorzeile] & 0x0F);// kanal b ist auf gerader zeile in bit 0-2, 8 ist OFF
                                     
                                     if (tempdata)
                                     {
@@ -4732,7 +4813,7 @@ int main (void)
                            
                				//lcd_putint2(startcounter);
                            //lcd_putc('*');
-                           if ((startcounter == 0)&& (manuellcounter )) // Settings sind nicht aktiv
+                           if ((startcounter == 0))//&& (manuellcounter)) // Settings sind nicht aktiv
                            {
                               lcd_gotoxy(16,1);
                               lcd_putc('A');
@@ -4794,6 +4875,13 @@ int main (void)
                               {
                                  
                                  write_Ext_EEPROM_Settings();// neue Einstellungen setzen
+                                 
+                                 // In write_Ext_EEPROM_Settings wird masterstatus & 1<<DOGM_BIT gesetzt.
+                                 //  In der Loop wird damit
+                                 //    task_out |= (1<< RAM_SEND_DOGM_TASK);
+                                 //    task_outdata = curr_model;//modelindex;
+                                 // ausgeloest.
+
                               }break;
                                  
                               case 1: // abbrechen
@@ -4813,6 +4901,7 @@ int main (void)
                            blink_cursorpos = 0xFFFF;
                            
                            sethomescreen();
+                           
                            
                            
                         }break;
@@ -5565,11 +5654,16 @@ int main (void)
                                  settingstartcounter=0;
                                  startcounter=0;
                                  
-                               //  curr_screen=HOMESCREEN;
-                               //  sethomescreen();
-                                 
-                                 curr_screen=SAVESCREEN;
-                                 setsavescreen();
+                                 if (eepromsavestatus)
+                                 {
+                                    curr_screen=SAVESCREEN;
+                                    setsavescreen();
+                                 }
+                                 else
+                                 {
+                                    curr_screen=HOMESCREEN;
+                                    sethomescreen();
+                                 }
                          
                                  
                                  manuellcounter=0;
@@ -5789,6 +5883,7 @@ int main (void)
                         {
                            if ((blink_cursorpos == 0xFFFF) && manuellcounter) // kein Blinken
                            {
+                              /*
                               lcd_gotoxy(5,1);
                               lcd_puthex(curr_cursorzeile);
                               lcd_putc('*');
@@ -5796,7 +5891,7 @@ int main (void)
                               lcd_putc('*');
                               lcd_puthex((posregister[curr_cursorzeile+1][curr_cursorspalte]&0x00FF));
                               lcd_putc('*');
-                              
+                              */
                               //if (curr_cursorzeile < 3 )//
                               if (posregister[curr_cursorzeile+1][curr_cursorspalte]<0xFFFF)
                               {
@@ -6044,13 +6139,14 @@ int main (void)
                         case MIXSCREEN:
                         {
 #pragma mark 8 MIXSCREEN
+                           /*
                            lcd_gotoxy(5,1);
                            lcd_puthex(curr_cursorzeile);
                            lcd_putc('*');
                            lcd_puthex((blink_cursorpos & 0xFF00)>>8); // Zeile
                            lcd_putc('*');
                            lcd_putc('*');
-                           
+                           */
                            if (blink_cursorpos == 0xFFFF && manuellcounter) // Kein Blinken
                            {
                               if (posregister[curr_cursorzeile+1][curr_cursorspalte]<0xFFFF)//
@@ -6061,8 +6157,8 @@ int main (void)
                                  
                                  curr_cursorzeile++;
                                  
-                                 lcd_puthex(curr_cursorzeile);
-                                 lcd_putc('+');
+                                 //lcd_puthex(curr_cursorzeile);
+                                 //lcd_putc('+');
                               }
                               else
                               {
@@ -6090,7 +6186,7 @@ int main (void)
                               {
                                  case 0: // Mix weiterschalten
                                  {
-                                    if (curr_mixarray[2*curr_cursorzeile+1]<4)
+                                    if (curr_mixarray[2*curr_cursorzeile+1]<3)
                                     {
                                        curr_mixarray[2*curr_cursorzeile+1] += 0x01;// Mix ist auf ungerader zeile
                                     }
@@ -6098,7 +6194,7 @@ int main (void)
                                     
                                  case 1: // Kanal A weiterschalten
                                  {
-                                    uint8_t tempdata =(curr_mixarray[2*curr_cursorzeile] & 0x70)>>4;// kanal a ist auf gerader zeile in bit 4-6
+                                    uint8_t tempdata =(curr_mixarray[2*curr_cursorzeile] & 0xF0)>>4;// kanal a ist auf gerader zeile in bit 4-6, 8 ist OFF
                                     
                                     if (tempdata < 8) //
                                     {
@@ -6111,7 +6207,7 @@ int main (void)
                                     
                                  case 2: // Kanal B weiterschalten
                                  {
-                                    uint8_t tempdata =(curr_mixarray[2*curr_cursorzeile] & 0x07);// kanal b ist auf gerader zeile in bit 0-2
+                                    uint8_t tempdata =(curr_mixarray[2*curr_cursorzeile] & 0x0F);// kanal b ist auf gerader zeile in bit 0-2, 8 ist OFF
                                     
                                     if (tempdata < 8)
                                     {
