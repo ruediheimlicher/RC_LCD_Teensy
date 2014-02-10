@@ -122,7 +122,7 @@
 
 
 
-#define MANUELLTIMEOUT	100 // Loopled-counts bis Manuell zurueckgesetzt wird. 02FF: ca. 100 s
+#define MANUELLTIMEOUT	50 // Loopled-counts bis Manuell zurueckgesetzt wird. 50: ca. 30s
 
 
 //#define MITTE_TASK         0x01 // Mitte lesen
@@ -141,7 +141,7 @@
 
 
 #define TASTATURPORT PORTF
-#define TASTATURPIN		1
+#define TASTATURPIN		3
 
 
 // end Screen
@@ -169,7 +169,7 @@
 #define ADC_DDR             DDRF    //    DDRF
 #define ADC_PIN             PINF    //    PINF
 
-#define ADC_AKKUPIN         0
+#define ADC_AKKUPIN         2
 
 
 // Bit

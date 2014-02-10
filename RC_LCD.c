@@ -47,6 +47,12 @@
 #define USB_DATENBREITE 64
 #define EE_PARTBREITE 32
 
+const char wertearray[] PROGMEM = {TASTE1,TASTE2,TASTE3,TASTE4,TASTE5,TASTE6,TASTE7,TASTE8,TASTE9,TASTE_L,TASTE0,TASTE_R};
+uint16_t key_state;				// debounced key state:
+// bit = 1: key pressed
+uint16_t key_press;				// key press detect
+volatile uint16_t tscounter =0;
+
 
 
 volatile uint8_t do_output=0;
@@ -176,10 +182,15 @@ volatile uint16_t                manuellcounter=0; // Countr fuer Timeout
 volatile uint8_t                 startcounter=0; // timeout-counter beim Start von Settings, schneller als manuellcounter. Ermoeglicht Dreifachklick auf Taste 5
 volatile uint8_t                 settingstartcounter=0; // Counter fuer Klicks auf Taste 5
 volatile uint16_t                mscounter=0; // Counter fuer ms in timer-ISR
-uint16_t TastenStatus=0;
-uint16_t Tastencount=0;
-uint16_t Tastenprellen=0x01F;
+volatile uint16_t TastenStatus=0;
+volatile uint16_t Tastencount=0;
+volatile uint16_t Tastenprellen=0x01F;
 volatile uint8_t                 Taste=0;
+
+volatile uint8_t                 Tastenindex=0;
+volatile uint8_t                 lastTastenindex=0;
+volatile uint16_t                prellcounter=0;
+
 volatile uint8_t                 programmstatus=0x00;
 
 volatile uint8_t                 senderstatus=0x00;
@@ -347,7 +358,7 @@ uint8_t  EEMEM speicherstopminute;
 
 volatile uint16_t batteriespannung =0;
 
-
+volatile uint16_t Tastenwert=0;
 
 // MARK: Proto
 uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_writedatabyte);
@@ -358,6 +369,59 @@ uint16_t eeprompartschreiben(void); // 23 ms
 void read_eeprom_zeit(void);
 void write_eeprom_zeit(void);
 void write_eeprom_status(void);
+
+
+
+
+/*
+ #define TASTE1		15
+ #define TASTE2		23
+ #define TASTE3		34
+ #define TASTE4		51
+ #define TASTE5		72
+ #define TASTE6		94
+ #define TASTE7		120
+ #define TASTE8		141
+ #define TASTE9		155
+ #define TASTE_L	168
+ #define TASTE0		178
+ #define TASTE_R	194
+ 
+ */
+//const char wertearray[] PROGMEM = {TASTE1,TASTE2,TASTE3,TASTE4,TASTE5,TASTE6,TASTE7,TASTE8,TASTE9,TASTE_L,TASTE0,TASTE_R};
+
+/*
+
+static inline
+uint16_t key_no( uint8_t adcval )
+{
+   uint16_t num = 0x1000;
+   PGM_P pointer = wertearray;
+   
+   
+   while( adcval < pgm_read_byte(pointer))
+   {
+      pointer++;
+      num >>= 1;
+   }
+   return num & ~0x1000;
+}
+
+uint16_t get_key_press( uint16_t key_mask )
+{
+   cli();
+   key_mask &= key_press;		// read key(s)
+   key_press ^= key_mask;		// clear key(s)
+   sei();
+   return key_mask;
+}
+
+*/
+
+
+
+
+
 
 void startTimer2(void)
 {
@@ -687,11 +751,27 @@ ISR (TIMER0_OVF_vect)
 {
    
    mscounter++;
+
+   /*
+   tscounter++;
    
+   if ((tscounter > 1)&& (substatus & (1<< TASTATUR_READ)))
+   {
+      tscounter=0;
+      static uint16_t ct0, ct1;
+      uint16_t i;
+      i = key_state ^ key_no( Tastenwert );	// key changed ?
+      ct0 = ~( ct0 & i );			// reset or count ct0
+      ct1 = ct0 ^ (ct1 & i);		// reset or count ct1
+      i &= ct0 & ct1;			// count until roll over ?
+      key_state ^= i;			// then toggle debounced state
+      key_press |= key_state & i;		// 0->1: key press detect
+   }
+  */
    if (mscounter > 2*CLOCK_DIV) // 0.5s
    {
      // displaycounter++;
-      
+      manuellcounter++;
       
       //OSZI_A_TOGG;
       programmstatus ^= (1<<MS_DIV); // Teilung /2
@@ -719,7 +799,7 @@ ISR (TIMER0_OVF_vect)
          }
          
          {
-            manuellcounter++;
+       //     manuellcounter++;
          }
          
          if (programmstatus & (1<<MOTOR_ON))
@@ -1793,7 +1873,37 @@ uint8_t Tastenwahl(uint8_t Tastaturwert)
       return 12;
    
    return -1;
+
+
+
 }
+/*
+uint8_t Tastenwahl_N(void)
+{
+   if( get_key_press( 1<<8 ))		// "1"
+      return 1;			//	toggle
+   if( get_key_press( 1<<4 ))		// "2"
+      return 2;
+   if( get_key_press( 1<<0 ))		// "3"
+      return 3;
+   if( get_key_press( 1<<9 ))		// "4"
+      return 4;
+   if( get_key_press( 1<<5 ))		// "5"
+      return 5;
+   if( get_key_press( 1<<1 ))		// "6"
+      return 6;
+   if( get_key_press( 1<<10 ))		// "7"
+      return 7;
+   if( get_key_press( 1<<6 ))		// "8"
+      return 8;
+   if( get_key_press( 1<<11 ))		// "#"
+      return 9;			//	all on
+   if( get_key_press( 1<<3 ))		// "*"
+      return 10;			//	all off
+   return -1;
+}
+*/
+
 
 void resetcursorpos(void)
 {
@@ -1969,7 +2079,7 @@ int main (void)
 	lcd_puts(VERSION);
    lcd_clr_line(1);
    
-	uint16_t Tastenwert=0;
+	
 	uint8_t TastaturCount=0;
 	
 	uint16_t TastenStatus=0;
@@ -2146,7 +2256,7 @@ int main (void)
          
       }
       
-		if (loopcount0==0x4FFF)
+		if (loopcount0==0x3FFF)
 		{
          
   
@@ -2292,7 +2402,13 @@ int main (void)
                   curr_cursorzeile=0;
                   last_cursorspalte=0;
                   last_cursorzeile=0;
+                  settingstartcounter=0;
+                  startcounter=0;
+                  eepromsavestatus=0;
+                  read_Ext_EEPROM_Settings();// zuruecksetzen
+
                   sethomescreen();
+                  
                }
                
 				}
@@ -2327,7 +2443,8 @@ int main (void)
          adc_counter =0;
          
          batteriespannung = adc_read(0);
-         
+         //lcd_gotoxy(0,0);
+         //lcd_putint16(batteriespannung);
       }
       
       //if (displaycounter)
@@ -2442,6 +2559,17 @@ int main (void)
          }
          // MARK:  SPI_RAM
          {//a
+            
+            /*
+            uint8_t taste_n = Tastenwahl_N();
+            if (taste_n)
+            {
+            lcd_gotoxy(0,0);
+            lcd_putc('T');
+            lcd_puthex(taste_n);
+            }
+             */
+            
             substatus &= ~(1<<UHR_OK);
             
             substatus &= ~(1<< TASTATUR_READ);
@@ -3647,13 +3775,13 @@ int main (void)
          
       {
          
-         Tastenwert=0;
+         //Tastenwert=0;
          //OSZI_B_LO;
          //substatus &= ~(1<< TASTATUR_READ);
          // OSZI_B_TOGG;
          Tastenwert=adc_read(TASTATURPIN)>>2;
         // lcd_gotoxy(4,1);
-         //lcd_putint12(Tastenwert);
+        // lcd_putint12(Tastenwert);
          //
          if (Tastenwert>5)
          {
@@ -3671,11 +3799,40 @@ int main (void)
              
              12: Manuell aus
              */
+            Tastenindex = Tastenwahl(Tastenwert);
             
+            if ((Tastenindex == lastTastenindex)) // gleiche Taste wie letztes Mal
+            {
+               prellcounter++;
+               
+            }
+            else // andere Taste oder prellen
+            {
+               lastTastenindex = Tastenindex;
+               prellcounter=0;
+            }
+            
+            /*
+            if (prellcounter>10)
+            {
+                lcd_gotoxy(6,0);
+               lcd_putint2(Tastenindex);
+            }
+            */
             TastaturCount++;
      //       if ((TastaturCount>=100) ) // 16 MHz
-            if ((TastaturCount>=50) ) // 8 MHz
+            
+            
+           // if ((TastaturCount>=150) ) // 8 MHz
+               
+            if (prellcounter>300)
             {
+               //lcd_gotoxy(6,0);
+               //lcd_putint2(Tastenindex);
+               Taste = Tastenindex;
+               prellcounter=0;
+               
+               
                substatus |= (1<<TASTATUR_OK);
                               /*
                lcd_gotoxy(10,1);
@@ -3687,10 +3844,10 @@ int main (void)
                
                lcd_gotoxy(18,1);
                */
-               Taste=Tastenwahl(Tastenwert);
+//               Taste=Tastenwahl(Tastenwert);
                //lcd_putint2(Taste);
                //lcd_putc(' ');
-               lcd_gotoxy(0,1);
+               //lcd_gotoxy(0,1);
                //lcd_putint(TastaturCount);
               // lcd_putc(' ');
                //lcd_putint2(Taste);
@@ -3699,6 +3856,8 @@ int main (void)
                Tastenwert=0x00;
                //uint8_t i=0;
                //uint8_t pos=0;
+               
+               
                
                programmstatus |= (1<<UPDATESCREEN);
                
@@ -4813,17 +4972,17 @@ int main (void)
                            
                				//lcd_putint2(startcounter);
                            //lcd_putc('*');
-                           if ((startcounter == 0))//&& (manuellcounter)) // Settings sind nicht aktiv
+                           if ((startcounter == 0)&& (manuellcounter)) // Settings sind nicht aktiv
                            {
-                              lcd_gotoxy(16,1);
+                              lcd_gotoxy(0,1);
                               lcd_putc('A');
                               programmstatus |= (1<< SETTINGWAIT);
-                              settingstartcounter++;
+                              settingstartcounter=1;
                               manuellcounter = 0;
                            }
-                           else if (startcounter > 5) // Irrtum, kein Umschalten
+                           else if (startcounter > 15) // Irrtum, kein Umschalten
                            {
-                              lcd_gotoxy(16,1);
+                              lcd_gotoxy(0,1);
                               lcd_putc('X');
                               programmstatus &= ~(1<< SETTINGWAIT);
                               settingstartcounter=0;
@@ -4834,8 +4993,8 @@ int main (void)
                            {
                               if ((programmstatus & (1<< SETTINGWAIT))&& (manuellcounter)) // Umschaltvorgang noch aktiv
                               {
-                                 lcd_gotoxy(16,1);
-                                 lcd_putc('B');
+                                 lcd_gotoxy(0,1);
+                                 lcd_putc('A'+settingstartcounter);
                                  lcd_putint2(settingstartcounter);
                                  settingstartcounter++; // counter fuer klicks
                                  if (settingstartcounter > 2)
@@ -4886,6 +5045,7 @@ int main (void)
                                  
                               case 1: // abbrechen
                               {
+                                 eepromsavestatus=0;
                                  read_Ext_EEPROM_Settings();// zuruecksetzen
                               
                               }break;
@@ -5905,8 +6065,8 @@ int main (void)
                                  
                                  curr_cursorzeile++;
                                  
-                                 lcd_gotoxy(19,1);
-                                 lcd_putc('+');
+                                 //lcd_gotoxy(19,1);
+                                 //lcd_putc('+');
                               }
                               else
                               {
@@ -5959,22 +6119,22 @@ int main (void)
                                        }break;
                                           
                                     } // switch Spalte
-                                    
+                                    manuellcounter=0;
                                  }break;
                                     
                                  case  1:
                                  {
-                                    lcd_putc('1');
+                                    //lcd_putc('1');
                                     
                                  }break;
                                     
                                  case  2:
                                  {
-                                    lcd_putc('2');
+                                    //lcd_putc('2');
                                  }break;
                                  case  3:
                                  {
-                                    lcd_putc('3');
+                                   // lcd_putc('3');
                                  }break;
                                     //
                                     
@@ -6512,6 +6672,7 @@ int main (void)
                }//switch Tastatur
                
                Tastenwert=0;
+               Taste=0;
             }//if TastaturCount
             
          } // if Tastenwert > 5
