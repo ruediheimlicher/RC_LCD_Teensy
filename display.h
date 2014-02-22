@@ -29,12 +29,26 @@
 #define DOG_SCL      3
 #define DOG_DATA     5
 */
+
+/*
 #define DOG_PWM      0
 #define DOG_CS       1
 #define DOG_RST      2
 #define DOG_A0       3
 #define DOG_SCL      4
 #define DOG_DATA     5
+*/
+
+// new OCB
+
+
+#define DOG_CS       5
+#define DOG_RST      4
+#define DOG_A0       3
+#define DOG_SCL      2
+#define DOG_DATA     1
+#define DOG_PWM      0
+
 
 
 
@@ -93,9 +107,18 @@
 char menubuffer[20];
 char titelbuffer[20];
 
+/*
+ //vNormale Textaustichtung 6:00
 volatile uint8_t itemtab[10] = {8,32,48,60,72,84,96,108,116,0};
 
 volatile uint8_t cursortab[10] = {0,24,40,52,64,76,88,100,108,0};
+*/
+
+// Textausrichtung 12:00: 4 zu x-koord addieren
+#define OFFSET_6_UHR 4
+volatile uint8_t itemtab[10] = {8+OFFSET_6_UHR,32+OFFSET_6_UHR,48+OFFSET_6_UHR,60+OFFSET_6_UHR,72+OFFSET_6_UHR,84+OFFSET_6_UHR,96+OFFSET_6_UHR,108+OFFSET_6_UHR,116+OFFSET_6_UHR,0+OFFSET_6_UHR};
+
+volatile uint8_t cursortab[10] = {0+OFFSET_6_UHR,24+OFFSET_6_UHR+OFFSET_6_UHR,40+OFFSET_6_UHR,52+OFFSET_6_UHR,64+OFFSET_6_UHR,76+OFFSET_6_UHR,88+OFFSET_6_UHR,100+OFFSET_6_UHR,108+OFFSET_6_UHR,0};
 
 const uint8_t PROGMEM  expoarray25[3][26] ={
 {0x00,0x01,0x01,0x02,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C,0x0D,0x0F,0x10,0x12,0x14,0x15,0x17,0x19,0x1B,0x1E,0x20},
@@ -138,13 +161,14 @@ void display_write_prop_str(uint8_t page, uint8_t column, uint8_t inverse, const
 
 void display_write_spannung(uint16_t rawspannung, uint8_t prop); // eine Dezimale
 void display_akkuanzeige (uint16_t spannung);
+void display_trimmanzeige (uint8_t char_x0, uint8_t char_y0,int8_t mitteposition);
 void r_uitoa8(int8_t zahl, char* string);
 
 uint8_t update_screen(void);
 
 uint8_t display_diagramm (uint8_t char_x, uint8_t char_y, uint8_t stufea,uint8_t stufeb, uint8_t typ);
 uint8_t display_kanaldiagramm (uint8_t char_x, uint8_t char_y, uint8_t level, uint8_t expo, uint8_t typ );
-
+uint8_t display_kanaldiagramm_var(uint8_t char_x0, uint8_t char_y0, uint8_t level, uint8_t expo, uint8_t typ );
 void display_cursorweg(void);
 
 
@@ -206,12 +230,12 @@ void display_cursorweg(void);
 
 	// (15) Common output mode select
 	#define DISPLAY_SCAN_DIR_NORMAL		0xC0  
-	#define DISPLAY_SCAN_DIR_REVERSE	0xC8  
+	#define DISPLAY_SCAN_DIR_REVERSE    0xC8
 
 	// (16) Power control set
-	#define DISPLAY_POWER_CONTROL		0x28
+	#define DISPLAY_POWER_CONTROL       0x28
 	#define DISPLAY_POWER_LOW_POWER		0x2F
-	#define DISPLAY_POWER_WIDE_RANGE	0x2F 
+	#define DISPLAY_POWER_WIDE_RANGE    0x2F 
 	#define DISPLAY_POWER_LOW_VOLTAGE	0x2B 
 
 	// (17) V0 voltage regulator internal resistor ratio set

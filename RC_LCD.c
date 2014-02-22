@@ -181,6 +181,8 @@ volatile uint16_t Tastencount=0;
 volatile uint16_t Tastenprellen=0x01F;
 volatile uint8_t                 Taste=0;
 
+volatile uint16_t tastentransfer=0;
+
 volatile uint8_t                 Tastenindex=0;
 volatile uint8_t                 lastTastenindex=0;
 volatile uint16_t                prellcounter=0;
@@ -2191,8 +2193,8 @@ int main (void)
           usbstatus &= ~(1<<USB_ATTACH_TASK);
          if (!(usb_configured()))
          {
-            lcd_gotoxy(16,1);
-            lcd_putc('U');
+            //lcd_gotoxy(16,1);
+            //lcd_putc('U');
             usb_init();
             while (!usb_configured()) ;//  wait
             _delay_ms(100);
@@ -2750,12 +2752,14 @@ int main (void)
                _delay_us(1);
                
                out_taskcounter++;
+               /*
                lcd_gotoxy(10,0);
                lcd_putc('o');
                lcd_puthex(task_out);
                lcd_putc('t');
                lcd_puthex(task_outdata);
                lcd_putc('c');
+                */
                lcd_puthex(out_taskcounter);
                
                task_out &= ~(1<<RAM_SEND_PPM_TASK); // Task gesendet, Bit reset
@@ -2763,11 +2767,11 @@ int main (void)
                // Sub soll  beim Start erst jetzt die Settings lesen.
                if (eepromstatus & (1<<READ_EEPROM_START))
                {
-                  OSZI_B_LO;
+                  //OSZI_B_LO;
                   eepromstatus &= ~(1<<READ_EEPROM_START);
                   substatus |= (1<<SETTINGS_READ); // wird in loop abgearbeitet
                   
-                  OSZI_B_HI;
+                  //OSZI_B_HI;
                   
                   /*
                    lcd_clr_line(0);
@@ -3924,15 +3928,20 @@ int main (void)
                      {
                         case HOMESCREEN: // home
                         {
-                           if (manuellcounter > 2)
+                           if (manuellcounter)
                            {
-                           substatus |= (1<<SETTINGS_READ);; // Settings beim Start lesen
+                           //substatus |= (1<<SETTINGS_READ);; // Settings beim Start lesen
                               manuellcounter=0;
+                              display_clear();
+                              sethomescreen();
+                              
                            }
+ 
+                           
  
                         }break;
                            
-                        case SETTINGSCREEN: // Settings
+                        case TRIMMSCREEN: // Trimmung
                         {
                            if (blink_cursorpos == 0xFFFF && manuellcounter) // Kein Blinken
                            {

@@ -34,8 +34,8 @@ extern volatile uint8_t       curr_levelarray[8];
 extern volatile uint8_t       curr_expoarray[8];
 extern volatile uint8_t       curr_mixarray[8];
 extern volatile uint8_t       curr_funktionarray[8];
-extern  volatile uint8_t       curr_devicearray[8];
-extern  volatile uint8_t       curr_ausgangarray[8];
+extern volatile uint8_t       curr_devicearray[8];
+extern volatile uint8_t       curr_ausgangarray[8];
 
 extern volatile int8_t              curr_trimmungarray[8];
 
@@ -50,7 +50,7 @@ extern volatile uint8_t       curr_kanal; // aktueller kanal
 extern volatile uint8_t       curr_richtung; // aktuelle richtung
 extern volatile uint8_t       curr_impuls; // aktueller impuls
 
-extern volatile uint8_t             eepromsavestatus;
+extern volatile uint8_t       eepromsavestatus;
 extern volatile uint8_t       programmstatus;
 
 
@@ -67,8 +67,8 @@ extern volatile uint8_t                 curr_trimmung; // aktuelle  Trimmung fue
 
 
 //extern volatile uint16_t      laufsekunde;
-extern volatile uint8_t      laufstunde;
-extern volatile uint8_t      laufminute;
+extern volatile uint8_t       laufstunde;
+extern volatile uint8_t       laufminute;
 extern volatile uint16_t      motorsekunde;
 extern volatile uint16_t      stopsekunde;
 extern volatile uint16_t      motorminute;
@@ -109,6 +109,7 @@ extern volatile uint16_t              updatecounter; // Zaehler fuer Einschalten
 #define ZUTEILUNGSCREEN 6
 #define AUSGANGSCREEN   7
 #define SAVESCREEN      8
+#define TRIMMSCREEN      9
 
 #define MODELLCURSOR 2
 #define SETCURSOR    4
@@ -127,20 +128,26 @@ const char balken[8]=
 
 const volatile char DISPLAY_INIT[] =
 {
-0x40,// Display start line set --> 0
-0xA1, // ADC set --> reverse Horizontal gespiegelt wenn A1
-0xC0, // Common output mode select --> normal
-0xA6, // Display --> normal  A7 ist reverse
-0xA2, // LCD Bias set --> 1/9 (Duty 1/65)
-0x2F, // Power control set --> Booster, Regulator and Follower on
-0xF8, // Booster ratio set --> Set internal Booster to 4x
-0x00, // ...
-0x27, //
-0x81, // Contrast set
-0x18,
-0xAC, // Static indicator set --> no indicator
-0x00, // ...
-0xAF
+   0x40,// Display start line set --> 0
+   
+//   0xA1, // ADC set --> reverse Horizontal gespiegelt wenn A1
+   0xA0, // ADC set --> reverse Horizontal gespiegelt wenn A1
+   
+//   0xC0, // Common output mode select --> normal
+   0xC8, // Common output mode select --> normal
+   
+   
+   0xA6, // Display --> normal  A7 ist reverse
+   0xA2, // LCD Bias set --> 1/9 (Duty 1/65)
+   0x2F, // Power control set --> Booster, Regulator and Follower on
+   0xF8, // Booster ratio set --> Set internal Booster to 4x
+   0x00, // ...
+   0x27, //
+   0x81, // Contrast set
+   0x18,
+   0xAC, // Static indicator set --> no indicator
+   0x00, // ...
+   0xAF
 };  // Display on/off
 
 //const char DISPLAY_INIT[] = {0xC8,0xA1,0xA6,0xA2,0x2F,0x26,0x81,0x25,0xAC,0x00,0xAF};
@@ -271,7 +278,7 @@ void sethomescreen(void)
 
   // display_write_propchar(' ');
  
-   char_x=0;
+   char_x=OFFSET_6_UHR;
    char_y = 8;
    display_write_symbol(pfeilvollrechts);
    char_x += 2;
@@ -579,7 +586,8 @@ void setcanalscreen(void)
     display_write_str(menubuffer,1);
 */
    
-   char_height_mul = 1;
+
+   
 }
 
 void setausgangscreen(void)
@@ -642,7 +650,7 @@ void setausgangscreen(void)
    
    strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(SettingTable[6]))); // Ausgang
    char_y= 1;
-   char_x = 10;
+   char_x = 10+OFFSET_6_UHR;
    char_height_mul = 1;
    char_width_mul = 1;
    display_write_str(menubuffer,2);
@@ -1329,7 +1337,13 @@ uint8_t update_screen(void)
             char_width_mul = 1;
             
             //display_kanaldiagramm (64, 7, curr_settingarray[curr_kanal][0], curr_settingarray[curr_kanal][1], 1);
-            display_kanaldiagramm (64, 7, curr_levelarray[curr_kanal], curr_expoarray[curr_kanal], 1);
+            display_kanaldiagramm_var(64+OFFSET_6_UHR, 6, curr_levelarray[curr_kanal], curr_expoarray[curr_kanal], 1);
+         
+            
+            char_height_mul = 1;
+            
+            display_trimmanzeige (14+OFFSET_6_UHR, 7,-15);
+
          }
          
          // Blinken
@@ -1595,7 +1609,7 @@ uint8_t update_screen(void)
                // Kanal an deviceindex einsetzen
  //              curr_devicearray[deviceindex] = kanalindex ;
             }
-
+            
             // Ungerade Nummern_ vertikal
             
             // Device 1: L_V
@@ -1645,7 +1659,7 @@ uint8_t update_screen(void)
             
             
             // Gerade Nummern_ horizontal
-            
+
             // Device 0: L_H
             
             char_y = (posregister[1][0] & 0xFF00)>>8;
@@ -1679,7 +1693,9 @@ uint8_t update_screen(void)
             strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(FunktionTable[funktionnummer]))); // R_H
             display_write_str(menubuffer,1);
             
+            
             // Device 4: Schieber L
+            
             // Position Nummer
             char_y = (posregister[2][0] & 0xFF00)>>8;
             char_x = (posregister[2][0] & 0x00FF);
@@ -2177,7 +2193,8 @@ uint8_t display_diagramm (uint8_t char_x, uint8_t char_y, uint8_t stufea, uint8_
    
 }
 
-uint8_t display_kanaldiagramm (uint8_t char_x, uint8_t char_y, uint8_t level, uint8_t expo, uint8_t typ )
+
+uint8_t display_kanaldiagramm (uint8_t char_x0, uint8_t char_y0, uint8_t level, uint8_t expo, uint8_t typ )
 {
    uint8_t pageA=0, pageB=0, col=0;
    uint16_t wertYA=0 , wertYB=0 ;
@@ -2185,14 +2202,14 @@ uint8_t display_kanaldiagramm (uint8_t char_x, uint8_t char_y, uint8_t level, ui
    uint8_t maxX=50, maxY=48;
    //uint8_t endY= maxY*(4-stufea)/4; // punkte, nicht page
    uint8_t page=0;
-   for (page=char_y;page>3;page--) //Ordinate
+   for (page=char_y0;page>3;page--) //Ordinate
    {
-      display_go_to(char_x-maxX,page);
+      display_go_to(char_x0-maxX,page);
       display_write_byte(DATA,0xDB); // Strich zeichnen
       
-      display_go_to(char_x,page);
+      display_go_to(char_x0,page);
       display_write_byte(DATA,0xFF); // Strich zeichnen
-      display_go_to(char_x+maxX,page);
+      display_go_to(char_x0+maxX,page);
       display_write_byte(DATA,0xDB); // Strich zeichnen
       
    }
@@ -2205,7 +2222,7 @@ uint8_t display_kanaldiagramm (uint8_t char_x, uint8_t char_y, uint8_t level, ui
    {
       if (expoa==0) // linear
       {
-      wertYA = (8-((level & 0x70)>>4))*col*0x20/0x32/8;
+         wertYA = (8-((level & 0x70)>>4))*col*0x20/0x32/8;
       }
       else
       {
@@ -2453,7 +2470,7 @@ uint8_t display_kanaldiagramm_var (uint8_t char_x0, uint8_t char_y0, uint8_t lev
 void display_back_char (void)
 {
 	char_x = char_x - (FONT_WIDTH*char_width_mul);
-	if (char_x > 128) char_x = 0;
+	if (char_x > 128+OFFSET_6_UHR) char_x = 0+OFFSET_6_UHR;
 }
 
 //##############################################################################################
