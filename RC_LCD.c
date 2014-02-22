@@ -270,15 +270,15 @@ volatile uint8_t                 default_funktionarray[8]=
 volatile uint8_t                 default_devicearray[8]=
 {
    //
-   // bit 0-2: Steuerfunktion bit 4-6: Kanal von Steuerfunktion
+   // bit 0-2: device bit 4-6: Kanal von Devicefunktion
    0x00,
-   0x01,
-   0x02,
-   0x03,
-   0x04,
-   0x05,
-   0x06,
-   0x07
+   0x11,
+   0x22,
+   0x33,
+   0x44,
+   0x55,
+   0x66,
+   0x77
 };
 
 volatile uint8_t                 default_ausgangarray[8]=
@@ -295,6 +295,20 @@ volatile uint8_t                 default_ausgangarray[8]=
    0x07
 };
 
+volatile int8_t                 default_trimmungarray[8]=
+{
+   //
+   // bit 0-2: Kanal bit 4-6:
+   0x00,
+   0x00,
+   0x00,
+   0x00,
+   0x00,
+   0x00,
+   0x00,
+   0x00
+};
+
 
 volatile uint8_t              curr_levelarray[8];
 volatile uint8_t              curr_expoarray[8];
@@ -302,6 +316,8 @@ volatile uint8_t              curr_mixarray[8]={};
 volatile uint8_t              curr_funktionarray[8];
  volatile uint8_t              curr_devicearray[8] = {};
  volatile uint8_t              curr_ausgangarray[8];
+volatile int8_t              curr_trimmungarray[8];
+
 
 volatile uint16_t                updatecounter; // Zaehler fuer Update des screens
 
@@ -320,10 +336,13 @@ volatile uint8_t                 curr_model=0; // aktuelles modell
 uint8_t              EEMEM       speichermodel=0;
 volatile uint8_t                 curr_kanal=0; // aktueller kanal
 volatile uint8_t                 curr_richtung=0; // aktuelle richtung
-
+volatile uint8_t                 curr_impuls=0; // aktueller impuls
 
 volatile uint8_t                 curr_setting=0; // aktuelles Setting fuer Modell
 uint8_t              EEMEM       speichersetting=0;
+
+volatile uint8_t                 curr_trimmkanal=0; // aktueller  Kanal fuerTrimmung
+volatile uint8_t                 curr_trimmung=0; // aktuelle  Trimmung fuer Trimmkanal
 
 
 volatile uint16_t                posregister[8][8]={}; // Aktueller screen: werte fuer page und daraufliegende col fuer Menueintraege (hex). geladen aus progmem
@@ -2059,15 +2078,6 @@ int main (void)
    volatile    uint8_t eeprom_errcount =0x00;
    
    
-   //MCP3208_spi_Init();
-   
-   // SPI_RAM_PORT &= ~(1<<SPI_RAM_CS_PIN);
-   // _delay_us(10);
-   
-   // spiram_init();
-   
-   // SPI_RAM_PORT |= (1<<SPI_RAM_CS_PIN);
-   // _delay_us(10);
 	/* initialize the LCD */
 	lcd_initialize(LCD_FUNCTION_8x2, LCD_CMD_ENTRY_INC, LCD_CMD_ON);
    
@@ -3822,22 +3832,22 @@ int main (void)
             TastaturCount++;
      //       if ((TastaturCount>=100) ) // 16 MHz
             
-            
            // if ((TastaturCount>=150) ) // 8 MHz
                
-            if (prellcounter>300)
+            if (prellcounter>200)
             {
                //lcd_gotoxy(6,0);
                //lcd_putint2(Tastenindex);
                Taste = Tastenindex;
+               tastentransfer = Tastenwert;
                prellcounter=0;
                
-               
                substatus |= (1<<TASTATUR_OK);
+               
+               //lcd_gotoxy(10,1);
+               //lcd_puts("T:\0");
+               //lcd_putint12(Tastenwert);
                               /*
-               lcd_gotoxy(10,1);
-               lcd_puts("T:\0");
-               lcd_putint12(Tastenwert);
                lcd_putc(' ');
                lcd_putc(' ');
                
@@ -3854,10 +3864,6 @@ int main (void)
                //lcd_putc('*');
                TastaturCount=0;
                Tastenwert=0x00;
-               //uint8_t i=0;
-               //uint8_t pos=0;
-               
-               
                
                programmstatus |= (1<<UPDATESCREEN);
                
@@ -3959,6 +3965,110 @@ int main (void)
                                     
                                  }break;
                                     
+                                 case  1: // horizontal
+                                 {
+                                    switch (curr_cursorspalte)
+                                    {
+                                       case 0:
+                                       {
+                                          //lcd_putc('0');
+                                          if (curr_model )
+                                          {
+                                             curr_model--;
+                                          }
+                                          
+                                       }break;
+                                          
+                                 case  1:
+                                 {
+                                          //lcd_putc('1');
+                                          if (curr_setting )
+                                          {
+                                             curr_setting--;
+                                          }
+                                          
+                                       }break;
+                                    } // switch Spalte
+                                    
+                                 }break;
+                                    
+                                 case  2:
+                                 {
+                                    
+                                 }break;
+                                 case  3:
+                                 {
+                                    
+                                 }break;
+                                    //
+                                    
+                              }// switch
+                              manuellcounter=0;
+                           }
+                        }break; // trimmscreen
+
+                           
+                           
+                           
+                        case SETTINGSCREEN: // Settings
+                        {
+                           if (blink_cursorpos == 0xFFFF && manuellcounter) // Kein Blinken
+                           {
+                              //lcd_gotoxy(0,1);
+                              if (curr_cursorzeile ) // curr_cursorzeile ist >0,
+                              {
+                                 display_cursorweg();
+                                 last_cursorzeile =curr_cursorzeile;
+                                 
+                                 curr_cursorzeile--;
+                                 //lcd_putc('+');
+                              }
+                              else
+                              {
+                                 
+                                 //lcd_putc('-');
+                              }
+                              manuellcounter=0;
+                           }
+                           else if (manuellcounter)
+                           {
+                              /*
+                               lcd_gotoxy(0,1);
+                               lcd_puthex((blink_cursorpos & 0xFF00)>>8);
+                               lcd_putc('*');
+                               lcd_puthex((blink_cursorpos & 0x00FF));
+                               */
+                              //switch((blink_cursorpos & 0xFF00)>>8) // Blink-Zeile
+                              switch(curr_cursorzeile) // Blink-Zeile
+                              {
+                                 case 0: // modell
+                                 {
+                                    //switch (blink_cursorpos & 0x00FF)
+                                    switch (curr_cursorspalte)
+                                    {
+                                       case 0:
+                                       {
+                                          //lcd_putc('0');
+                                          if (curr_model )
+                                          {
+                                             curr_model--;
+                                          }
+                                          
+                                       }break;
+                                          
+                                       case 1:
+                                       {
+                                          //lcd_putc('1');
+                                          if (curr_setting )
+                                          {
+                                             curr_setting--;
+                                          }
+                           
+                                       }break;
+                                    } // switch Spalte
+                           
+                        }break;
+                           
                                  case  1:
                                  {
                                     
@@ -3977,8 +4087,6 @@ int main (void)
                               }// switch
                               manuellcounter=0;
                            }
-                           
-                           
                         }break;
                            
                         case KANALSCREEN: // Kanalsettings
@@ -6036,6 +6144,21 @@ int main (void)
                      {
                         case HOMESCREEN: // home
                         {
+                           if (manuellcounter)
+                           {
+                              display_clear();
+                              
+                              curr_screen = TRIMMSCREEN;
+                              blink_cursorpos=0xFFFF;
+                              curr_cursorspalte=0;
+                              curr_cursorzeile=0;
+                              last_cursorspalte=0;
+                              last_cursorzeile=0;
+                              settrimmscreen();
+                              manuellcounter=0;
+                           }
+
+                           
                            
                         }break;
                            
