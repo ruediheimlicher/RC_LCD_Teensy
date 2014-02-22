@@ -54,7 +54,11 @@ void initADC(uint8_t derKanal)
    //ADCSRA = (1<<ADEN) |(1<<ADPS2) | (1<<ADPS0);
    ADCSRA = (1<<ADEN) | ADC_PRESCALER;       // Frequenzvorteiler auf 32 setzen und ADC aktivieren
    ADCSRB = (1<<ADHSM) | (derKanal & 0x20);  // high speed mode
+  
    ADMUX = aref | (derKanal & 0x1F);         // configure mux input und Ÿbergebenen Kanal waehlen
+   
+   
+   
    
    ADMUX |= (1<<REFS1) | (1<<REFS0); // interne Referenzspannung nutzen
    //ADMUX |= (1<<REFS0); // VCC als Referenzspannung nutzen
@@ -75,7 +79,10 @@ int16_t adc_read(uint8_t derKanal)
    ADCSRA = (1<<ADEN) | ADC_PRESCALER;             // enable ADC  f/64
    
    ADCSRB = (1<<ADHSM) | (derKanal & 0x20);             // high speed mode
-   ADMUX = aref | (derKanal & 0x1F);                    // configure mux input
+   //ADMUX = aref | (derKanal & 0x1F);                    // configure mux input
+   
+   ADMUX = ADC_REF_POWER | (derKanal & 0x1F); // Vcc als Referenz
+   
    
    for(i=0;i<4;i++)
    {

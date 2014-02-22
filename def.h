@@ -104,6 +104,7 @@
 #define TASTE0		252
 #define TASTE_R	255
 */
+/*
 // Teensy2 int ref/TL431
 #define TASTE1		15
 #define TASTE2		23
@@ -117,12 +118,41 @@
 #define TASTE_L	168
 #define TASTE0		178
 #define TASTE_R	194
+*/
+/*
+// Teensy2 int ref/TL431
+#define TASTE1		15
+#define TASTE2		23
+#define TASTE3		34
+#define TASTE4		51
+#define TASTE5		72
+#define TASTE6		94
+#define TASTE7		120
+#define TASTE8		141
+#define TASTE9		155
+#define TASTE_L	168
+#define TASTE0		178
+#define TASTE_R	194
+*/
+// Teensy2 int Vcc
+#define TASTE1		16
+#define TASTE2		26
+#define TASTE3		40
+#define TASTE4		62
+#define TASTE5		88
+#define TASTE6		114
+#define TASTE7		146
+#define TASTE8		177
+#define TASTE9		222
+
+
+#define TASTE_L	168
+#define TASTE0		178
+#define TASTE_R	194
 
 
 
-
-
-#define MANUELLTIMEOUT	50 // Loopled-counts bis Manuell zurueckgesetzt wird. 50: ca. 30s
+#define MANUELLTIMEOUT	100 // Loopled-counts bis Manuell zurueckgesetzt wird. 50: ca. 30s
 
 
 //#define MITTE_TASK         0x01 // Mitte lesen
@@ -141,7 +171,7 @@
 
 
 #define TASTATURPORT PORTF
-#define TASTATURPIN		3
+#define TASTATURPIN		1
 
 
 // end Screen

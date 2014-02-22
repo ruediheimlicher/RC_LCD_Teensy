@@ -310,8 +310,8 @@ volatile uint8_t              curr_levelarray[8];
 volatile uint8_t              curr_expoarray[8];
 volatile uint8_t              curr_mixarray[8]={};
 volatile uint8_t              curr_funktionarray[8];
- volatile uint8_t              curr_devicearray[8] = {};
- volatile uint8_t              curr_ausgangarray[8];
+volatile uint8_t             curr_devicearray[8] = {};
+volatile uint8_t             curr_ausgangarray[8];
 volatile int8_t              curr_trimmungarray[8];
 
 
@@ -2087,7 +2087,7 @@ int main (void)
    volatile    uint8_t eeprom_errcount =0x00;
    
    
-	/* initialize the LCD */
+ 	/* initialize the LCD */
 	lcd_initialize(LCD_FUNCTION_8x2, LCD_CMD_ENTRY_INC, LCD_CMD_ON);
    
 	lcd_puts("Guten Tag\0");
@@ -2425,7 +2425,7 @@ int main (void)
                   startcounter=0;
                   eepromsavestatus=0;
                   read_Ext_EEPROM_Settings();// zuruecksetzen
-
+                  
                   sethomescreen();
                   
                }
@@ -3810,7 +3810,6 @@ int main (void)
 		//		initADC(TASTATURPIN);
 		//		Tastenwert=(uint8_t)(readKanal(TASTATURPIN)>>2);
       
- //     if ((substatus & (1<< TASTATUR_READ)) && (mscounter%2)) // 16 MHz
      if ((substatus & (1<< TASTATUR_READ))) // 8 MHz
          
       {
@@ -3819,9 +3818,15 @@ int main (void)
          //OSZI_B_LO;
          //substatus &= ~(1<< TASTATUR_READ);
          // OSZI_B_TOGG;
+         
          Tastenwert=adc_read(TASTATURPIN)>>2;
-        // lcd_gotoxy(4,1);
-        // lcd_putint12(Tastenwert);
+         
+         if (loopcount1%2==0)
+         {
+         //lcd_gotoxy(4,1);
+         //lcd_putint12(Tastenwert);
+         }
+         
          //
          if (Tastenwert>5)
          {
@@ -3877,7 +3882,7 @@ int main (void)
                //lcd_gotoxy(10,1);
                //lcd_puts("T:\0");
                //lcd_putint12(Tastenwert);
-                              /*
+               /*
                lcd_putc(' ');
                lcd_putc(' ');
                
@@ -3894,7 +3899,7 @@ int main (void)
                //lcd_putc('*');
                TastaturCount=0;
                Tastenwert=0x00;
-               
+
                programmstatus |= (1<<UPDATESCREEN);
                
                switch (Taste)
@@ -3936,11 +3941,11 @@ int main (void)
                               sethomescreen();
                               
                            }
- 
+                           
                            
  
                         }break;
-                           
+  
                         case TRIMMSCREEN: // Trimmung
                         {
                            if (blink_cursorpos == 0xFFFF && manuellcounter) // Kein Blinken
@@ -3972,7 +3977,7 @@ int main (void)
                               //switch((blink_cursorpos & 0xFF00)>>8) // Blink-Zeile
                               switch(curr_cursorzeile) // Blink-Zeile
                               {
-                                 case 0: // modell
+                                 case 0: // vertikal
                                  {
                                     //switch (blink_cursorpos & 0x00FF)
                                     switch (curr_cursorspalte)
@@ -4014,8 +4019,8 @@ int main (void)
                                           
                                        }break;
                                           
-                                 case  1:
-                                 {
+                                       case 1:
+                                       {
                                           //lcd_putc('1');
                                           if (curr_setting )
                                           {
@@ -4024,7 +4029,7 @@ int main (void)
                                           
                                        }break;
                                     } // switch Spalte
-                                    
+                                 
                                  }break;
                                     
                                  case  2:
@@ -4098,12 +4103,12 @@ int main (void)
                                           {
                                              curr_setting--;
                                           }
-                           
+                                          
                                        }break;
                                     } // switch Spalte
-                           
-                        }break;
-                           
+                                    
+                                 }break;
+                                    
                                  case  1:
                                  {
                                     
@@ -5177,7 +5182,6 @@ int main (void)
                               {
                                  case 0: // Modell
                                  {
-                                    
                                     // lcd_gotoxy(0,0);
                                     //lcd_puthex(curr_cursorzeile);
                                     //lcd_putc('*');
@@ -5187,34 +5191,12 @@ int main (void)
                                        blink_cursorpos =  cursorpos[curr_cursorzeile][curr_cursorspalte];
                                        manuellcounter=0;
                                     } // if manuellcounter
-                                    /*
-                                     switch (curr_cursorspalte)
-                                     {
-                                     case 0:
-                                     {
-                                     // lcd_putc('>');
-                                     blink_cursorpos =  cursorpos[0][0]; // Modellname
-                                     
-                                     }break;
-                                     case 1: // Set
-                                     {
-                                     lcd_putc('1');
-                                     blink_cursorpos =  cursorpos[0][1]; // setting nummer
-                                     
-                                     }break;
-                                     case 2:
-                                     {
-                                     blink_cursorpos =  cursorpos[0][2]; // setting nummer
-                                     }break;
-                                     
-                                     
-                                     } // switch curr_cursorspalte
-                                     */
                                  }break;
                                     
                                     
                                  case 1: // Kanal
                                  {
+                                   
                                     // Zu Kanal-Screen
                                     //blink_cursorpos =  cursorpos[2][0]; // canalcursor
                                     if (manuellcounter)
@@ -5871,13 +5853,31 @@ int main (void)
                               
                            }break;
                               
+                           case TRIMMSCREEN:
+                           {
+                              display_clear();
+                              
+                              curr_cursorspalte=0;
+                              curr_cursorzeile=0;
+                              last_cursorspalte=0;
+                              last_cursorzeile=0;
+                              blink_cursorpos = 0xFFFF;
+                              
+                              
+                              // curr_screen=HOMESCREEN;
+                              sethomescreen();
+                              
+                              
+                           }break;
+
+                              
                            case SAVESCREEN:
                            {
                               if ((blink_cursorpos == 0xFFFF) && manuellcounter)
                               {
                                  display_clear();
                                  curr_cursorspalte=0;
-                                 //curr_cursorzeile=0;
+                                 curr_cursorzeile=0;
                                  last_cursorspalte=0;
                                  //last_cursorzeile=0;
                                  blink_cursorpos = 0xFFFF;
@@ -5885,7 +5885,7 @@ int main (void)
                                  startcounter=0;
                                  
                                  
-                                 //curr_screen=SAVESCREEN;
+                                 curr_screen=SAVESCREEN;
                                  //setsavescreen();
                                  
                                  
