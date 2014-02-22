@@ -134,7 +134,8 @@
 #define TASTE0		178
 #define TASTE_R	194
 */
-// Teensy2 int Vcc
+// Teensy2 int Vcc Tastatur1
+/*
 #define TASTE1		16
 #define TASTE2		26
 #define TASTE3		40
@@ -149,6 +150,19 @@
 #define TASTE_L	168
 #define TASTE0		178
 #define TASTE_R	194
+*/
+
+// Teensy2 int VCC Tastatur2
+
+#define WERT1    19    // 1 oben  Taste 2
+#define WERT3    49    // 2 links  Taste 4
+#define WERT4    68    // 3 unten  Taste 8
+#define WERT6    110   // 4 rechts  Taste 6
+#define WERT9    215   // 5 Mitte  Taste 5
+#define WERT2     30    //  A links oben Taste  1
+#define WERT5    88       //    B links unten Taste 7
+#define WERT7    139      //   C rechts oben Taste 3
+#define WERT8    168      // D rechts unten Taste 9
 
 
 
@@ -171,7 +185,8 @@
 
 
 #define TASTATURPORT PORTF
-#define TASTATURPIN		1
+#define TASTATURPIN		0
+#define TRIMMTASTATURPIN		1
 
 
 // end Screen
@@ -231,13 +246,18 @@
 
 // Task fuer substatus
 #define TASTATUR_READ   0
-#define TASTATUR_OK     1
+//#define TASTATUR_OK     1
 #define SETTINGS_READ    2
 
 #define SCREEN_OK       4
 #define SCREEN_REFRESH  5
 #define UHR_OK          6
 #define UHR_REFRESH     7
+
+// Bits fuer tastaturstatus
+
+#define READ_TRIMM    3
+#define READ_TASTEN    4
 
 
 // Bits fuer usbstatus
