@@ -37,16 +37,18 @@ extern volatile uint8_t       curr_funktionarray[8];
 extern  volatile uint8_t       curr_devicearray[8];
 extern  volatile uint8_t       curr_ausgangarray[8];
 
+extern volatile int8_t              curr_trimmungarray[8];
+
+
 extern volatile uint8_t       curr_screen;
 extern volatile uint8_t       curr_page; // aktuelle page
 extern volatile uint8_t       curr_col; // aktuelle colonne
 extern volatile uint8_t       curr_model; // aktuelles modell
-extern volatile uint8_t       curr_impuls=0; // aktueller Impuls im
 
 extern volatile uint8_t       curr_kanal; // aktueller kanal
 
 extern volatile uint8_t       curr_richtung; // aktuelle richtung
-extern volatile uint8_t       curr_impuls; // aktuelle richtung
+extern volatile uint8_t       curr_impuls; // aktueller impuls
 
 extern volatile uint8_t             eepromsavestatus;
 extern volatile uint8_t       programmstatus;
@@ -60,6 +62,10 @@ extern volatile uint8_t       last_cursorzeile; // letzte zeile des cursors
 extern volatile uint8_t       last_cursorspalte; // letzte colonne des cursors
 extern volatile uint16_t      blink_cursorpos;
 
+extern volatile uint8_t                 curr_trimmkanal; // aktueller  Kanal fuerTrimmung
+extern volatile uint8_t                 curr_trimmung; // aktuelle  Trimmung fuer Trimmkanal
+
+
 //extern volatile uint16_t      laufsekunde;
 extern volatile uint8_t      laufstunde;
 extern volatile uint8_t      laufminute;
@@ -68,6 +74,8 @@ extern volatile uint16_t      stopsekunde;
 extern volatile uint16_t      motorminute;
 extern volatile uint16_t      stopminute;
 extern volatile uint16_t      batteriespannung;
+
+extern volatile uint16_t      tastentransfer;
 
 extern volatile uint16_t  posregister[8][8]; // Aktueller screen: werte fuer page und daraufliegende col fuer Menueintraege (hex). geladen aus progmem
 
@@ -160,30 +168,34 @@ void sethomescreen(void)
    posregister[0][0] = itemtab[5] | (1 << 8);// Laufzeit Anzeige
    
    
-   posregister[1][0] = 0 | (0x05 << 8); // Text Motorzeit
-   posregister[1][1] = 0 | (0x06 << 8); // Anzeige Motorzeit
+   posregister[1][0] = (0+OFFSET_6_UHR) | (0x05 << 8); // Text Motorzeit
+   posregister[1][1] = (0+OFFSET_6_UHR) | (0x06 << 8); // Anzeige Motorzeit
    
    
-   posregister[2][0] = 56 | (0x05 << 8); // Text Stoppuhr
-   posregister[2][1] = 56 | (0x06 << 8); // Anzeige Stoppuhr
+   posregister[2][0] = (56+OFFSET_6_UHR) | (0x05 << 8); // Text Stoppuhr
+   posregister[2][1] = (56+OFFSET_6_UHR) | (0x06 << 8); // Anzeige Stoppuhr
    
    
-   posregister[3][0] = 56 | (0x07 << 8); // Text Akku
-   posregister[3][1] = 80 | (0x08 << 8); // Anzeige Akku
+   posregister[3][0] = (56+OFFSET_6_UHR) | (0x07 << 8); // Text Akku
+   posregister[3][1] = (80+OFFSET_6_UHR) | (0x08 << 8); // Anzeige Akku
 
-   posregister[4][0] = 0 | (2 << 8); // Name Modell
-   posregister[4][1] = 80 | (3 << 8); // Text Setting
-   posregister[4][2] = 100 | (3 << 8); // Anzeige Setting
+   posregister[4][0] = (0+OFFSET_6_UHR) | (2 << 8); // Name Modell
+   posregister[4][1] = (80+OFFSET_6_UHR) | (3 << 8); // Text Setting
+   posregister[4][2] = (100+OFFSET_6_UHR) | (3 << 8); // Anzeige Setting
 
    
   
    // positionen lesen
    // titel setzen
    strcpy_P(titelbuffer, (PGM_P)pgm_read_word(&(TitelTable[0])));
-   char_x=0;
+   char_x=OFFSET_6_UHR;
    char_y = 1;
    char_height_mul = 1;
    char_width_mul = 1;
+   display_go_to(char_x+1,0);
+   display_write_byte(DATA,0xFF);
+   //char_x++;
+
    display_inverse(1);
    //display_write_prop_str(char_y,char_x,0,(unsigned char*)titelbuffer);
    display_write_inv_str(titelbuffer,1);
@@ -191,15 +203,15 @@ void sethomescreen(void)
    char_height_mul = 1;
    char_width_mul = 1;
    
-   // Stoppuhr schreiben
+   // Stoppuhrtext schreiben
    strcpy_P(titelbuffer, (PGM_P)pgm_read_word(&(TitelTable[2]))); // Text Stoppuhr
-   char_x = posregister[2][0] & 0x00FF;
+   char_x = (posregister[2][0] & 0x00FF);
    char_y= (posregister[2][0] & 0xFF00)>>8;
    display_write_str(titelbuffer,2);
    
    // Stoppzeit schreiben
    char_y= (posregister[2][1] & 0xFF00)>>8;
-   char_x = posregister[2][1] & 0x00FF;
+   char_x = (posregister[2][1] & 0x00FF);
    char_height_mul = 2;
    char_width_mul = 2;
    display_write_stopzeit_BM(stopsekunde,stopminute);
@@ -207,9 +219,9 @@ void sethomescreen(void)
    char_width_mul = 1;
 
    
-   // Motorzeit schreiben
+   // Motorzeittext schreiben
    strcpy_P(titelbuffer, (PGM_P)pgm_read_word(&(TitelTable[3]))); // Text Motorzeit
-   char_x = posregister[1][0] & 0x00FF;
+   char_x = (posregister[1][0] & 0x00FF);
    char_y= ((posregister[1][0] & 0xFF00)>>8);
    char_height_mul = 1;
    display_write_str(titelbuffer,2);
@@ -947,6 +959,36 @@ void setsavescreen(void)
    
 }
 
+void settrimmscreen(void)
+{
+   resetRegister();
+   blink_cursorpos=0xFFFF;
+   
+   
+   
+   posregister[0][0] =  itemtab[0] |   (2 << 8); //Vertikal links
+   posregister[0][1] =  itemtab[4] |   (2 << 8); //Vertikal rechts
+   
+   posregister[1][0] =  itemtab[0] |    (5 << 8); // Horizontal links
+   posregister[1][1] =  itemtab[4] |    (5 << 8); // Horizontal rechts
+   
+   cursorpos[0][0] = cursortab[0] |    (2 << 8); // cursorpos fuer Vertikal links
+   cursorpos[0][1] = cursortab[4] |    (2 << 8); //  cursorpos fuer Vertikal rechts
+   cursorpos[1][0] = cursortab[0] |    (4 << 8);  //cursorpos fuer Horizontal links
+   cursorpos[1][1] = cursortab[0] |    (5 << 8);  //cursorpos fuer Horizontal rechts
+   
+   cursorpos[3][0] = cursortab[0] |    (6 << 8);  // cursorpos fuer save
+
+   char_x = posregister[0][0] & 0x00FF;
+   char_y= (posregister[0][0] & 0xFF00)>>8;
+   char_height_mul = 1;
+   char_width_mul = 1;
+
+   
+
+
+} //settrimmscreen
+
 
 void update_time(void)
 {
@@ -1043,12 +1085,25 @@ uint8_t update_screen(void)
          char_width_mul = 1;
          display_write_spannung(batteriespannung/10,2);
          
+         char_x=4;
+         char_y = 4;
+         display_write_str("                    ",2);
+
+         char_x=4;
+         char_y = 4;
          
+         //display_write_int(Tastenwert&0x00FF,2);
+         display_write_int((tastentransfer&0xFF00)>>8,2);
+         display_write_int((tastentransfer&0x00FF),2);
+         char_x=40;
+         display_write_int((batteriespannung&0xFF00)>>8,2);
+         display_write_propchar('*',1);
+         display_write_int((batteriespannung&0x00FF),2);
          
          
          // Akkubalken anzeigen
-         char_height_mul = 1;
-         char_width_mul = 1;
+ //        char_height_mul = 1;
+ //        char_width_mul = 1;
 //         display_akkuanzeige(batteriespannung);
          
       }break;
@@ -1541,33 +1596,42 @@ uint8_t update_screen(void)
  //              curr_devicearray[deviceindex] = kanalindex ;
             }
 
+            // Ungerade Nummern_ vertikal
             
             // Device 1: L_V
             
-            // Position Nummer
+            // Display-Position Nummer
             char_y= (posregister[0][0] & 0xFF00)>>8;
             char_x = (posregister[0][0] & 0x00FF);
+            
             // Kanalnummer: aktueller Wert in curr_devicearray
             uint8_t canalnummer = ((curr_devicearray[1]& 0x07));
             display_write_int(canalnummer,1);// Kanalnummer ,
             
-            // Position Funktion
+            // Display-Position Funktion
             char_y= (posregister[0][1] & 0xFF00)>>8;
             char_x = (posregister[0][1] & 0x00FF);
             // Funktionnummer: aktueller wert in curr_funktionarray auf Zeile canalnummer
             uint8_t funktionnummer= curr_funktionarray[canalnummer]&0x07;
             
-            // index der Devicenummer in curr_funktionarray einsetzen: bit 4-6
+            // index der Devicenummer (1 fuer L_V) in curr_funktionarray einsetzen: bit 4-6
             curr_funktionarray[canalnummer] = 0x10 | (curr_funktionarray[canalnummer]&0x0F);
             
+            // Name der Funktion schreiben
             strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(FunktionTable[funktionnummer]))); // L_V
             display_write_str(menubuffer,1);
             
+            
             // Device 3: R_V
+            // Display-Position Nummer
             char_y = (posregister[0][2] & 0xFF00)>>8;
             char_x = (posregister[0][2] & 0x00FF);
+
+            // Kanalnummer: aktueller Wert in curr_devicearray
             canalnummer = ((curr_devicearray[3]& 0x07));
             display_write_int(canalnummer,1);// Kanalnummer R_V,
+            
+            // Display-Position Funktion
             char_y= (posregister[0][3] & 0xFF00)>>8;
             char_x = (posregister[0][3] & 0x00FF);
             funktionnummer= curr_funktionarray[canalnummer]&0x07;
@@ -1575,10 +1639,12 @@ uint8_t update_screen(void)
             // index der Devicenummer in curr_funktionarray einsetzen: bit 4-6
             curr_funktionarray[canalnummer] = 0x30 | (curr_funktionarray[canalnummer]&0x0F);
 
+            // Name der Funktion schreiben
             strcpy_P(menubuffer, (PGM_P)pgm_read_word(&(FunktionTable[funktionnummer]))); // R_V
             display_write_str(menubuffer,1);
             
             
+            // Gerade Nummern_ horizontal
             
             // Device 0: L_H
             
@@ -1841,11 +1907,46 @@ uint8_t update_screen(void)
          }
          char_height_mul = 1;
          char_y= 5;
-         char_x = 10;
+         char_x = 10+OFFSET_6_UHR;
          display_write_int(eepromsavestatus,2);
          
          
       }break;
+
+#pragma mark update TRIMMSCREEN
+
+      case TRIMMSCREEN: // Kanal
+      {
+         if (blink_cursorpos == 0xFFFF) // Kein Blinken des Cursors
+         {
+            char_y= (cursorposition & 0xFF00)>>8;
+            char_x = cursorposition & 0x00FF;
+            
+            display_write_symbol(pfeilvollrechts);
+            
+         }
+         else // Cursor blinkt an blink_cursorpos
+         {
+            
+            char_y= (blink_cursorpos & 0xFF00)>>8;
+            char_x = blink_cursorpos & 0x00FF;
+            
+            if (laufsekunde%2)
+            {
+               display_write_symbol(pfeilvollrechts);
+            }
+            else
+            {
+               display_write_symbol(pfeilwegrechts);
+            }
+            
+         }
+         char_y= 5;
+         char_x = 10+OFFSET_6_UHR;
+         
+         display_trimmanzeige (14+OFFSET_6_UHR, 7,-15);
+      }break;
+
 
    }
    return fehler;
@@ -1864,7 +1965,36 @@ void display_cursorweg(void)
    
 }
 
+//##############################################################################################
+// Trimmanzeige
+//
+//##############################################################################################
+void display_trimmanzeige (uint8_t char_x0, uint8_t char_y0,int8_t mitteposition)
+{
+   //mitteposition ist Abweichung von Mitte des Kanals, mit Vorzeichen
+   uint8_t col=char_x0, page=char_y0, breite=100;
+   
+   // linke Begrenzung
+   display_go_to(col,page);
+   
+   uint8_t i=0;
+   for (i=0;i<breite;i++)
+   {
+      if ((i==0)||(i==breite-1) || (i==breite/2) || (i== breite/2+mitteposition))
+      {
+         display_write_byte(DATA,0x7E);// Strich zeichnen
+      }
+        else
+      {
+         
+            display_write_byte(DATA,0x42);// obere und untere linie  zeichnen
+        
+      }
+   }
 
+
+
+}
 //##############################################################################################
 // Akkuanzeige
 //
@@ -1879,7 +2009,7 @@ void display_akkuanzeige (uint16_t spannung)
    uint8_t grenze = 4;
    //part=4;
    //full = 2;
-   char_x = 110;
+   uint8_t char_x0 = 112+OFFSET_6_UHR;
    
    for (page=1;page<8;page++)
    {
@@ -1892,7 +2022,7 @@ void display_akkuanzeige (uint16_t spannung)
       col=0;
       while(col++ < balkenbreite)
       {
-         display_go_to(char_x+col,page);
+         display_go_to(char_x0+col,page);
          
          if (page < (7-full)) // sicher
          {
@@ -2116,7 +2246,7 @@ uint8_t display_kanaldiagramm (uint8_t char_x, uint8_t char_y, uint8_t level, ui
       for (k=7; k >2; k--)
       {
          // Seite B ( rechts)
-         display_go_to(char_x+col,k);
+         display_go_to(char_x0+col,k);
          if (k == pageB) // Auf dieser Page liegt der Wert
          {
             if (col%3==0)
@@ -2141,7 +2271,138 @@ uint8_t display_kanaldiagramm (uint8_t char_x, uint8_t char_y, uint8_t level, ui
          
          // Seite A (links)
          
-         display_go_to(char_x-col,k);
+         display_go_to(char_x0-col,k);
+         if (k == pageA) // Auf dieser Page liegt der Wert
+         {
+            if (col%3==0)
+            {
+               display_write_byte(DATA,(1<<(7-wertYA%8))|0x80); //Punkt zeichnen
+            }
+            else
+            {
+               display_write_byte(DATA,(1<<(7-wertYA%8)));
+            }
+            
+            
+         }
+         else if (col%3==0)
+         {
+            display_write_byte(DATA,0x80); //Punkt zeichnen
+         }
+         else
+         {
+            display_write_byte(DATA,0x00); //Punkte entfernen
+         }
+         
+         
+         
+      }
+      
+      
+      
+      //display_go_to(char_x+col,page);
+      //display_write_byte(DATA,(1<<(7-wertY%8))); //Punkt zeichnen
+   }
+   
+   
+   return expob;
+   
+}
+
+uint8_t display_kanaldiagramm_var (uint8_t char_x0, uint8_t char_y0, uint8_t level, uint8_t expo, uint8_t typ )
+{
+   uint8_t pageA=0, pageB=0, col=0;
+   uint16_t wertYA=0 , wertYB=0 ;
+   
+   uint8_t maxX=50, maxY=48;
+   //uint8_t endY= maxY*(4-stufea)/4; // punkte, nicht page
+   uint8_t page=0;
+   for (page=char_y0;page>char_y0-4;page--) //Ordinate
+   {
+      display_go_to(char_x0-maxX,page);
+      display_write_byte(DATA,0xDB); // Strich zeichnen
+      
+      display_go_to(char_x0,page);
+      display_write_byte(DATA,0xFF); // Strich zeichnen
+      display_go_to(char_x0+maxX,page);
+      display_write_byte(DATA,0xDB); // Strich zeichnen
+      
+   }
+   //uint16_t steigung= 0xFF*maxY*(4-stufe)/4/maxX; // punkte, nicht page
+   // Steigung = (4-stufe)/4  1:1 ist Stufe 0
+   uint8_t k=0;
+   uint8_t expoa=((expo & 0x30)>>4);
+   uint8_t expob=(expo & 0x03);
+   for (col=1;col<maxX;col++)
+   {
+      if (expoa==0) // linear
+      {
+      wertYA = (8-((level & 0x70)>>4))*col*0x20/0x32/8;
+      }
+      else
+      {
+         if (col%2) // ungerade, interpolieren mit naechstem Wert
+         {
+            // expoa wirkt erst ab wert 1, array der Werte ist 0-basiert: Wert an expoa-1 lesen
+            wertYA = pgm_read_byte(&(expoarray25[expoa-1][col/2]))/2 +pgm_read_byte(&(expoarray25[expoa-1][col/2+1]))/2;
+         }
+         else // gerade, Wert aus Array
+         {
+            wertYA = pgm_read_byte(&(expoarray25[expoa-1][col/2]));
+         }
+         wertYA =(8-((level & 0x70)>>4))*wertYA/8; // Level
+      }
+      pageA = char_y0-(wertYA/8);
+      
+      
+      if (expob==0) // linear
+      {
+         wertYB = (8-(level & 0x07))*col*0x20/0x32/8;
+      }
+      else
+      {
+         if (col%2) // ungerade, interpolieren mit naechstem Wert
+         {
+            wertYB = pgm_read_byte(&(expoarray25[expob-1][col/2]))/2 +pgm_read_byte(&(expoarray25[expob-1][col/2+1]))/2;
+         }
+         else // gerade, Wert aus Array
+         {
+            wertYB = pgm_read_byte(&(expoarray25[expob-1][col/2]));
+         }
+         wertYB =(8-(level & 0x07))*wertYB/8; // Level
+      }
+      
+      pageB = char_y0-(wertYB/8);
+      
+      for (k=char_y0; k >char_y0-5; k--)
+      {
+         // Seite B ( rechts)
+         display_go_to(char_x0+col,k);
+         if (k == pageB) // Auf dieser Page liegt der Wert
+         {
+            if (col%3==0)
+            {
+               display_write_byte(DATA,(1<<(char_y0-wertYB%8))|0x80); //Punkt zeichnen
+            }
+            else
+            {
+               display_write_byte(DATA,(1<<(char_y0-wertYB%8)));
+            }
+            
+            
+         }
+         else if (col%3==0)
+         {
+            display_write_byte(DATA,0x80); //Punkt zeichnen
+         }
+         else
+         {
+            display_write_byte(DATA,0x00); //Punkte entfernen
+         }
+         
+         // Seite A (links)
+         
+         display_go_to(char_x0-col,k);
          if (k == pageA) // Auf dieser Page liegt der Wert
          {
             if (col%3==0)
@@ -2343,9 +2604,9 @@ void display_clear()
 	
 	for(page=0;page<8;page++)
 	{
-		display_go_to(0,page);
+		display_go_to(0+OFFSET_6_UHR,page);
 	
-		for (col=0;col<128;col++)
+		for (col=0+OFFSET_6_UHR;col<128+OFFSET_6_UHR;col++)
 		{
          if (col%4)
          {

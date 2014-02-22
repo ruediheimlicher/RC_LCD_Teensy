@@ -97,10 +97,6 @@ volatile uint8_t                    out_taskcounter=0;
 
 static volatile uint8_t             substatus=0x00; // Tasks fuer Sub
 
-
-
-
-
 static volatile uint8_t             usbstatus=0x00;
 
 static volatile uint8_t             usbtask=0x00; // was ist zu tun
@@ -110,8 +106,6 @@ static volatile uint8_t             potstatus=0x00; // Bit 7 gesetzt, Mittelwert
 static volatile uint8_t             impulscounter=0x00;
 
 static volatile uint8_t             masterstatus = 0;
-
-
 
 volatile uint8_t status=0;
 
@@ -1518,6 +1512,19 @@ void read_Ext_EEPROM_Settings(void)
       
    }
    
+   /*
+   lcd_gotoxy(0,1);
+   
+   lcd_puthex(curr_funktionarray[0]);
+   lcd_putc('$');
+   lcd_puthex(curr_funktionarray[1]);
+   lcd_putc('$');
+   lcd_puthex(curr_funktionarray[2]);
+   lcd_putc('$');
+   lcd_puthex(curr_funktionarray[3]);
+   lcd_putc('$');
+    */
+   
    _delay_us(RAMDELAY);
 
    
@@ -1718,9 +1725,9 @@ void write_Ext_EEPROM_Settings(void)
       // startadresse fuer Settings des models
       for (pos=0;pos<8;pos++)
       {
-         lcd_gotoxy(4+2*pos,1);
+  //       lcd_gotoxy(4+2*pos,1);
          //lcd_putc(' ');
-         lcd_puthex(curr_levelarray[pos]);
+  //       lcd_puthex(curr_levelarray[pos]);
          eeprombyteschreiben(0xB0,writestartadresse+pos,curr_levelarray[pos]);
          
       }
@@ -2139,19 +2146,19 @@ int main (void)
    
    strcpy_P(titelbuffer, (PGM_P)pgm_read_word(&(TitelTable[5])));
    
-   char_x=0;
+   char_x=0+OFFSET_6_UHR;
    char_y = 3;
    //display_write_symbol(pfeilvollrechts);
    char_x += FONT_WIDTH;
    //display_write_str(titelbuffer,1);
    
-   char_x=0;
+   char_x=0+OFFSET_6_UHR;
    char_y = 4;
    
    // display_write_prop_str(char_y,char_x,0,(unsigned char*)titelbuffer);
    //display_write_str((unsigned char*)titelbuffer,1);
    
-   char_x=0;
+   char_x=0+OFFSET_6_UHR;
    char_y = 5;
 	lcd_gotoxy(1,2);
 	lcd_puts("RC_LCD\0");
@@ -2452,9 +2459,13 @@ int main (void)
       {
          adc_counter =0;
          
+         //OSZI_A_LO;
          batteriespannung = adc_read(0);
-         //lcd_gotoxy(0,0);
-         //lcd_putint16(batteriespannung);
+         //OSZI_A_HI;
+         if (batteriespannung==0)
+         {
+            batteriespannung = 550; // ca. 5.5V
+         }
       }
       
       //if (displaycounter)
@@ -2462,6 +2473,13 @@ int main (void)
       {
          displaystatus &= ~(1<<UHR_UPDATE);
          displaycounter++;
+         if (batteriespannung==0)
+         {
+            //batteriespannung=6300;
+         }
+         //lcd_gotoxy(0,0);
+         //lcd_putint16(batteriespannung);
+
          if ((displaycounter ==4)&& (curr_screen==0))
          {
              //OSZI_A_LO;
@@ -2471,9 +2489,13 @@ int main (void)
          if (displaycounter >8)
          {
             //OSZI_B_LO;
+
             update_screen();
             //OSZI_B_HI;
+            
             displaycounter=0;
+            
+
          }
       }
       
@@ -2636,6 +2658,7 @@ int main (void)
             if (!(task_indata == new_task_indata))
             {
                in_taskcounter++;
+               /*
                lcd_gotoxy(10,1);
                lcd_putc('i');
                lcd_puthex(task_in);
@@ -2643,6 +2666,7 @@ int main (void)
                lcd_puthex(new_task_indata);
                lcd_putc('c');
                lcd_puthex(in_taskcounter);
+                */
                task_indata = new_task_indata;
             }
             
@@ -2692,12 +2716,14 @@ int main (void)
                _delay_us(1);
 
                out_taskcounter++;
+               /*
                lcd_gotoxy(0,0);
                lcd_putc('D');
                lcd_puthex(task_out);
                lcd_putc('+');
                lcd_puthex(out_taskcounter);
                lcd_putc('+');
+                */
                task_out &= ~(1<<RAM_SEND_DOGM_TASK);
                
             }
@@ -5033,48 +5059,6 @@ int main (void)
 #pragma mark Taste 5
                      switch (curr_screen)
                      {
-                           /*
-                        case HOMESCREEN:
-                        {
-                           if (startcounter == 0) // Settings sind nicht aktiv
-                           {
-                              programmstatus |= (1<< SETTINGWAIT);
-                              settingstartcounter++;
-                           }
-                           else if (startcounter > 5) // Irrtum, kein Umschalten
-                           {
-                              programmstatus &= ~(1<< SETTINGWAIT);
-                              settingstartcounter=0;
-                              startcounter=0;
-                              manuellcounter = 0;
-                           }
-                           else
-                           {
-                              if (programmstatus & (1<< SETTINGWAIT)) // Umschaltvorgang noch aktiv
-                              {
-                                 settingstartcounter++; // counter fuer klicks
-                                 if (settingstartcounter > 2)
-                                 {
-                                    programmstatus &= ~(1<< SETTINGWAIT);
-                                    settingstartcounter=0;
-                                    startcounter=0;
-                                    
-                                    // Umschalten
-                                    display_clear();
-                                    setsettingscreen();
-                                    curr_screen = SETTINGSCREEN;
-                                    curr_cursorspalte=0;
-                                    curr_cursorzeile=0;
-                                    last_cursorspalte=0;
-                                    last_cursorzeile=0;
-                                    blink_cursorpos=0xFFFF;
-                                    manuellcounter = 0;
-                                    
-                                 } // if settingcounter <
-                              }
-                           }
-                        }break;
-                           */
                         case HOMESCREEN:
                         {
                            
@@ -5082,16 +5066,16 @@ int main (void)
                            //lcd_putc('*');
                            if ((startcounter == 0)&& (manuellcounter)) // Settings sind nicht aktiv
                            {
-                              lcd_gotoxy(0,1);
-                              lcd_putc('A');
+                              //lcd_gotoxy(0,1);
+                              //lcd_putc('A');
                               programmstatus |= (1<< SETTINGWAIT);
                               settingstartcounter=1;
                               manuellcounter = 0;
                            }
                            else if (startcounter > 15) // Irrtum, kein Umschalten
                            {
-                              lcd_gotoxy(0,1);
-                              lcd_putc('X');
+                             // lcd_gotoxy(0,1);
+                              //lcd_putc('X');
                               programmstatus &= ~(1<< SETTINGWAIT);
                               settingstartcounter=0;
                               startcounter=0;
@@ -5101,14 +5085,14 @@ int main (void)
                            {
                               if ((programmstatus & (1<< SETTINGWAIT))&& (manuellcounter)) // Umschaltvorgang noch aktiv
                               {
-                                 lcd_gotoxy(0,1);
-                                 lcd_putc('A'+settingstartcounter);
-                                 lcd_putint2(settingstartcounter);
+                                 //lcd_gotoxy(0,1);
+                                 //lcd_putc('A'+settingstartcounter);
+                                 //lcd_putint2(settingstartcounter);
                                  settingstartcounter++; // counter fuer klicks
                                  if (settingstartcounter > 2)
                                  {
-                                    lcd_gotoxy(16,1);
-                                    lcd_putc('S');
+                                    //lcd_gotoxy(16,1);
+                                    //lcd_putc('S');
                                     programmstatus &= ~(1<< SETTINGWAIT);
                                     programmstatus |=(1<<UPDATESCREEN);
                                     settingstartcounter=0;
