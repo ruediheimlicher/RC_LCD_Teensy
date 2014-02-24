@@ -193,9 +193,14 @@ volatile uint8_t                 Tastenindex=0;
 volatile uint8_t                 lastTastenindex=0;
 volatile uint16_t                prellcounter=0;
 
+volatile uint8_t                 trimmstatus=0;
+volatile uint8_t                 Trimmtaste=0;
 volatile uint8_t                 Trimmtastenindex=0;
 volatile uint8_t                 lastTrimmtastenindex=0;
 volatile uint16_t                trimmprellcounter=0;
+
+volatile int8_t                vertikaltrimm=0;
+volatile int8_t                horizontaltrimm=0;
 
 
 
@@ -1853,6 +1858,47 @@ void write_Ext_EEPROM_Settings(void)
    //task_outdata = curr_model;//modelindex;
 }
 
+uint8_t Trimmtastenwahl(uint8_t Tastaturwert)
+{
+   /*
+#define TASTE_L_O    15
+#define TASTE_L_L		23
+#define TASTE_L_U		34
+#define TASTE_L_R    51
+#define TASTE_L_M		78
+#define TASTE_R_O		94
+#define TASTE_R_L		120
+#define TASTE_R_U		141
+#define TASTE_R_R    155
+#define TASTE_R_M    168
+*/
+       //lcd_gotoxy(0,0);
+      //lcd_putint(Tastaturwert);
+   
+      if (Tastaturwert < TASTE_L_O)
+         return 1;
+      if (Tastaturwert < TASTE_L_L)
+         return 2;
+      if (Tastaturwert < TASTE_L_U)
+         return 3;
+      if (Tastaturwert < TASTE_L_R)
+         return 4;
+      if (Tastaturwert < TASTE_L_M)
+         return 5;
+      if (Tastaturwert < TASTE_R_O)
+         return 6;
+      if (Tastaturwert < TASTE_R_L)
+         return 7;
+      if (Tastaturwert < TASTE_R_U)
+         return 8;
+      if (Tastaturwert < TASTE_R_R)
+         return 9;
+      if (Tastaturwert < TASTE_R_M)
+         return 10;
+      
+   
+   return -1;
+}
 
 uint8_t Tastenwahl(uint8_t Tastaturwert)
 {
@@ -2106,7 +2152,8 @@ int main (void)
    uint16_t count=0;
    
 	// set for 16 MHz clock
-	CPU_PRESCALE(CPU_8MHz);
+	CPU_PRESCALE(CPU_16MHz);
+   
    
    
 	// Initialize the USB, and then wait for the host to set configuration.
