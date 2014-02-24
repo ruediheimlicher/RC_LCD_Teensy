@@ -165,6 +165,30 @@
 #define WERT8    168      // D rechts unten Taste 9
 
 
+/*
+#define TASTE_L_O    15
+#define TASTE_L_L		23
+#define TASTE_L_U		34
+#define TASTE_L_R    51
+#define TASTE_L_M		72
+#define TASTE_R_O		94
+#define TASTE_R_L		120
+#define TASTE_R_U		141
+#define TASTE_R_R    155
+#define TASTE_R_M    168
+*/
+
+#define TASTE_L_O    16
+#define TASTE_L_L		26
+#define TASTE_L_U		40
+#define TASTE_L_R    62
+#define TASTE_L_M		88
+#define TASTE_R_O		114
+#define TASTE_R_L		146
+#define TASTE_R_U		177
+#define TASTE_R_R    222
+#define TASTE_R_M    245
+
 
 #define MANUELLTIMEOUT	100 // Loopled-counts bis Manuell zurueckgesetzt wird. 50: ca. 30s
 
@@ -296,10 +320,6 @@
 
 
 
-
-
-
-
 #define EEPROM_WRITE_BYTE_TASK     1
 #define EEPROM_WRITE_PAGE_TASK     2
 #define EEPROM_READ_BYTE_TASK      3
@@ -320,6 +340,13 @@
 #define RAM_SEND_PPM_TASK         2 // PPM soll Status lesen (Auftrag AN PPM)
 #define RAM_RECV_PPM_TASK         1 // LCD soll Status lesen (Auftrag VON PPM)
 
-#define RAM_SEND_DOGM_TASK 3
+#define RAM_SEND_DOGM_TASK         3
+#define RAM_SEND_TRIMM_TASK      4
 
 #define RAM_TASK_OK           7 // PPM hat Task gelesen
+
+
+// TRIMM_Tasks
+
+#define RAM_TRIMM_OFFSET      0x2F0 // Startadresse fuer Trimmdaten 
+

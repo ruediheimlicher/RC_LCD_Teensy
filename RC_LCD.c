@@ -2861,7 +2861,7 @@ int main (void)
                 lcd_putc('+');
                 lcd_puthex(out_taskcounter);
                 lcd_putc('+');
-            
+               
                task_out &= ~(1<<RAM_SEND_TRIMM_TASK); // Aufforderung an PPM, die Daten fuer Mitte zu lesen
                
             }
@@ -6998,7 +6998,7 @@ int main (void)
                //lcd_putc('*');
                Trimmtastenwert=0x00;
                
-         
+               
                switch (Trimmtaste)
                {
 #pragma mark Taste 0
@@ -7021,7 +7021,7 @@ int main (void)
                   {
                      horizontaltrimm--;
                   }break;
-         
+
                   case 5:// L_M
                   {
                      vertikaltrimm=0;
