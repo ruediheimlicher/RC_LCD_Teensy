@@ -2695,15 +2695,6 @@ int main (void)
          // MARK:  SPI_RAM
          {//a
             
-            /*
-            uint8_t taste_n = Tastenwahl_N();
-            if (taste_n)
-            {
-            lcd_gotoxy(0,0);
-            lcd_putc('T');
-            lcd_puthex(taste_n);
-            }
-             */
             
             substatus &= ~(1<<UHR_OK);
             
@@ -2803,6 +2794,7 @@ int main (void)
                
             {
                OSZI_A_LO;
+               
                RAM_CS_LO;
                
                _delay_us(LOOPDELAY);
@@ -2831,7 +2823,48 @@ int main (void)
                
             }
 
+            if (task_out & (1<<RAM_SEND_TRIMM_TASK)) // Trimmmung lesen
+            {
+               
+               
+               // Trimmdaten schreiben
+               RAM_CS_LO;
+               _delay_us(LOOPDELAY);
+               //      OSZI_A_LO;
+               spiram_wrbyte(RAM_TRIMM_OFFSET+ task_outdata,vertikaltrimm + 0x7F); // int zu uint
+               //     OSZI_A_HI;
+               RAM_CS_HI;
+               _delay_us(1);
+
+               
+               
+               RAM_CS_LO;
+               _delay_us(LOOPDELAY);
+               //      OSZI_A_LO;
+               spiram_wrbyte(WRITE_TASKADRESSE, task_out);
+               //     OSZI_A_HI;
+               RAM_CS_HI;
+               RAM_CS_LO;
+               _delay_us(LOOPDELAY);
+               //      OSZI_A_LO;
+               spiram_wrbyte(WRITE_TASKDATA, task_outdata);
+               //     OSZI_A_HI;
+               RAM_CS_HI;
+               _delay_us(1);
+ 
+
+               out_taskcounter++;
+               
+                lcd_gotoxy(0,1);
+                lcd_putc('R');
+                lcd_puthex(task_out);
+                lcd_putc('+');
+                lcd_puthex(out_taskcounter);
+                lcd_putc('+');
             
+               task_out &= ~(1<<RAM_SEND_TRIMM_TASK); // Aufforderung an PPM, die Daten fuer Mitte zu lesen
+               
+            }
             
 
             if (task_out & (1<<RAM_SEND_PPM_TASK)) // task an PPM senden
@@ -3902,7 +3935,7 @@ int main (void)
 			
 		} // Taste 1
  */
-		// MARK:  Tastatur
+		// MARK:  Tastatur ADC
 		/* ******************** */
 		//		initADC(TASTATURPIN);
 		//		Tastenwert=(uint8_t)(readKanal(TASTATURPIN)>>2);
@@ -3934,7 +3967,7 @@ int main (void)
           //  lcd_putint(Tastenwert);
            // lcd_putc(' ');
          }
-         
+ // MARK:  Tastatur
          //
          if (Tastenwert>5)
          {
@@ -6899,8 +6932,130 @@ int main (void)
             
          } // if Tastenwert > 5
          
+         // MARK:  Trimmung
          
+         if (Trimmtastenwert>5)
+         {
+            /*
+             0:											1	2	3
+             1:											4	5	6
+             2:											7	8	9
+             3:											x	0	y
+             4:
+             5: enter
+             6:
+             7:
+             8:
+             9:
+             
+             12: Manuell aus
+             */
+            Trimmtastenindex = Trimmtastenwahl(Trimmtastenwert);
+            
+            if ((Trimmtastenindex == lastTrimmtastenindex)) // gleiche Taste wie letztes Mal
+            {
+               trimmprellcounter++;
+               
+            }
+            else // andere Taste oder prellen
+            {
+               lastTrimmtastenindex = Trimmtastenindex;
+               trimmprellcounter=0;
+            }
+            
+             TastaturCount++;
+            
+            if (trimmprellcounter>150)
+            {
+               //lcd_gotoxy(6,0);
+               //lcd_putint(Trimmtastenwert);
+               //lcd_putc(' ');
+               //lcd_putint2(Trimmtastenindex);
+               Trimmtaste = Trimmtastenindex;
+               trimmstatus = Trimmtastenindex;
+               trimmprellcounter=0;
+               
+               task_out |= 1<<RAM_SEND_TRIMM_TASK; // Aufforderung an PPM, die Daten fuer Mitte zu lesen
+               task_outdata = trimmstatus;            // Device der Aenderung (increment/decrement)
+               
+               //lcd_gotoxy(10,1);
+               //lcd_puts("T:\0");
+               //lcd_putint12(Tastenwert);
+               /*
+                lcd_putc(' ');
+                lcd_putc(' ');
+                
+                
+                lcd_gotoxy(18,1);
+                */
+               //               Taste=Tastenwahl(Tastenwert);
+               //lcd_putint2(Taste);
+               //lcd_putc(' ');
+               //lcd_gotoxy(0,1);
+               //lcd_putint(TastaturCount);
+               // lcd_putc(' ');
+               //lcd_putint2(Taste);
+               //lcd_putc('*');
+               Trimmtastenwert=0x00;
+               
          
+               switch (Trimmtaste)
+               {
+#pragma mark Taste 0
+                  case 1:// L_O
+                  {
+                     
+                  }break;
+
+                  case 2:// L_L
+                  {
+                     vertikaltrimm++;
+                  }break;
+
+                  case 3:// L_U
+                  {
+                     
+                  }break;
+
+                  case 4:// L_R
+                  {
+                     horizontaltrimm--;
+                  }break;
+         
+                  case 5:// L_M
+                  {
+                     vertikaltrimm=0;
+                  }break;
+
+                  case 6:// R_O
+                  {
+                     horizontaltrimm++;
+                  }break;
+
+                  case 7:// R_L
+                  {
+                     
+                  }break;
+
+                  case 8:// R_U
+                  {
+                     vertikaltrimm--;
+                  }break;
+
+                  case 9:// R_R
+                  {
+                     
+                  }break;
+
+                  case 10:// R_M
+                  {
+                     
+                  }break;
+
+  
+               }
+            }
+         }// if Trimmtastenwert
          //OSZI_B_HI;
       }
 		Tastenwert=0;
