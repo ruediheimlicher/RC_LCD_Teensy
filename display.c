@@ -64,6 +64,8 @@ extern volatile uint16_t      blink_cursorpos;
 
 extern volatile uint8_t                 curr_trimmkanal; // aktueller  Kanal fuerTrimmung
 extern volatile uint8_t                 curr_trimmung; // aktuelle  Trimmung fuer Trimmkanal
+extern volatile int8_t                vertikaltrimm;
+extern volatile int8_t                horizontaltrimm;
 
 
 //extern volatile uint16_t      laufsekunde;
@@ -124,6 +126,12 @@ extern volatile uint16_t              updatecounter; // Zaehler fuer Einschalten
 const char balken[8]=
 {0x80,0xC0,0xE0,0xF0,0xF8,0xFC,0xFE,0xFF};
 
+const char marke[8]=
+{0x80,0x40,0x20,0x10,0x08,0x04,0x02,0x01};
+
+const char marke_dick[8]=
+{0x80,0xC0,0x60,0x30,0x18,0x0C,0x06,0x03};
+
 
 
 const volatile char DISPLAY_INIT[] =
@@ -179,12 +187,12 @@ void sethomescreen(void)
    posregister[1][1] = (0+OFFSET_6_UHR) | (0x06 << 8); // Anzeige Motorzeit
    
    
-   posregister[2][0] = (56+OFFSET_6_UHR) | (0x05 << 8); // Text Stoppuhr
-   posregister[2][1] = (56+OFFSET_6_UHR) | (0x06 << 8); // Anzeige Stoppuhr
+   posregister[2][0] = (60+OFFSET_6_UHR) | (0x05 << 8); // Text Stoppuhr
+   posregister[2][1] = (60+OFFSET_6_UHR) | (0x06 << 8); // Anzeige Stoppuhr
    
    
-   posregister[3][0] = (56+OFFSET_6_UHR) | (0x07 << 8); // Text Akku
-   posregister[3][1] = (80+OFFSET_6_UHR) | (0x08 << 8); // Anzeige Akku
+   posregister[3][0] = (60+OFFSET_6_UHR) | (0x07 << 8); // Text Akku
+   posregister[3][1] = (84+OFFSET_6_UHR) | (0x08 << 8); // Anzeige Akku
 
    posregister[4][0] = (0+OFFSET_6_UHR) | (2 << 8); // Name Modell
    posregister[4][1] = (80+OFFSET_6_UHR) | (3 << 8); // Text Setting
@@ -284,6 +292,7 @@ void sethomescreen(void)
    char_x += 2;
    strcpy_P(titelbuffer, (PGM_P)pgm_read_word(&(TitelTable[4])));
    display_write_str(titelbuffer,2);
+   
 }// sethomescreen
 
 
@@ -1073,7 +1082,6 @@ uint8_t update_screen(void)
          char_width_mul = 2;
  //        if (programmstatus &(1<<STOP_ON)) // loescht nicht bei reset
          {
-            //display_write_stopzeit(stopsekunde,stopminute, 2);
             display_write_stopzeit_BM(stopsekunde,stopminute);
          }
  
@@ -1093,6 +1101,7 @@ uint8_t update_screen(void)
          char_width_mul = 1;
          display_write_spannung(batteriespannung/10,2);
          
+         /*
          char_x=4;
          char_y = 4;
          display_write_str("                    ",2);
@@ -1107,12 +1116,16 @@ uint8_t update_screen(void)
          display_write_int((batteriespannung&0xFF00)>>8,2);
          display_write_propchar('*',1);
          display_write_int((batteriespannung&0x00FF),2);
-         
+         */
          
          // Akkubalken anzeigen
  //        char_height_mul = 1;
  //        char_width_mul = 1;
 //         display_akkuanzeige(batteriespannung);
+         
+     //    display_trimmanzeige_horizontal (4+OFFSET_6_UHR,3, 4,-15);
+         
+         display_trimmanzeige_vertikal (52+OFFSET_6_UHR,6, 4,vertikaltrimm);
          
       }break;
          
@@ -1342,7 +1355,7 @@ uint8_t update_screen(void)
             
             char_height_mul = 1;
             
-            display_trimmanzeige (14+OFFSET_6_UHR, 7,-15);
+           // display_trimmanzeige_horizontal (14+OFFSET_6_UHR, 7,-15);
 
          }
          
@@ -1960,7 +1973,7 @@ uint8_t update_screen(void)
          char_y= 5;
          char_x = 10+OFFSET_6_UHR;
          
-         display_trimmanzeige (14+OFFSET_6_UHR, 7,-15);
+         display_trimmanzeige_horizontal (14+OFFSET_6_UHR, 7,1,-15);
       }break;
 
 
@@ -1978,16 +1991,16 @@ void display_cursorweg(void)
    char_y= (cursorposition & 0xFF00)>>8;
    char_x = cursorposition & 0x00FF;
    display_write_symbol(pfeilwegrechts);
-   
 }
 
 //##############################################################################################
 // Trimmanzeige
 //
 //##############################################################################################
-void display_trimmanzeige (uint8_t char_x0, uint8_t char_y0,int8_t mitteposition)
+void display_trimmanzeige_horizontal (uint8_t char_x0, uint8_t char_y0, uint8_t device, int8_t mitteposition)
 {
    //mitteposition ist Abweichung von Mitte des Kanals, mit Vorzeichen
+   
    uint8_t col=char_x0, page=char_y0, breite=100;
    
    // linke Begrenzung
@@ -1996,21 +2009,107 @@ void display_trimmanzeige (uint8_t char_x0, uint8_t char_y0,int8_t mitteposition
    uint8_t i=0;
    for (i=0;i<breite;i++)
    {
-      if ((i==0)||(i==breite-1) || (i==breite/2) || (i== breite/2+mitteposition))
+      if ((i==0)||(i==breite-1) || (i==breite/2) || (i== breite/2+mitteposition)|| (i== breite/2+mitteposition-1)|| (i== breite/2+mitteposition+1))
       {
          display_write_byte(DATA,0x7E);// Strich zeichnen
       }
+      
         else
       {
-         
-            display_write_byte(DATA,0x42);// obere und untere linie  zeichnen
-        
+         display_write_byte(DATA,0x42);// obere und untere linie  zeichnen
       }
    }
 
-
-
 }
+
+void display_trimmanzeige_vertikal (uint8_t char_x0, uint8_t char_y0, uint8_t device, int8_t mitteposition)
+{
+   //mitteposition ist Abweichung von Mitte des Kanals, mit Vorzeichen
+   
+   uint8_t col=char_x0, page=char_y0, breite=6; uint8_t hoehe = 6;
+   
+   uint16_t markenlage =(hoehe*4 + mitteposition);
+   //display_go_to(col,page);
+   int8_t full =markenlage/8; // ganze pages
+   int8_t part =markenlage%8; // rest
+   uint8_t balkenbreite = 6;
+   
+   //full=2;
+   //part=4;
+   
+   // linke Begrenzung
+   /*
+   display_go_to(0,3);
+   display_write_int(mitteposition,2);
+   display_write_propchar(' ',2);
+   
+   display_write_int(full,2);
+   display_write_propchar(' ',2);
+   display_write_int(part,2);
+   
+   return;
+    */
+   //display_go_to(col,page);
+   for (page=char_y0;page > char_y0-(hoehe);page--)
+   {
+      if (page == char_y0-hoehe/2)// Mitte
+      {
+         display_go_to(char_x0-1,page);
+         display_write_byte(DATA,0x80);
+         display_go_to(char_x0+breite,page);
+         display_write_byte(DATA,0x80);
+
+         
+      
+      }
+
+      for (col=char_x0;col<char_x0+breite;col++)
+      {
+         display_go_to(col,page);
+         
+         if ((col==char_x0)||(col==char_x0+breite-1) )
+         {
+            display_write_byte(DATA,0xFF);// senkrechte Begrenzung zeichnen
+         }
+         
+         else
+         {
+            
+            uint8_t markenwert=0;
+            
+            if (page == (char_y0-full)) // Wert liegt in der page
+            //if (page == (2)) // Wert liegt in der page
+            {
+               markenwert = marke[part];
+            }
+            if (page == char_y0) // untere Begrenzung
+            {
+               markenwert |= 0x80;
+            }
+           // else if (page == 1)  // obere Begrenzung
+
+            else if (page == char_y0+1-hoehe)  // obere Begrenzung
+            {
+               markenwert |= 0x01;
+            }
+            
+            else if (page == char_y0-hoehe/2)// Mitte
+            {
+               markenwert |= 0x80;
+            }
+            
+            
+            display_write_byte(DATA,markenwert);
+         }
+         
+      }
+      
+   }
+  // display_go_to(char_x0,0);
+   
+   
+}
+
 //##############################################################################################
 // Akkuanzeige
 //
@@ -3449,6 +3548,7 @@ void display_write_stopzeit_BM(uint8_t sekunde,uint8_t minute)
    }
    
    startposition+= delta;
+   
     // Digit 4 sekunde zehner
    
    for (index=0;index<breite;index++)
@@ -3458,7 +3558,7 @@ void display_write_stopzeit_BM(uint8_t sekunde,uint8_t minute)
    tmp2 = (char)pgm_read_byte(&(zahlfont12[sekunde%10][2*index+1])); // byte col, lo
    tempbuffer[1][startposition+index] = tmp2;
    }
-   endposition = 56;
+   endposition = 52; // Ganzen Block zeichnen
    for (index=0;index<endposition;index++)
    {
       display_write_byte(0,tempbuffer[1][index]);

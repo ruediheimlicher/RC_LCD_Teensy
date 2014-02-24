@@ -161,7 +161,9 @@ void display_write_prop_str(uint8_t page, uint8_t column, uint8_t inverse, const
 
 void display_write_spannung(uint16_t rawspannung, uint8_t prop); // eine Dezimale
 void display_akkuanzeige (uint16_t spannung);
-void display_trimmanzeige (uint8_t char_x0, uint8_t char_y0,int8_t mitteposition);
+void display_trimmanzeige_horizontal (uint8_t char_x0, uint8_t char_y0, uint8_t device, int8_t mitteposition);
+void display_trimmanzeige_vertikal (uint8_t char_x0, uint8_t char_y0, uint8_t device, int8_t mitteposition);
+
 void r_uitoa8(int8_t zahl, char* string);
 
 uint8_t update_screen(void);
