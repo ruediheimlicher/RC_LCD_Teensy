@@ -37,7 +37,7 @@ extern volatile uint8_t       curr_funktionarray[8];
 extern volatile uint8_t       curr_devicearray[8];
 extern volatile uint8_t       curr_ausgangarray[8];
 
-extern volatile int8_t              curr_trimmungarray[8];
+extern volatile int8_t        curr_trimmungarray[8];
 
 
 extern volatile uint8_t       curr_screen;
@@ -62,10 +62,10 @@ extern volatile uint8_t       last_cursorzeile; // letzte zeile des cursors
 extern volatile uint8_t       last_cursorspalte; // letzte colonne des cursors
 extern volatile uint16_t      blink_cursorpos;
 
-extern volatile uint8_t                 curr_trimmkanal; // aktueller  Kanal fuerTrimmung
-extern volatile uint8_t                 curr_trimmung; // aktuelle  Trimmung fuer Trimmkanal
-extern volatile int8_t                vertikaltrimm;
-extern volatile int8_t                horizontaltrimm;
+extern volatile uint8_t       curr_trimmkanal; // aktueller  Kanal fuerTrimmung
+extern volatile uint8_t       curr_trimmung; // aktuelle  Trimmung fuer Trimmkanal
+extern volatile int8_t        vertikaltrimm;
+extern volatile int8_t        horizontaltrimm;
 
 
 //extern volatile uint16_t      laufsekunde;
@@ -79,12 +79,12 @@ extern volatile uint16_t      batteriespannung;
 
 extern volatile uint16_t      tastentransfer;
 
-extern volatile uint16_t  posregister[8][8]; // Aktueller screen: werte fuer page und daraufliegende col fuer Menueintraege (hex). geladen aus progmem
+extern volatile uint16_t      posregister[8][8]; // Aktueller screen: werte fuer page und daraufliegende col fuer Menueintraege (hex). geladen aus progmem
 
-extern volatile uint16_t  cursorpos[8][8]; // Aktueller screen: werte fuer page und daraufliegende col fuer cursor (hex). geladen aus progmem
+extern volatile uint16_t      cursorpos[8][8]; // Aktueller screen: werte fuer page und daraufliegende col fuer cursor (hex). geladen aus progmem
 
 // 
-extern volatile uint16_t              updatecounter; // Zaehler fuer Einschalten
+extern volatile uint16_t      updatecounter; // Zaehler fuer Einschalten
 /*
  write_dogm(0x40,A0);// Display start line set --> 0
  write_dogm(0xA1,A0);  // ADC set --> reverse
@@ -2028,7 +2028,11 @@ void display_trimmanzeige_vertikal (uint8_t char_x0, uint8_t char_y0, uint8_t de
    
    uint8_t col=char_x0, page=char_y0, breite=6; uint8_t hoehe = 6;
    
-   uint16_t markenlage =(hoehe*4 + mitteposition);
+   int16_t tempmitteposition = mitteposition;
+   // auf hoehe normieren
+   tempmitteposition = tempmitteposition*(hoehe*4)/0x7F; // hoehe*8: Hoehe Balken in pix. /2: Mitte in pix
+   uint16_t markenlage =(hoehe*4 + tempmitteposition);
+   
    //display_go_to(col,page);
    int8_t full =markenlage/8; // ganze pages
    int8_t part =markenlage%8; // rest
