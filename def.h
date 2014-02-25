@@ -60,6 +60,8 @@
 #define  EXPO_OFFSET       0x30 // 48
 #define  MIX_OFFSET        0x40 // 64
 
+#define  TRIMM_OFFSET      0x50 // 80
+
 #define FUNKTION_OFFSET    0x60 // 96
 #define DEVICE_OFFSET      0x70 // 122
 #define AUSGANG_OFFSET     0x80 // 128

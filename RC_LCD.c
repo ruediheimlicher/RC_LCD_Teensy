@@ -311,7 +311,7 @@ volatile uint8_t                 default_ausgangarray[8]=
 volatile int8_t                 default_trimmungarray[8]=
 {
    //
-   // bit 0-2: Kanal bit 4-6:
+   // Abweichung von Mitte
    0x00,
    0x00,
    0x00,
@@ -2823,11 +2823,12 @@ int main (void)
                
             }
 
+                // MARK: task_out TRIMM
             if (task_out & (1<<RAM_SEND_TRIMM_TASK)) // Trimmmung lesen
             {
                
                
-               // Trimmdaten schreiben
+               // Trimmdaten schreiben. task_outdata ist devicenummer
                RAM_CS_LO;
                _delay_us(LOOPDELAY);
                //      OSZI_A_LO;
@@ -2844,6 +2845,7 @@ int main (void)
                spiram_wrbyte(WRITE_TASKADRESSE, task_out);
                //     OSZI_A_HI;
                RAM_CS_HI;
+               
                RAM_CS_LO;
                _delay_us(LOOPDELAY);
                //      OSZI_A_LO;
@@ -2851,16 +2853,19 @@ int main (void)
                //     OSZI_A_HI;
                RAM_CS_HI;
                _delay_us(1);
+               
+  
  
-
                out_taskcounter++;
                
                 lcd_gotoxy(0,1);
                 lcd_putc('R');
                 lcd_puthex(task_out);
                 lcd_putc('+');
-                lcd_puthex(out_taskcounter);
+                lcd_puthex(vertikaltrimm+ 0x7F);
                 lcd_putc('+');
+               
+               
                
                task_out &= ~(1<<RAM_SEND_TRIMM_TASK); // Aufforderung an PPM, die Daten fuer Mitte zu lesen
                
@@ -6998,58 +7003,44 @@ int main (void)
                //lcd_putc('*');
                Trimmtastenwert=0x00;
                
+               // Device 0: L_H
+               // Device 1: L_V
+               // Device 2: R_H
+               // Device 3: L_V
                
-               switch (Trimmtaste)
+               switch (Trimmtaste) // 3x3-Tastatur, nur Tasten 2,4,5,6,8
                {
 #pragma mark Taste 0
-                  case 1:// L_O
-                  {
-                     
-                  }break;
 
                   case 2:// L_L
                   {
                      vertikaltrimm++;
-                  }break;
-
-                  case 3:// L_U
-                  {
-                     
+                     task_outdata = 1;
                   }break;
 
                   case 4:// L_R
                   {
                      horizontaltrimm--;
+                     task_outdata = 0;
                   }break;
 
                   case 5:// L_M
                   {
                      vertikaltrimm=0;
+                     task_outdata = 1;
                   }break;
 
                   case 6:// R_O
                   {
                      horizontaltrimm++;
+                     task_outdata = 0;
                   }break;
 
-                  case 7:// R_L
-                  {
-                     
-                  }break;
 
                   case 8:// R_U
                   {
                      vertikaltrimm--;
-                  }break;
-
-                  case 9:// R_R
-                  {
-                     
-                  }break;
-
-                  case 10:// R_M
-                  {
-                     
+                     task_outdata = 1; // Device 1 L_V links vertikal
                   }break;
 
   
