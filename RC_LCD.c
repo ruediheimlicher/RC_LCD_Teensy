@@ -178,16 +178,16 @@ volatile    uint8_t task_outdata=0; // Taskdata an RC_PPM
 
 
 volatile uint16_t                TastaturCount=0;
-volatile uint16_t                manuellcounter=0; // Countr fuer Timeout
+volatile uint16_t                manuellcounter=0; // Counter fuer Timeout
 volatile uint8_t                 startcounter=0; // timeout-counter beim Start von Settings, schneller als manuellcounter. Ermoeglicht Dreifachklick auf Taste 5
 volatile uint8_t                 settingstartcounter=0; // Counter fuer Klicks auf Taste 5
 volatile uint16_t                mscounter=0; // Counter fuer ms in timer-ISR
-volatile uint16_t TastenStatus=0;
-volatile uint16_t Tastencount=0;
-volatile uint16_t Tastenprellen=0x01F;
+volatile uint16_t                TastenStatus=0;
+volatile uint16_t                Tastencount=0;
+volatile uint16_t                Tastenprellen=0x01F;
 volatile uint8_t                 Taste=0;
 
-volatile uint16_t tastentransfer=0;
+volatile uint16_t                tastentransfer=0;
 
 volatile uint8_t                 Tastenindex=0;
 volatile uint8_t                 lastTastenindex=0;
@@ -199,8 +199,13 @@ volatile uint8_t                 Trimmtastenindex=0;
 volatile uint8_t                 lastTrimmtastenindex=0;
 volatile uint16_t                trimmprellcounter=0;
 
-volatile int8_t                vertikaltrimm=0;
-volatile int8_t                horizontaltrimm=0;
+volatile uint16_t                manuelltrimmcounter=0; // Counter fuer Timeout der Trimmtsastatur
+
+
+volatile int8_t                  vertikaltrimm_L=0;
+volatile int8_t                  vertikaltrimm_R=0;
+volatile int8_t                  horizontaltrimm_L=0;
+volatile int8_t                  horizontaltrimm_R=0;
 
 
 
@@ -388,6 +393,8 @@ volatile uint16_t stopminute=0;
 uint8_t  EEMEM speicherstopminute;
 
 
+
+
 volatile uint16_t batteriespannung =0;
 
 volatile uint16_t Tastenwert=0;
@@ -400,10 +407,12 @@ uint8_t eeprombytelesen(uint16_t readadresse); // 300 us ohne lcd_anzeige
 uint8_t eeprompartlesen(uint16_t readadresse); //   us ohne lcd_anzeige
 uint16_t eeprompartschreiben(void); // 23 ms
 
+void eepromtrimmschreiben(uint16_t writeadresse,uint8_t eeprom_writedatabyte);
 void read_eeprom_zeit(void);
 void write_eeprom_zeit(void);
 void write_eeprom_status(void);
-
+void write_Ext_EEPROM_Settings(void);
+void write_Ext_EEPROM_Trimm(uint8_t device);
 
 
 
@@ -807,6 +816,11 @@ ISR (TIMER0_OVF_vect)
      // displaycounter++;
       manuellcounter++;
       
+      if (trimmstatus) // trimmtaste wurde gedrueckt
+      {
+         manuelltrimmcounter++;
+      }
+      
       //OSZI_A_TOGG;
       programmstatus ^= (1<<MS_DIV); // Teilung /2
       mscounter=0;
@@ -919,9 +933,9 @@ ISR(INT3_vect) // Interrupt bei USB_ATTACH, rising edge
 
 ISR( ANALOG_COMP_vect ) // Power-OFF detektieren
 {
- //  lcd_gotoxy(16,1);
- //  lcd_putc('+');
- //  lcd_putint(laufsekunde);
+   //lcd_gotoxy(16,1);
+   //lcd_putc('+');
+   //lcd_putint(laufsekunde);
 
 //	programmstatus |= (1<<EEPROM_TASK);
    
@@ -932,6 +946,7 @@ ISR( ANALOG_COMP_vect ) // Power-OFF detektieren
    else
    {
       OSZI_C_LO;
+      write_Ext_EEPROM_Trimm(1);
       write_eeprom_zeit();
       write_eeprom_status();
       cli();
@@ -1134,11 +1149,11 @@ uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_w
    spi_start();
    SPI_PORT_Init();
    /*
-      lcd_gotoxy(3,0);
-      lcd_putc('w');
-      lcd_putint12(writeadresse);
-      lcd_putc('*');
-   */
+    lcd_gotoxy(3,0);
+    lcd_putc('w');
+    lcd_putint12(writeadresse);
+    lcd_putc('*');
+    */
    spieeprom_init();
    
    // Test 131210
@@ -1197,14 +1212,14 @@ uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_w
    _delay_ms(4);
    
    /*
-   lcd_gotoxy(0,1);
-   lcd_putc('e');
-   lcd_puthex(byte_errcount);
-   lcd_putc(' ');
-   lcd_puthex(eeprom_writedatabyte);
-   lcd_putc(' ');
-   lcd_puthex(checkbyte);
-   */
+    lcd_gotoxy(0,1);
+    lcd_putc('e');
+    lcd_puthex(byte_errcount);
+    lcd_putc(' ');
+    lcd_puthex(eeprom_writedatabyte);
+    lcd_putc(' ');
+    lcd_puthex(checkbyte);
+    */
    //OSZI_B_HI;
    
    sendbuffer[1] = writeadresse & 0xFF;
@@ -1231,6 +1246,32 @@ uint8_t eeprombyteschreiben(uint8_t code, uint16_t writeadresse,uint8_t eeprom_w
    
    return byte_errcount;
 }
+
+void eepromtrimmschreiben(uint16_t writeadresse,uint8_t eeprom_writedatabyte) //   1 ms ohne lcd-anzeige
+{
+   //OSZI_B_LO;
+   cli();
+   SUB_EN_PORT &= ~(1<<SUB_EN_PIN);
+   spi_start();
+   SPI_PORT_Init();
+   spieeprom_init();
+    // WREN schicken: Write ermoeglichen
+   
+   _delay_us(LOOPDELAY);
+   EE_CS_LO;
+   _delay_us(LOOPDELAY);
+   spieeprom_wren();
+   _delay_us(LOOPDELAY);
+   EE_CS_HI; // SS HI End
+
+   // Data schicken
+   EE_CS_LO;
+   
+   spieeprom_wrbyte(writeadresse,eeprom_writedatabyte);
+   
+   EE_CS_HI;
+   
+  }
 
 uint16_t eeprompartschreiben(void) // 23 ms
 {
@@ -1446,63 +1487,63 @@ void read_Ext_EEPROM_Settings(void)
    uint8_t modelindex =0;
    modelindex = buffer[3]; // welches model soll gelesen werden
    uint16_t readstartadresse=0;
-
+   
    uint8_t pos=0, verbose=buffer[4];
    
    //EE_CS_LO;
    _delay_us(LOOPDELAY);
-  // uint16_t readstartadresse=0;
+   // uint16_t readstartadresse=0;
    //uint8_t modelindex = curr_model; // welches model soll gelesen werden
    // uint8_t pos=0;
    
-    // Level lesen
+   // Level lesen
    cli();
-    readstartadresse = TASK_OFFSET  + LEVEL_OFFSET + modelindex*SETTINGBREITE;
+   readstartadresse = TASK_OFFSET  + LEVEL_OFFSET + modelindex*SETTINGBREITE;
    sei();
-    // startadresse fuer Settings des models
-    for (pos=0;pos<8;pos++)
-    {
-       curr_levelarray[pos] = eeprombytelesen(readstartadresse+pos);
-       
-    }
-    _delay_us(100);
+   // startadresse fuer Settings des models
+   for (pos=0;pos<8;pos++)
+   {
+      curr_levelarray[pos] = eeprombytelesen(readstartadresse+pos);
+      
+   }
+   _delay_us(100);
    
-    // Expo lesen
-    readstartadresse = TASK_OFFSET  + EXPO_OFFSET + modelindex*SETTINGBREITE;
-    for (pos=0;pos<8;pos++)
-    {
-       curr_expoarray[pos] = eeprombytelesen(readstartadresse+pos);
-       
-    }
-    _delay_us(100);
+   // Expo lesen
+   readstartadresse = TASK_OFFSET  + EXPO_OFFSET + modelindex*SETTINGBREITE;
+   for (pos=0;pos<8;pos++)
+   {
+      curr_expoarray[pos] = eeprombytelesen(readstartadresse+pos);
+      
+   }
+   _delay_us(100);
    
    
    // Mix lesen
    cli();
-    readstartadresse = TASK_OFFSET  + MIX_OFFSET + modelindex*SETTINGBREITE;
+   readstartadresse = TASK_OFFSET  + MIX_OFFSET + modelindex*SETTINGBREITE;
    sei();
    /*
-   lcd_gotoxy(0,0);
-   //lcd_putc('+');
-   //lcd_putint1(modelindex);
-   //lcd_putc('+');
-   lcd_putint12(readstartadresse);
-   lcd_putc('*');
-   lcd_puthex((readstartadresse & 0xFF00)>>8);
-   lcd_puthex((readstartadresse & 0x00FF));
- */
+    lcd_gotoxy(0,0);
+    //lcd_putc('+');
+    //lcd_putint1(modelindex);
+    //lcd_putc('+');
+    lcd_putint12(readstartadresse);
+    lcd_putc('*');
+    lcd_puthex((readstartadresse & 0xFF00)>>8);
+    lcd_puthex((readstartadresse & 0x00FF));
+    */
    
-    for (pos=0;pos<8;pos++)
-    {
-       if (pos==0)
-       {
-       //OSZI_D_LO;
-       }
-       //cli();
-       curr_mixarray[pos] = eeprombytelesen(readstartadresse+pos);
-       //OSZI_D_HI;
-
-    }
+   for (pos=0;pos<8;pos++)
+   {
+      if (pos==0)
+      {
+         //OSZI_D_LO;
+      }
+      //cli();
+      curr_mixarray[pos] = eeprombytelesen(readstartadresse+pos);
+      //OSZI_D_HI;
+      
+   }
    
    _delay_us(RAMDELAY);
    
@@ -1534,20 +1575,64 @@ void read_Ext_EEPROM_Settings(void)
    }
    
    /*
-   lcd_gotoxy(0,1);
-   
-   lcd_puthex(curr_funktionarray[0]);
-   lcd_putc('$');
-   lcd_puthex(curr_funktionarray[1]);
-   lcd_putc('$');
-   lcd_puthex(curr_funktionarray[2]);
-   lcd_putc('$');
-   lcd_puthex(curr_funktionarray[3]);
-   lcd_putc('$');
+    lcd_gotoxy(0,1);
+    
+    lcd_puthex(curr_funktionarray[0]);
+    lcd_putc('$');
+    lcd_puthex(curr_funktionarray[1]);
+    lcd_putc('$');
+    lcd_puthex(curr_funktionarray[2]);
+    lcd_putc('$');
+    lcd_puthex(curr_funktionarray[3]);
+    lcd_putc('$');
     */
    
+   // Trimm lesen
+   cli();
+   readstartadresse = TASK_OFFSET  + TRIMM_OFFSET + modelindex*SETTINGBREITE;
+   sei();
+   /*
+    lcd_gotoxy(0,0);
+    //lcd_putc('+');
+    //lcd_putint1(modelindex);
+    //lcd_putc('+');
+    lcd_putint12(readstartadresse);
+    lcd_putc('*');
+    lcd_puthex((readstartadresse & 0xFF00)>>8);
+    lcd_puthex((readstartadresse & 0x00FF));
+    */
+   
+   for (pos=0;pos<4;pos++)
+   {
+      if (pos==0)
+      {
+         //OSZI_D_LO;
+      }
+      //cli();
+      curr_trimmungarray[pos] = eeprombytelesen(readstartadresse+pos)- 0x7F;
+      //OSZI_D_HI;
+      
+   }
+   
+   
+   lcd_gotoxy(4,0);
+   //lcd_putc('+');
+   //lcd_putint1(modelindex);
+   //lcd_putc('+');
+   //lcd_putint12(readstartadresse);
+   //lcd_putc('*');
+   lcd_puthex(curr_trimmungarray[0]);
+   lcd_putc('*');
+   lcd_puthex(curr_trimmungarray[1]);
+   
+   //lcd_puthex((readstartadresse & 0xFF00)>>8);
+   //lcd_puthex((readstartadresse & 0x00FF));
+   
+   
+   
+   
    _delay_us(RAMDELAY);
-
+   
    
    //EE_CS_HI;
 }
@@ -1858,6 +1943,52 @@ void write_Ext_EEPROM_Settings(void)
    //task_outdata = curr_model;//modelindex;
 }
 
+
+void write_Ext_EEPROM_Trimm(uint8_t device)
+{
+   // Halt einschalten
+   masterstatus |= (1<<HALT_BIT); // Halt-Bit aktiviert Task bei ausgeschaltetem Slave
+   MASTER_PORT &= ~(1<<SUB_BUSY_PIN);
+   uint16_t writestartadresse=0;
+   uint8_t modelindex = curr_model; // welches model soll gelesen werden
+   uint8_t pos=0;
+
+   cli();
+   writestartadresse = TASK_OFFSET  + TRIMM_OFFSET + modelindex*SETTINGBREITE;
+   
+   /*
+    lcd_gotoxy(0,0);
+    //lcd_putc('+');
+    //lcd_putint1(modelindex);
+    //lcd_putc('+');
+    lcd_putint12(readstartadresse);
+    lcd_putc('*');
+    lcd_puthex((readstartadresse & 0xFF00)>>8);
+    lcd_puthex((readstartadresse & 0x00FF));
+    */
+   
+   //spi_start();
+   //SPI_PORT_Init();
+   //spieeprom_init();
+
+  // for (pos=0;pos<4;pos++)
+   {
+      //eeprombyteschreiben(0xB0, writestartadresse+device,(curr_trimmungarray[device]+ 0x7F)&0xFF);
+      eepromtrimmschreiben(writestartadresse+device,(curr_trimmungarray[device]+ 0x7F)&0xFF);
+      //OSZI_D_HI;
+      
+   }
+   
+   
+
+   
+   masterstatus &= ~(1<<HALT_BIT); // Halt-Bit aktiviert Task bei ausgeschaltetem Slave
+   MASTER_PORT |= (1<<SUB_BUSY_PIN);
+   _delay_us(100);
+   sei();
+   
+}
+
 uint8_t Trimmtastenwahl(uint8_t Tastaturwert)
 {
    /*
@@ -2120,10 +2251,18 @@ void read_eeprom_zeit(void)
    
    stopsekunde = eeprom_read_byte(&speicherstopsekunde);
    stopminute = eeprom_read_byte(&speicherstopminute);
-
-   
    
 }
+
+
+void write_eeprom_trimm(void)
+{
+   eeprom_write_byte(&speichermodel, curr_model);
+   
+   eeprom_write_byte(&speichersetting, curr_setting);
+   
+}
+
 
 
 void setdefaultsetting(void)
@@ -2138,10 +2277,10 @@ void setdefaultsetting(void)
       curr_funktionarray[i] = default_funktionarray[i];
       curr_devicearray[i] = default_devicearray[i];
       curr_ausgangarray[i] = default_ausgangarray[i];
+     // curr_trimmungarray[i] = default_trimmungarray[i];
 
    }
 }
-
 
 
 // MARK:  - main
@@ -2152,7 +2291,7 @@ int main (void)
    uint16_t count=0;
    
 	// set for 16 MHz clock
-	CPU_PRESCALE(CPU_16MHz);
+	CPU_PRESCALE(CPU_8MHz); // Strom sparen
    
    
    
@@ -2220,7 +2359,7 @@ int main (void)
    
    PWM = 0;
    
-   char* versionstring = (char*) malloc(4);
+   char* versionstring[4] = {};
    strncpy(versionstring, VERSION+9, 3);
    versionstring[3]='\0';
    volatile uint16_t versionint = atoi(versionstring);
@@ -2650,6 +2789,10 @@ int main (void)
             // Analog-Comparator einschalten. Verhindert loeschen der Zeit beim Start mit USB
             analogcomp_init();
             
+            task_out |= 1<<RAM_SEND_TRIMM_TASK; // Aufforderung an PPM, die Daten fuer Mitte zu lesen
+            task_outdata = 0xFF;            // Device der Aenderung (increment/decrement)
+
+            
             OSZI_D_HI;
             
             /*
@@ -2824,7 +2967,7 @@ int main (void)
             }
 
                 // MARK: task_out TRIMM
-            if (task_out & (1<<RAM_SEND_TRIMM_TASK)) // Trimmmung lesen
+            if (task_out & (1<<RAM_SEND_TRIMM_TASK)) // Trimmmung an PPM senden
             {
                
                
@@ -2832,7 +2975,7 @@ int main (void)
                RAM_CS_LO;
                _delay_us(LOOPDELAY);
                //      OSZI_A_LO;
-               spiram_wrbyte(RAM_TRIMM_OFFSET+ task_outdata,vertikaltrimm + 0x7F); // int zu uint
+               spiram_wrbyte(RAM_TRIMM_OFFSET+ task_outdata,vertikaltrimm_L + 0x7F); // int zu uint
                //     OSZI_A_HI;
                RAM_CS_HI;
                _delay_us(1);
@@ -2854,19 +2997,18 @@ int main (void)
                RAM_CS_HI;
                _delay_us(1);
                
-  
+               curr_trimmungarray[task_outdata] = vertikaltrimm_L; // signed int8
  
                out_taskcounter++;
                
+               /*
                 lcd_gotoxy(0,1);
                 lcd_putc('R');
                 lcd_puthex(task_out);
                 lcd_putc('+');
-                lcd_puthex(vertikaltrimm+ 0x7F);
+                lcd_puthex(vertikaltrimm_L+ 0x7F);
                 lcd_putc('+');
-               
-               
-               
+               */
                task_out &= ~(1<<RAM_SEND_TRIMM_TASK); // Aufforderung an PPM, die Daten fuer Mitte zu lesen
                
             }
@@ -3943,8 +4085,7 @@ int main (void)
 		// MARK:  Tastatur ADC
 		/* ******************** */
 		//		initADC(TASTATURPIN);
-		//		Tastenwert=(uint8_t)(readKanal(TASTATURPIN)>>2);
-      
+	     
      if ((substatus & (1<< TASTATUR_READ))) // 8 MHz
          
       {
@@ -6936,7 +7077,7 @@ int main (void)
             }//if TastaturCount
             
          } // if Tastenwert > 5
-         
+         Tastenwert=0;
          // MARK:  Trimmung
          
          if (Trimmtastenwert>5)
@@ -6970,18 +7111,20 @@ int main (void)
             
              TastaturCount++;
             
-            if (trimmprellcounter>150)
+            if (trimmprellcounter>100)
             {
                //lcd_gotoxy(6,0);
                //lcd_putint(Trimmtastenwert);
                //lcd_putc(' ');
                //lcd_putint2(Trimmtastenindex);
                Trimmtaste = Trimmtastenindex;
-               trimmstatus = Trimmtastenindex;
+               trimmstatus = (Trimmtastenindex & 0x0F); // Bit 0-3
                trimmprellcounter=0;
                
+               manuelltrimmcounter =0;
+               
                task_out |= 1<<RAM_SEND_TRIMM_TASK; // Aufforderung an PPM, die Daten fuer Mitte zu lesen
-               task_outdata = trimmstatus;            // Device der Aenderung (increment/decrement)
+               task_outdata = 0;//trimmstatus;            // Device der Aenderung (increment/decrement)
                
                //lcd_gotoxy(10,1);
                //lcd_puts("T:\0");
@@ -7014,42 +7157,75 @@ int main (void)
 
                   case 2:// L_L
                   {
-                     vertikaltrimm++;
+                     vertikaltrimm_L++;
                      task_outdata = 1;
+                     curr_trimmungarray[1] = vertikaltrimm_L+0x7F;
                   }break;
 
                   case 4:// L_R
                   {
-                     horizontaltrimm--;
+                     horizontaltrimm_L--;
+                     lcd_gotoxy(3,1);
+                     lcd_putint(horizontaltrimm_L+0x7F);
                      task_outdata = 0;
+                     curr_trimmungarray[0] = horizontaltrimm_L+0x7F;
+                     curr_trimmungarray[0] = 0x0F;
+                     //lcd_putint(curr_trimmungarray[0]);
+                    
                   }break;
 
                   case 5:// L_M
                   {
-                     vertikaltrimm=0;
-                     task_outdata = 1;
+                  //   vertikaltrimm_L=0;
+                     //task_outdata = 1;
+                     //lcd_gotoxy(18,1);
+                     //lcd_putint2(Trimmtaste);
+curr_trimmungarray[0] = 0x0F;
+                     write_Ext_EEPROM_Trimm(0);
+                     write_Ext_EEPROM_Trimm(1);
+                     lcd_gotoxy(10,1);
+                     lcd_puthex(task_outdata);
+                     lcd_puthex(curr_trimmungarray[0]);
+                     
+                     lcd_puthex(curr_trimmungarray[1]);
+                     
+                    
                   }break;
 
                   case 6:// R_O
                   {
-                     horizontaltrimm++;
+                     horizontaltrimm_L++;
+                     lcd_gotoxy(3,1);
+                     lcd_putint(horizontaltrimm_L+0x7F);
                      task_outdata = 0;
+                     curr_trimmungarray[0] = horizontaltrimm_L+0x7F;
+                     //lcd_putint(curr_trimmungarray[0]);
                   }break;
 
 
                   case 8:// R_U
                   {
-                     vertikaltrimm--;
+                     vertikaltrimm_L--;
                      task_outdata = 1; // Device 1 L_V links vertikal
+                     curr_trimmungarray[1] = vertikaltrimm_L+0x7F;
                   }break;
 
   
-               }
+               }// switch Trimmtaste
+               
+               // Bit 4 ff fuer device gesetz. loest Anzeige des Balkens aus.
+               // wird mit manuelltrimmcounter zurueckgesetzt
+               trimmstatus |= (1<<(4+task_outdata));
+               //trimmstatus |= (task_outdata << 4); // nummer des device in bit 4 ff
+               //lcd_gotoxy(0,1);
+               //lcd_putint2(Trimmtaste);
+
             }
          }// if Trimmtastenwert
+         //Trimmtastenwert=0;
          //OSZI_B_HI;
       }
-		Tastenwert=0;
+		
 		
       
       
