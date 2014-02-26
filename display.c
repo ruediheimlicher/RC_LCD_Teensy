@@ -37,7 +37,7 @@ extern volatile uint8_t       curr_funktionarray[8];
 extern volatile uint8_t       curr_devicearray[8];
 extern volatile uint8_t       curr_ausgangarray[8];
 
-extern volatile int8_t        curr_trimmungarray[8];
+extern volatile uint8_t        curr_trimmungarray[8];
 
 
 extern volatile uint8_t       curr_screen;
@@ -64,10 +64,10 @@ extern volatile uint16_t      blink_cursorpos;
 
 extern volatile uint8_t       curr_trimmkanal; // aktueller  Kanal fuerTrimmung
 extern volatile uint8_t       curr_trimmung; // aktuelle  Trimmung fuer Trimmkanal
-extern volatile int8_t        vertikaltrimm_L;
-extern volatile int8_t        vertikaltrimm_R;
-extern volatile int8_t        horizontaltrimm_L;
-extern volatile int8_t        horizontaltrimm_R;
+extern volatile uint8_t        vertikaltrimm_L;
+extern volatile uint8_t        vertikaltrimm_R;
+extern volatile uint8_t        horizontaltrimm_L;
+extern volatile uint8_t        horizontaltrimm_R;
 extern volatile uint8_t        trimmstatus;
 
 
@@ -1144,7 +1144,8 @@ uint8_t update_screen(void)
                else
                {
                   //horizontaltrimm_L = curr_trimmungarray[0];
-                  display_trimmanzeige_horizontal (24+OFFSET_6_UHR,3, 4,horizontaltrimm_L);
+                  
+                  display_trimmanzeige_horizontal (24+OFFSET_6_UHR,3, 4,curr_trimmungarray[0]-0x7F);
                   
                }
             }break;
@@ -1159,8 +1160,8 @@ uint8_t update_screen(void)
                }
                else
                {
-                  vertikaltrimm_L = curr_trimmungarray[1];
-                  display_trimmanzeige_vertikal (52+OFFSET_6_UHR,6, 4,vertikaltrimm_L);
+                  //vertikaltrimm_L = curr_trimmungarray[1];
+                  display_trimmanzeige_vertikal (52+OFFSET_6_UHR,6, 4,curr_trimmungarray[1]-0x7F);
                }
             }break;
                
