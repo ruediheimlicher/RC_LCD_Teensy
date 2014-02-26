@@ -64,11 +64,15 @@ extern volatile uint16_t      blink_cursorpos;
 
 extern volatile uint8_t       curr_trimmkanal; // aktueller  Kanal fuerTrimmung
 extern volatile uint8_t       curr_trimmung; // aktuelle  Trimmung fuer Trimmkanal
-extern volatile int8_t        vertikaltrimm;
-extern volatile int8_t        horizontaltrimm;
+extern volatile int8_t        vertikaltrimm_L;
+extern volatile int8_t        vertikaltrimm_R;
+extern volatile int8_t        horizontaltrimm_L;
+extern volatile int8_t        horizontaltrimm_R;
+extern volatile uint8_t        trimmstatus;
 
 
-//extern volatile uint16_t      laufsekunde;
+extern volatile uint16_t      manuelltrimmcounter;
+
 extern volatile uint8_t       laufstunde;
 extern volatile uint8_t       laufminute;
 extern volatile uint16_t      motorsekunde;
@@ -121,6 +125,7 @@ extern volatile uint16_t      updatecounter; // Zaehler fuer Einschalten
 #define KANALTEXTCURSOR 1
 #define KANALNUMMERCURSOR  3
 
+//#define TRIMMTIMEOUT	10 // Loopled-counts bis Manuell zurueckgesetzt wird. 50: ca. 30s
 
 
 const char balken[8]=
@@ -1124,8 +1129,43 @@ uint8_t update_screen(void)
 //         display_akkuanzeige(batteriespannung);
          
      //    display_trimmanzeige_horizontal (4+OFFSET_6_UHR,3, 4,-15);
+         //if (trimmstatus == 2)
          
-         display_trimmanzeige_vertikal (52+OFFSET_6_UHR,6, 4,vertikaltrimm);
+         
+         switch (trimmstatus >> 4) // bit 4-7
+         {
+            case 1: // Bit 0, L_H
+            {
+               if (manuelltrimmcounter > TRIMMTIMEOUT)
+               {
+                  display_trimmanzeige_horizontal_weg(24+OFFSET_6_UHR,3);
+                  trimmstatus=0;
+               }
+               else
+               {
+                  //horizontaltrimm_L = curr_trimmungarray[0];
+                  display_trimmanzeige_horizontal (24+OFFSET_6_UHR,3, 4,horizontaltrimm_L);
+                  
+               }
+            }break;
+               
+            case 2: // Bit 1,  L_V
+            {
+               if (manuelltrimmcounter > TRIMMTIMEOUT)
+               {
+                  display_trimmanzeige_vertikal_weg(52+OFFSET_6_UHR,6);
+                  trimmstatus=0;
+
+               }
+               else
+               {
+                  vertikaltrimm_L = curr_trimmungarray[1];
+                  display_trimmanzeige_vertikal (52+OFFSET_6_UHR,6, 4,vertikaltrimm_L);
+               }
+            }break;
+               
+         }
+         
          
       }break;
          
@@ -2001,7 +2041,7 @@ void display_trimmanzeige_horizontal (uint8_t char_x0, uint8_t char_y0, uint8_t 
 {
    //mitteposition ist Abweichung von Mitte des Kanals, mit Vorzeichen
    
-   uint8_t col=char_x0, page=char_y0, breite=100;
+   uint8_t col=char_x0, page=char_y0, breite=60;
    
    // linke Begrenzung
    display_go_to(col,page);
@@ -2009,18 +2049,50 @@ void display_trimmanzeige_horizontal (uint8_t char_x0, uint8_t char_y0, uint8_t 
    uint8_t i=0;
    for (i=0;i<breite;i++)
    {
-      if ((i==0)||(i==breite-1) || (i==breite/2) || (i== breite/2+mitteposition)|| (i== breite/2+mitteposition-1)|| (i== breite/2+mitteposition+1))
+      if ((i==0)||(i==breite-1) )// || (i== breite/2+mitteposition))//|| (i== breite/2+mitteposition-1)|| (i== breite/2+mitteposition+1))
       {
-         display_write_byte(DATA,0x7E);// Strich zeichnen
+         //display_write_byte(DATA,0x7E);// Begrenzungsstrich zeichnen
+      }
+      else if (i==breite/2)
+      {
+         display_write_byte(DATA,0xFF);// Mittelmarke zeichnen
+      }
+      else if ((i== breite/2+mitteposition)|| (i== breite/2+mitteposition)|| (i== breite/2+mitteposition-1))
+      {
+         display_write_byte(DATA,0x7E);
       }
       
-        else
+      
+      else
       {
-         display_write_byte(DATA,0x42);// obere und untere linie  zeichnen
+         //display_write_byte(DATA,0x42);// obere und untere linie  zeichnen
+         display_write_byte(DATA,0x18);
       }
    }
 
 }
+
+void display_trimmanzeige_horizontal_weg (uint8_t char_x0, uint8_t char_y0)
+{
+   //Anzeige entfernen
+   
+   uint8_t col=char_x0, page=char_y0, breite=60;
+   
+   // linke Begrenzung
+   display_go_to(col,page);
+   
+   uint8_t i=0;
+   for (i=0;i<breite;i++)
+   {
+         display_write_byte(DATA,0x00);// leer
+      
+    }
+   
+}
+
+
+
+
 
 void display_trimmanzeige_vertikal (uint8_t char_x0, uint8_t char_y0, uint8_t device, int8_t mitteposition)
 {
@@ -2071,9 +2143,11 @@ void display_trimmanzeige_vertikal (uint8_t char_x0, uint8_t char_y0, uint8_t de
       {
          display_go_to(col,page);
          
-         if ((col==char_x0)||(col==char_x0+breite-1) )
+         //if ((col==char_x0)||(col==char_x0+breite-1) )
+         if ((col==char_x0+breite/2)||(col==char_x0+breite/2-1)  ) // Mittelstrich zeichnen
          {
             display_write_byte(DATA,0xFF);// senkrechte Begrenzung zeichnen
+            
          }
          
          else
@@ -2088,13 +2162,13 @@ void display_trimmanzeige_vertikal (uint8_t char_x0, uint8_t char_y0, uint8_t de
             }
             if (page == char_y0) // untere Begrenzung
             {
-               markenwert |= 0x80;
+               //markenwert |= 0x80;
             }
            // else if (page == 1)  // obere Begrenzung
 
             else if (page == char_y0+1-hoehe)  // obere Begrenzung
             {
-               markenwert |= 0x01;
+               //markenwert |= 0x01;
             }
             
             else if (page == char_y0-hoehe/2)// Mitte
@@ -2112,6 +2186,23 @@ void display_trimmanzeige_vertikal (uint8_t char_x0, uint8_t char_y0, uint8_t de
   // display_go_to(char_x0,0);
    
    
+}
+
+
+void display_trimmanzeige_vertikal_weg (uint8_t char_x0, uint8_t char_y0)
+{
+   //mitteposition ist Abweichung von Mitte des Kanals, mit Vorzeichen
+   
+   uint8_t col=char_x0, page=char_y0, breite=6; uint8_t hoehe = 6;
+   for (page=char_y0;page > char_y0-(hoehe);page--)
+   {
+      
+      for (col=char_x0-1;col<char_x0+breite+1;col++)
+      {
+         display_go_to(col,page);
+         display_write_byte(DATA,0x00);
+      }
+   }
 }
 
 //##############################################################################################

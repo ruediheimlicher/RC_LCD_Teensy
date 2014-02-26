@@ -67,12 +67,13 @@
 #define AUSGANG_OFFSET     0x80 // 128
 
 
-#define SAVE_LEVEL   0
-#define SAVE_MIX  2
-#define SAVE_EXPO 3
-#define SAVE_FUNKTION 4
-#define SAVE_DEVICE 5
-#define SAVE_AUSGANG 6
+#define SAVE_LEVEL         0
+#define SAVE_TRIMM         1
+#define SAVE_MIX           2
+#define SAVE_EXPO          3
+#define SAVE_FUNKTION      4
+#define SAVE_DEVICE        5
+#define SAVE_AUSGANG       6
 
 
 // Tastatur
@@ -193,6 +194,8 @@
 
 
 #define MANUELLTIMEOUT	100 // Loopled-counts bis Manuell zurueckgesetzt wird. 50: ca. 30s
+
+#define TRIMMTIMEOUT	4 // Loopled-counts bis Manuell zurueckgesetzt wird. 50: ca. 30s
 
 
 //#define MITTE_TASK         0x01 // Mitte lesen
