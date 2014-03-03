@@ -73,6 +73,8 @@ extern volatile uint8_t        trimmstatus;
 
 extern volatile uint16_t      manuelltrimmcounter;
 
+extern volatile uint8_t       blinkcounter;
+
 extern volatile uint8_t       laufstunde;
 extern volatile uint8_t       laufminute;
 extern volatile uint16_t      motorsekunde;
@@ -1139,6 +1141,8 @@ uint8_t update_screen(void)
                if (manuelltrimmcounter > TRIMMTIMEOUT)
                {
                   display_trimmanzeige_horizontal_weg(24+OFFSET_6_UHR,3);
+                  display_trimmanzeige_vertikal_weg(52+OFFSET_6_UHR,6);
+
                   trimmstatus=0;
                }
                else
@@ -1154,6 +1158,7 @@ uint8_t update_screen(void)
             {
                if (manuelltrimmcounter > TRIMMTIMEOUT)
                {
+                   display_trimmanzeige_horizontal_weg(24+OFFSET_6_UHR,3);
                   display_trimmanzeige_vertikal_weg(52+OFFSET_6_UHR,6);
                   trimmstatus=0;
 
@@ -1162,6 +1167,7 @@ uint8_t update_screen(void)
                {
                   //vertikaltrimm_L = curr_trimmungarray[1];
                   display_trimmanzeige_vertikal (52+OFFSET_6_UHR,6, 4,curr_trimmungarray[1]-0x7F);
+               
                }
             }break;
                
@@ -1234,7 +1240,7 @@ uint8_t update_screen(void)
             
             char_y= (blink_cursorpos & 0xFF00)>>8;
             char_x = blink_cursorpos & 0x00FF;
-            if (laufsekunde%2)
+            if (blinkcounter%2)
             {
                if (curr_cursorzeile==0)
                {
