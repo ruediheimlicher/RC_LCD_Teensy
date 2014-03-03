@@ -181,6 +181,8 @@
 #define TASTE_R_M    168
 */
 
+/*
+ // Tastatur 3x3
 #define TASTE_L_O    16
 #define TASTE_L_L		26
 #define TASTE_L_U		40
@@ -191,6 +193,21 @@
 #define TASTE_R_U		177
 #define TASTE_R_R    222
 #define TASTE_R_M    245
+*/
+
+// Tastatur 2xPitch
+#define TASTE_L_O    22
+#define TASTE_L_L		61
+#define TASTE_L_U		102
+#define TASTE_L_R    135
+#define TASTE_L_M		205
+#define TASTE_R_O		38
+#define TASTE_R_L		80
+#define TASTE_R_U		123
+#define TASTE_R_R    178
+#define TASTE_R_M    235
+
+
 
 
 #define MANUELLTIMEOUT	100 // Loopled-counts bis Manuell zurueckgesetzt wird. 50: ca. 30s

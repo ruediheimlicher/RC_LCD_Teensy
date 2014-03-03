@@ -112,7 +112,6 @@ static volatile uint8_t             masterstatus = 0;
 
 static volatile uint8_t             tastaturstatus = 0;
 
-
 volatile uint8_t status=0;
 
 volatile uint8_t                    PWM=0;
@@ -174,6 +173,7 @@ volatile    uint8_t task_outdata=0; // Taskdata an RC_PPM
 
 //#define CLOCK_DIV 15 // timer0 1 Hz bei Teilung /4 in ISR 16 MHz
 #define CLOCK_DIV 8 // timer0 1 Hz bei Teilung /4 in ISR 8 MHz
+#define BLINK_DIV 4 // timer0 1 Hz bei Teilung /4 in ISR 8 MHz
 
 
 
@@ -182,6 +182,8 @@ volatile uint16_t                manuellcounter=0; // Counter fuer Timeout
 volatile uint8_t                 startcounter=0; // timeout-counter beim Start von Settings, schneller als manuellcounter. Ermoeglicht Dreifachklick auf Taste 5
 volatile uint8_t                 settingstartcounter=0; // Counter fuer Klicks auf Taste 5
 volatile uint16_t                mscounter=0; // Counter fuer ms in timer-ISR
+volatile uint8_t                 blinkcounter=0;
+
 volatile uint16_t                TastenStatus=0;
 volatile uint16_t                Tastencount=0;
 volatile uint16_t                Tastenprellen=0x01F;
@@ -811,6 +813,13 @@ ISR (TIMER0_OVF_vect)
       key_press |= key_state & i;		// 0->1: key press detect
    }
   */
+   
+   if (mscounter%BLINK_DIV ==0)
+   {
+      blinkcounter++;
+   }
+   
+   
    if (mscounter > 2*CLOCK_DIV) // 0.5s
    {
      // displaycounter++;
@@ -830,6 +839,8 @@ ISR (TIMER0_OVF_vect)
          startcounter++;
          
       }
+      
+      
       
       if (programmstatus & (1<<MS_DIV))
       {
@@ -933,7 +944,7 @@ ISR(INT3_vect) // Interrupt bei USB_ATTACH, rising edge
 
 ISR( ANALOG_COMP_vect ) // Power-OFF detektieren
 {
-   //lcd_gotoxy(16,1);
+   //lcd_gotoxy(19,1);
    //lcd_putc('+');
    //lcd_putint(laufsekunde);
 
@@ -947,7 +958,7 @@ ISR( ANALOG_COMP_vect ) // Power-OFF detektieren
    {
       OSZI_C_LO;
       write_Ext_EEPROM_Trimm(0);
-      delay_ms(2);
+      delay_ms(1);
       write_Ext_EEPROM_Trimm(1);
       delay_ms(1);
       write_eeprom_zeit();
@@ -967,9 +978,6 @@ ISR( ANALOG_COMP_vect ) // Power-OFF detektieren
 //	sleep_cpu();		// power down...
 //	sleep_disable();
 }
-
-
-
 
 
 void setMitte(void)
@@ -1970,11 +1978,11 @@ void write_Ext_EEPROM_Trimm(uint8_t device)
     lcd_puthex((readstartadresse & 0x00FF));
     */
    
-   lcd_gotoxy(0,0);
-   lcd_puthex(curr_trimmungarray[0]);
-   lcd_puthex(curr_trimmungarray[1]);
-   lcd_gotoxy(0,1);
-   lcd_putint1(device);
+   //lcd_gotoxy(0,0);
+   //lcd_puthex(curr_trimmungarray[0]);
+   //lcd_puthex(curr_trimmungarray[1]);
+   //lcd_gotoxy(0,1);
+   //lcd_putint1(device);
    //spi_start();
    //SPI_PORT_Init();
    //spieeprom_init();
@@ -2011,26 +2019,40 @@ uint8_t Trimmtastenwahl(uint8_t Tastaturwert)
 #define TASTE_R_R    155
 #define TASTE_R_M    168
 */
+   
+   // Tastatur 2xPitch
+/*
+ #define TASTE_L_O    22
+ #define TASTE_L_L		61
+ #define TASTE_L_U		102
+ #define TASTE_L_R    135
+ #define TASTE_L_M		205
+ #define TASTE_R_O		38
+ #define TASTE_R_L		80
+ #define TASTE_R_U		123
+ #define TASTE_R_R    178
+ #define TASTE_R_M    235
+*/
        //lcd_gotoxy(0,0);
       //lcd_putint(Tastaturwert);
    
       if (Tastaturwert < TASTE_L_O)
          return 1;
-      if (Tastaturwert < TASTE_L_L)
-         return 2;
-      if (Tastaturwert < TASTE_L_U)
-         return 3;
-      if (Tastaturwert < TASTE_L_R)
-         return 4;
-      if (Tastaturwert < TASTE_L_M)
-         return 5;
       if (Tastaturwert < TASTE_R_O)
-         return 6;
+         return 2;
+      if (Tastaturwert < TASTE_L_L)
+         return 3;
       if (Tastaturwert < TASTE_R_L)
-         return 7;
+         return 4;
+      if (Tastaturwert < TASTE_L_U)
+         return 5;
       if (Tastaturwert < TASTE_R_U)
-         return 8;
+         return 6;
+      if (Tastaturwert < TASTE_L_R)
+         return 7;
       if (Tastaturwert < TASTE_R_R)
+         return 8;
+      if (Tastaturwert < TASTE_L_M)
          return 9;
       if (Tastaturwert < TASTE_R_M)
          return 10;
@@ -2858,6 +2880,7 @@ int main (void)
             spiram_init();
             
             _delay_us(1);
+            
             // MARK: F0
             // Daten von Potentiometern vom RAM lesen und senden
             
@@ -2878,9 +2901,9 @@ int main (void)
             
             // Testdaten lesen
             
-           // for (i=0;i<8;i++)
+            for (i=0;i<8;i++)
             {
-            //   sendbuffer[EE_PARTBREITE+i] = readRAMbyteAnAdresse(teststartadresse+i);
+               sendbuffer[EE_PARTBREITE+i] = readRAMbyteAnAdresse(teststartadresse+i);
             
             }
 
@@ -2983,7 +3006,7 @@ int main (void)
                RAM_CS_LO;
                _delay_us(LOOPDELAY);
                //      OSZI_A_LO;
-               spiram_wrbyte(RAM_TRIMM_OFFSET+ task_outdata,curr_trimmungarray[1]); // int zu uint
+               spiram_wrbyte(RAM_TRIMM_OFFSET+ task_outdata,curr_trimmungarray[task_outdata]); // int zu uint
                //     OSZI_A_HI;
                RAM_CS_HI;
                _delay_us(1);
@@ -3624,6 +3647,7 @@ int main (void)
                         //lcd_putc('A'+kanal);
                         //lcd_putc('*');
                         
+                        /*
                          lcd_gotoxy(0,changeposition);
                          lcd_putc('k');
                          lcd_putint2(kanal);
@@ -3634,7 +3658,7 @@ int main (void)
                          lcd_putc('e');
                          lcd_puthex(expowert);
                          lcd_putc('*');
-                        
+                        */
                         //sendbuffer[0x10+2*kanal] = levelwert;
                         //sendbuffer[0x10+2*kanal+1] = expowert;
                         
@@ -4230,8 +4254,8 @@ int main (void)
                            {
                            //substatus |= (1<<SETTINGS_READ);; // Settings beim Start lesen
                               manuellcounter=0;
-                      //        display_clear();
-                      //        sethomescreen();
+                              display_clear();
+                              sethomescreen();
                               
                            }
                            
@@ -7119,12 +7143,12 @@ int main (void)
             
              TastaturCount++;
             
-            if (trimmprellcounter>100)
+            if (trimmprellcounter>150)
             {
-               //lcd_gotoxy(6,0);
-               //lcd_putint(Trimmtastenwert);
-               //lcd_putc(' ');
-               //lcd_putint2(Trimmtastenindex);
+               lcd_gotoxy(0,1);
+               lcd_putint(Trimmtastenwert);
+               lcd_putc(' ');
+               lcd_putint2(Trimmtastenindex);
                Trimmtaste = Trimmtastenindex;
                trimmstatus = (Trimmtastenindex & 0x0F); // Bit 0-3
                trimmprellcounter=0;
@@ -7132,38 +7156,39 @@ int main (void)
                manuelltrimmcounter =0;
                
                task_out |= 1<<RAM_SEND_TRIMM_TASK; // Aufforderung an PPM, die Daten fuer Mitte zu lesen
-              // task_outdata = 0;//trimmstatus;            // Device der Aenderung (increment/decrement)
-               
-               //lcd_gotoxy(10,1);
-               //lcd_puts("T:\0");
-               //lcd_putint12(Tastenwert);
-               /*
-                lcd_putc(' ');
-                lcd_putc(' ');
-                
-                
-                lcd_gotoxy(18,1);
-                */
-               //               Taste=Tastenwahl(Tastenwert);
-               //lcd_putint2(Taste);
-               //lcd_putc(' ');
-               //lcd_gotoxy(0,1);
-               //lcd_putint(TastaturCount);
-               // lcd_putc(' ');
-               //lcd_putint2(Taste);
-               //lcd_putc('*');
                Trimmtastenwert=0x00;
                
-               // Device 0: L_H
-               // Device 1: L_V
-               // Device 2: R_H
-               // Device 3: L_V
+               /*
+               if (Tastaturwert < TASTE_L_O)
+                  return 1;
+               if (Tastaturwert < TASTE_R_O)
+                  return 2;
+               if (Tastaturwert < TASTE_L_L)
+                  return 3;
+               if (Tastaturwert < TASTE_R_L)
+                  return 4;
+               if (Tastaturwert < TASTE_L_U)
+                  return 5;
+               if (Tastaturwert < TASTE_R_U)
+                  return 6;
+               if (Tastaturwert < TASTE_L_R)
+                  return 7;
+               if (Tastaturwert < TASTE_R_R)
+                  return 8;
+               if (Tastaturwert < TASTE_L_M)
+                  return 9;
+               if (Tastaturwert < TASTE_R_M)
+                  return 10;
+               */
+               
+               // Device 0: L_Horizontal
+               // Device 1: L Vertikal
                
                switch (Trimmtaste) // 3x3-Tastatur, nur Tasten 2,4,5,6,8
                {
 #pragma mark Taste 0
-
-                  case 2:// L_L
+                     //
+                  case 1:// Device 1  L_O
                   {
                      if (curr_trimmungarray[1] < 0xFF)
                      {
@@ -7173,63 +7198,22 @@ int main (void)
                      //curr_trimmungarray[1] = vertikaltrimm_L;
                   }break;
 
-                  case 4:// L_R
+                  case 3:// Device 0  L_L
                   {
                      if (curr_trimmungarray[0])
                      {
                         curr_trimmungarray[0]--;
                      }
+                     task_outdata = 0;
+
                      //lcd_gotoxy(3,1);
                      //lcd_putint(curr_trimmungarray[0]);
-                     //task_outdata = 0;
-                     //curr_trimmungarray[0] = horizontaltrimm_L;
+                                          //curr_trimmungarray[0] = horizontaltrimm_L;
                      //lcd_putint(curr_trimmungarray[0]);
                     
                   }break;
 
-                  case 5:// L_M
-                  {
-                  //   vertikaltrimm_L=0;
-                     //task_outdata = 1;
-                     
-                     lcd_gotoxy(18,task_outdata);
-                     lcd_puts("  \0");
-
-                     lcd_gotoxy(18,task_outdata);
-                     lcd_putint2(Trimmtaste);
-                     
-                     lcd_gotoxy(10,task_outdata);
-                     lcd_puts("-----\0");
-                     
-                     lcd_gotoxy(10,task_outdata);
-                     //lcd_puthex(task_outdata);
-                     lcd_puthex(curr_trimmungarray[0]);
-                     lcd_putc('*');
-                     lcd_puthex(curr_trimmungarray[1]);
-
-
-                     write_Ext_EEPROM_Trimm(0);
-                     delay_ms(2);
-                     write_Ext_EEPROM_Trimm(1);
-                     
-                    
-                  }break;
-
-                  case 6:// R_O
-                  {
-                     if (curr_trimmungarray[0]< 0xFF)
-                     {
-                        curr_trimmungarray[0]++;
-                     }
-                     lcd_gotoxy(3,1);
-                     lcd_putint(curr_trimmungarray[0]);
-                     task_outdata = 0;
-                     //curr_trimmungarray[0] = horizontaltrimm_L;
-                     //lcd_putint(curr_trimmungarray[0]);
-                  }break;
-
-
-                  case 8:// R_U
+                  case 5:// Device 1  L_U
                   {
                      if (curr_trimmungarray[1])
                      {
@@ -7238,6 +7222,130 @@ int main (void)
                      task_outdata = 1; // Device 1 L_V links vertikal
                      //curr_trimmungarray[1] = vertikaltrimm_L;
                   }break;
+
+                  case 7:// Device 0  L_R
+                  {
+                     if (curr_trimmungarray[0]< 0xFF)
+                     {
+                        curr_trimmungarray[0]++;
+                     }
+                     task_outdata = 0;
+                     //lcd_gotoxy(3,1);
+                     //lcd_putint(curr_trimmungarray[0]);
+                     
+                     //curr_trimmungarray[0] = horizontaltrimm_L;
+                     //lcd_putint(curr_trimmungarray[0]);
+                  }break;
+
+                  case 9:// L_M
+                  {
+                  //   vertikaltrimm_L=0;
+                     //task_outdata = 1;
+                     
+                     //lcd_gotoxy(18,task_outdata);
+                     //lcd_puts("  \0");
+
+                     //lcd_gotoxy(18,task_outdata);
+                     //lcd_putint2(Trimmtaste);
+                     
+                     //lcd_gotoxy(10,task_outdata);
+                     //lcd_puts("-----\0");
+                     
+                     lcd_gotoxy(12,task_outdata);
+                     lcd_putint1(task_outdata);
+                     lcd_putc(' ');
+                     lcd_puthex(curr_trimmungarray[0]);
+                     lcd_putc('*');
+                     lcd_puthex(curr_trimmungarray[1]);
+                     curr_trimmungarray[0]=0x7F;
+                     curr_trimmungarray[1]=0x7F;
+
+                     write_Ext_EEPROM_Trimm(0);
+                     delay_ms(2);
+                     write_Ext_EEPROM_Trimm(1);
+                    
+                  }break;
+                     
+            
+                     
+                  // Pitch rechts
+
+                  case 2:// Device 3  R_O
+                  {
+                     if (curr_trimmungarray[1] < 0xFF)
+                     {
+                        curr_trimmungarray[3]++;
+                     }
+                     task_outdata = 1;
+                     //curr_trimmungarray[1] = vertikaltrimm_L;
+                  }break;
+                     
+                  case 4:// Device 2  R_L
+                  {
+                     if (curr_trimmungarray[0])
+                     {
+                        curr_trimmungarray[2]--;
+                     }
+                     task_outdata = 0;
+                     
+                     //lcd_gotoxy(3,1);
+                     //lcd_putint(curr_trimmungarray[0]);
+                     //curr_trimmungarray[2] = horizontaltrimm_L;
+                     //lcd_putint(curr_trimmungarray[0]);
+                     
+                  }break;
+                     
+                  case 6:// Device 3  R_U
+                  {
+                     if (curr_trimmungarray[1])
+                     {
+                        curr_trimmungarray[3]--;
+                     }
+                     task_outdata = 1; // Device 1 L_V links vertikal
+                     //curr_trimmungarray[1] = vertikaltrimm_L;
+                  }break;
+                     
+                  case 8:// Device 2  R_R
+                  {
+                     if (curr_trimmungarray[0]< 0xFF)
+                     {
+                        curr_trimmungarray[2]++;
+                     }
+                     task_outdata = 0;
+                     //lcd_gotoxy(3,1);
+                     //lcd_putint(curr_trimmungarray[0]);
+                     
+                     //curr_trimmungarray[0] = horizontaltrimm_L;
+                     //lcd_putint(curr_trimmungarray[0]);
+                  }break;
+                     
+                  case 10:// L_M
+                  {
+                     //   vertikaltrimm_L=0;
+                     //task_outdata = 1;
+                     
+                     //lcd_gotoxy(18,task_outdata);
+                     //lcd_puts("  \0");
+                     
+                     //lcd_gotoxy(18,task_outdata);
+                     //lcd_putint2(Trimmtaste);
+                     
+                     //lcd_gotoxy(10,task_outdata);
+                     //lcd_puts("-----\0");
+                     
+                     lcd_gotoxy(10,task_outdata);
+                     //lcd_puthex(task_outdata);
+                     lcd_puthex(curr_trimmungarray[2]);
+                     lcd_putc('*');
+                     lcd_puthex(curr_trimmungarray[3]);
+                     
+                     
+                     write_Ext_EEPROM_Trimm(2);
+                     delay_ms(2);
+                     write_Ext_EEPROM_Trimm(3);
+                     
+                  }break;
+
 
   
                }// switch Trimmtaste
