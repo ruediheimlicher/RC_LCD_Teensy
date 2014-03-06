@@ -2329,13 +2329,13 @@ int main (void)
 	// If the Teensy is powered without a PC connected to the USB port,
 	// this will wait forever.
    
-//   sei();
+   //   sei();
 	Master_Init();
    
    
-
- //  usb_init();
-//	while (!usb_configured()) /* wait */ ;
+   
+   //  usb_init();
+   //	while (!usb_configured()) /* wait */ ;
    
 	// Wait an extra second for the PC's operating system to load drivers
 	// and do whatever it does to actually be ready for input
@@ -2385,7 +2385,7 @@ int main (void)
     */
 	uint8_t i=0;
    
-//   sei();
+   //   sei();
    
    PWM = 0;
    
@@ -2409,7 +2409,7 @@ int main (void)
 	display_clear();
 	
    _delay_us(50);
-  
+   
    
    
    char_height_mul = 1;
@@ -2440,7 +2440,7 @@ int main (void)
    
    read_eeprom_zeit();
    read_eeprom_status();
-
+   
    setdefaultsetting();
    
    sethomescreen();
@@ -2802,79 +2802,88 @@ int main (void)
          
          if (substatus & (1<<SETTINGS_READ))
          {
+            // -------------------------------------------------------
+            // Settings lesen am Anfang
+            // -------------------------------------------------------
             OSZI_D_LO;
             substatus &= ~(1<<SETTINGS_READ);
             
             // Halt einschalten
             masterstatus |= (1<<HALT_BIT); // Halt-Bit aktiviert Task bei ausgeschaltetem Slave
             MASTER_PORT &= ~(1<<SUB_BUSY_PIN);
-
+            
             read_Ext_EEPROM_Settings();
             //read_Ext_EEPROM_Level();
             
             //Halt reseten
             masterstatus &= ~(1<<HALT_BIT); // Halt-Bit aktiviert Task bei ausgeschaltetem Slave
             MASTER_PORT |= (1<<SUB_BUSY_PIN);
-
+            
             // Analog-Comparator einschalten. Verhindert loeschen der Zeit beim Start mit USB
             analogcomp_init();
             
-            task_out |= 1<<RAM_SEND_TRIMM_TASK; // Aufforderung an PPM, die Daten fuer Mitte zu lesen
-            task_outdata = 0xFF;            // Device der Aenderung (increment/decrement)
-
+            task_out |= 1<<RAM_SEND_TRIMM_TASK; // Aufforderung an PPM, die Daten fuer Trimming zu lesen
+            task_outdata = 0x01;            // Device der Aenderung (increment/decrement)
             
+            /*
+             lcd_gotoxy(0,0);
+             lcd_putc('T');
+             //lcd_putc(' ');
+             lcd_puthex(task_outdata);
+             lcd_putc('T');
+             lcd_puthex(curr_trimmungarray[0]);
+             lcd_puthex(curr_trimmungarray[1]);
+             */
             OSZI_D_HI;
             
             /*
-            lcd_gotoxy(0,0);
-            
-            lcd_putc('L');
-            //lcd_putc(' ');
-            
-            lcd_puthex(curr_levelarray[0]);
-            lcd_puthex(curr_levelarray[1]);
-            //lcd_putc(' ');
-            lcd_puthex(curr_levelarray[2]);
-            lcd_puthex(curr_levelarray[3]);
-            
-            lcd_putc(' ');
-            
-            lcd_putc('M');
-            //lcd_putc(' ');
-            lcd_puthex(curr_mixarray[0]);
-            lcd_puthex(curr_mixarray[1]);
-            //lcd_putc(' ');
-            
-            lcd_puthex(curr_mixarray[2]);
-            lcd_puthex(curr_mixarray[3]);
-            
-            lcd_gotoxy(0,1);
-            
-            lcd_putc('E');
-            //lcd_putc(' ');
-            
-            lcd_puthex(curr_expoarray[0]);
-            lcd_puthex(curr_expoarray[1]);
-            lcd_putc(' ');
-            lcd_puthex(curr_expoarray[2]);
-            lcd_puthex(curr_expoarray[3]);
-            lcd_putc(' ');
-            lcd_puthex(curr_expoarray[4]);
-            lcd_puthex(curr_expoarray[5]);
-            
-            //OSZI_D_HI;
-            */
+             lcd_gotoxy(0,0);
+             
+             lcd_putc('L');
+             //lcd_putc(' ');
+             
+             lcd_puthex(curr_levelarray[0]);
+             lcd_puthex(curr_levelarray[1]);
+             //lcd_putc(' ');
+             lcd_puthex(curr_levelarray[2]);
+             lcd_puthex(curr_levelarray[3]);
+             
+             lcd_putc(' ');
+             
+             lcd_putc('M');
+             //lcd_putc(' ');
+             lcd_puthex(curr_mixarray[0]);
+             lcd_puthex(curr_mixarray[1]);
+             //lcd_putc(' ');
+             
+             lcd_puthex(curr_mixarray[2]);
+             lcd_puthex(curr_mixarray[3]);
+             
+             lcd_gotoxy(0,1);
+             
+             lcd_putc('E');
+             //lcd_putc(' ');
+             
+             lcd_puthex(curr_expoarray[0]);
+             lcd_puthex(curr_expoarray[1]);
+             lcd_putc(' ');
+             lcd_puthex(curr_expoarray[2]);
+             lcd_puthex(curr_expoarray[3]);
+             lcd_putc(' ');
+             lcd_puthex(curr_expoarray[4]);
+             lcd_puthex(curr_expoarray[5]);
+             
+             //OSZI_D_HI;
+             */
          }
          // MARK:  SPI_RAM
          {//a
-            
-            
             substatus &= ~(1<<UHR_OK);
             
             substatus &= ~(1<< TASTATUR_READ);
-         //   substatus &= ~(1<< TASTATUR_OK);
+            //   substatus &= ~(1<< TASTATUR_OK);
             
-      //      OSZI_A_HI;
+            //      OSZI_A_HI;
             
             SPI_RAM_init();
             spiram_init();
@@ -2897,16 +2906,16 @@ int main (void)
                _delay_us(LOOPDELAY);
                sendbuffer[1+2*i+1] = spiram_rdbyte(2*i+1); // HI
                RAM_CS_HI;
-              }
+            }
             
             // Testdaten lesen
             
             for (i=0;i<8;i++)
             {
                sendbuffer[EE_PARTBREITE+i] = readRAMbyteAnAdresse(teststartadresse+i);
-            
+               
             }
-
+            
             anzeigecounter = 0;
             
             // MARK: task_in
@@ -2927,13 +2936,13 @@ int main (void)
             {
                in_taskcounter++;
                /*
-               lcd_gotoxy(10,1);
-               lcd_putc('i');
-               lcd_puthex(task_in);
-               lcd_putc('t');
-               lcd_puthex(new_task_indata);
-               lcd_putc('c');
-               lcd_puthex(in_taskcounter);
+                lcd_gotoxy(10,1);
+                lcd_putc('i');
+                lcd_puthex(task_in);
+                lcd_putc('t');
+                lcd_puthex(new_task_indata);
+                lcd_putc('c');
+                lcd_puthex(in_taskcounter);
                 */
                task_indata = new_task_indata;
             }
@@ -2960,7 +2969,7 @@ int main (void)
             RAM_CS_HI;
             
             _delay_us(1);
-
+            
             // MARK: task_out
             
             sendbuffer[0x3B] =task_out;
@@ -2983,34 +2992,56 @@ int main (void)
                //     OSZI_A_HI;
                RAM_CS_HI;
                _delay_us(1);
-
+               
                out_taskcounter++;
                /*
-               lcd_gotoxy(0,0);
-               lcd_putc('D');
-               lcd_puthex(task_out);
-               lcd_putc('+');
-               lcd_puthex(out_taskcounter);
-               lcd_putc('+');
+                lcd_gotoxy(0,0);
+                lcd_putc('D');
+                lcd_puthex(task_out);
+                lcd_putc('+');
+                lcd_puthex(out_taskcounter);
+                lcd_putc('+');
                 */
                task_out &= ~(1<<RAM_SEND_DOGM_TASK);
                
             }
-
-                // MARK: task_out TRIMM
+            
+            // MARK: task_out TRIMM
             if (task_out & (1<<RAM_SEND_TRIMM_TASK)) // Trimmmung an PPM senden
             {
-               
-               
-               // Trimmdaten schreiben. task_outdata ist devicenummer
-               RAM_CS_LO;
-               _delay_us(LOOPDELAY);
-               //      OSZI_A_LO;
-               spiram_wrbyte(RAM_TRIMM_OFFSET+ task_outdata,curr_trimmungarray[task_outdata]); // int zu uint
-               //     OSZI_A_HI;
-               RAM_CS_HI;
-               _delay_us(1);
-
+               // ---------------------------------------------------
+               // Trimmdaten in RAM schreiben. task_outdata ist devicenummer oder 0xFF, wenn alle geschickt werden sollen
+               // ---------------------------------------------------
+               if (task_outdata == 0xFF) // alle schreiben
+               {
+                  
+                  uint8_t pos=0;
+                  for(pos=0;pos<4;pos++)
+                  {
+                     RAM_CS_LO;
+                     _delay_us(LOOPDELAY);
+                     //      OSZI_A_LO;
+                     spiram_wrbyte(RAM_TRIMM_OFFSET+ pos,curr_trimmungarray[pos]); // Trimm an RAM schicken
+                     //     OSZI_A_HI;
+                     RAM_CS_HI;
+                     _delay_us(1);
+                     
+                  }
+                  
+               }
+               else // nur Trimm fuer ein device schreiben
+               {
+                  RAM_CS_LO;
+                  _delay_us(LOOPDELAY);
+                  //      OSZI_A_LO;
+                  spiram_wrbyte(RAM_TRIMM_OFFSET+ task_outdata,curr_trimmungarray[task_outdata]); // Trimm an RAM schicken
+                  //     OSZI_A_HI;
+                  RAM_CS_HI;
+                  _delay_us(1);
+               }
+               // ---------------------------------------------------
+               // Task an Master schicken. task_outdata ist devicenummer oder 0xFF, wenn alle geschickt werden sollen
+               // ---------------------------------------------------
                
                
                RAM_CS_LO;
@@ -3028,25 +3059,28 @@ int main (void)
                RAM_CS_HI;
                _delay_us(1);
                
-               //curr_trimmungarray[task_outdata] = vertikaltrimm_L; // signed int8
- 
                out_taskcounter++;
                
-               /*
-                lcd_gotoxy(0,1);
-                lcd_putc('R');
-                lcd_puthex(task_out);
-                lcd_putc('+');
-                lcd_puthex(curr_trimmungarray[1]);
-                lcd_putc('+');
-               */
-               task_out &= ~(1<<RAM_SEND_TRIMM_TASK); // Aufforderung an PPM, die Daten fuer Mitte zu lesen
+               lcd_gotoxy(0,1);
+               lcd_putc('T');
+               lcd_puthex(task_out);
+               lcd_putc(' ');
+               lcd_puthex(curr_trimmungarray[0]);
+               lcd_putc(' ');
+               lcd_puthex(curr_trimmungarray[1]);
+               lcd_putc(' ');
+               
+               
+               task_out &= ~(1<<RAM_SEND_TRIMM_TASK); // Aufforderung an PPM zuruecksetzen
                
             }
             
-
-            if (task_out & (1<<RAM_SEND_PPM_TASK)) // task an PPM senden
+            
+            if (task_out & (1<<RAM_SEND_PPM_TASK))
             {
+               // ---------------------------------------------------
+               // task an PPM senden
+               // ---------------------------------------------------
                OSZI_A_LO;
                RAM_CS_LO;
                
@@ -3065,18 +3099,20 @@ int main (void)
                
                out_taskcounter++;
                /*
-               lcd_gotoxy(10,0);
-               lcd_putc('o');
-               lcd_puthex(task_out);
-               lcd_putc('t');
-               lcd_puthex(task_outdata);
-               lcd_putc('c');
+                lcd_gotoxy(10,0);
+                lcd_putc('o');
+                lcd_puthex(task_out);
+                lcd_putc('t');
+                lcd_puthex(task_outdata);
+                lcd_putc('c');
                 */
-               lcd_puthex(out_taskcounter);
+               //lcd_puthex(out_taskcounter);
                
                task_out &= ~(1<<RAM_SEND_PPM_TASK); // Task gesendet, Bit reset
                
+               // ---------------------------------------------------
                // Sub soll  beim Start erst jetzt die Settings lesen.
+               // ---------------------------------------------------
                if (eepromstatus & (1<<READ_EEPROM_START))
                {
                   //OSZI_B_LO;
@@ -3084,6 +3120,19 @@ int main (void)
                   substatus |= (1<<SETTINGS_READ); // wird in loop abgearbeitet
                   
                   //OSZI_B_HI;
+                  
+                  // Trimmung
+                  lcd_gotoxy(10,0);
+                  lcd_putc('T');
+                  lcd_puthex(curr_trimmungarray[0]);
+                  lcd_puthex(curr_trimmungarray[1]);
+                  lcd_putc('*');
+                  /*
+                  lcd_puthex(curr_trimmungarray[2]);
+                  lcd_puthex(curr_trimmungarray[3]);
+                  lcd_putc('*');
+                  */
+                  
                   
                   /*
                    lcd_clr_line(0);
@@ -3128,13 +3177,13 @@ int main (void)
                OSZI_A_HI;
             }
             
-
+            
             
             // Fehler ausgeben
             if (outcounter%0x40 == 0)
             {
                //lcd_gotoxy(0,0);
-                //lcd_putint1(errcount);
+               //lcd_putint1(errcount);
                //lcd_putc('+');
                testdata++;
                testaddress = 32;
@@ -3146,15 +3195,12 @@ int main (void)
             
             // end Daten an RAM
             
-            
-            
-            
             SUB_EN_PORT |= (1<<SUB_EN_PIN);
             
             // EEPROM Test
             //
             sei();
-           
+            
          }//a
          
          spi_end(); // SPI von Sub ausschalten
@@ -3180,7 +3226,6 @@ int main (void)
       // MARK: USB_READ
       if (r > 0)
       {
-         
          //OSZI_D_LO;
          cli();
          uint8_t code = 0x00;
@@ -3220,8 +3265,10 @@ int main (void)
                   
                   
                   
+                  // ---------------------------------------------------
+                  // MARK: C4 Write EEPROM Byte
+                  // ---------------------------------------------------
                   
-// MARK: C4 Write EEPROM Byte
                case 0xC4: // Write EEPROM Byte  // 10 ms
                {
                   //OSZI_A_TOGG;
@@ -3256,13 +3303,14 @@ int main (void)
                   sendbuffer[9] = 0xFB;
                   
                   usb_rawhid_send((void*)sendbuffer, 50);
-
+                  
                   masterstatus |= (1<<SUB_TASK_BIT);
                   //usbtask |= (1<<EEPROM_WRITE_BYTE_TASK);
                   
                }break;
-                  
+                  // ---------------------------------------------------
                case 0xC6: // Ausgabe von Daten Start
+                  // ---------------------------------------------------
                {
                   //abschnittnummer++;
                   //lcd_gotoxy(16,1);
@@ -3281,12 +3329,12 @@ int main (void)
                      //eeprombuffer[5] = buffer[5];
                      for (index=0;index<USB_DATENBREITE;index++)
                      {
-                       // eeprombuffer[index] = buffer[index];
+                        // eeprombuffer[index] = buffer[index];
                         //sendbuffer[index] = buffer[index];
                      }
                      if (abschnittnummer==0)
                      {
-                     //eepromstartadresse = eeprombuffer[1] | (eeprombuffer[2]<<8);
+                        //eepromstartadresse = eeprombuffer[1] | (eeprombuffer[2]<<8);
                      }
                      
                      //lcd_gotoxy(0,0);
@@ -3295,37 +3343,38 @@ int main (void)
                         //lcd_puthex(eeprombuffer[index]);
                         
                      }
-
-                   }
+                     
+                  }
                   
                   usbtask |= (1<<EEPROM_AUSGABE_TASK);
                   
-               
-               }break;
                   
- // MARK: CA EEPROM Part schreiben
+               }break;
+                  // ---------------------------------------------------
+                  // MARK: CA EEPROM Part schreiben
+                  // ---------------------------------------------------
                case 0xCA: // EEPROM Part schreiben 5 ms
                {
-                 // lcd_gotoxy(18,1);
-                 // lcd_putint2(32);
+                  // lcd_gotoxy(18,1);
+                  // lcd_putint2(32);
                   uint8_t index;
                   bytechecksumme=0;
                   eepromstartadresse = buffer[1] | (buffer[2]<<8);
                   /*
-                  lcd_gotoxy(4,0);
-                  lcd_putint12(eepromstartadresse);
-                  lcd_putc(' ');
-                  lcd_puthex(buffer[32]);
-              
-                  lcd_puthex(buffer[33]);
-                  lcd_putc(' ');
-                  lcd_puthex(buffer[34]);
-               
-                  lcd_puthex(buffer[35]);
-                  */
+                   lcd_gotoxy(4,0);
+                   lcd_putint12(eepromstartadresse);
+                   lcd_putc(' ');
+                   lcd_puthex(buffer[32]);
+                   
+                   lcd_puthex(buffer[33]);
+                   lcd_putc(' ');
+                   lcd_puthex(buffer[34]);
+                   
+                   lcd_puthex(buffer[35]);
+                   */
                   
                   
-                   inchecksumme = buffer[3] | (buffer[4]<<8);
+                  inchecksumme = buffer[3] | (buffer[4]<<8);
                   // Byte 0-31: codes
                   // Byte 32-63: data
                   
@@ -3354,19 +3403,20 @@ int main (void)
                   sendbuffer[6] = bytechecksumme & 0x00FF; // aus Eingabe
                   sendbuffer[7] = (bytechecksumme & 0xFF00)>>8;
                   
-                   sendbuffer[8] = 0xF9;
+                  sendbuffer[8] = 0xF9;
                   sendbuffer[9] = 0xFA;
-
+                  
                   usb_rawhid_send((void*)sendbuffer, 50);
-
-             //     anzeigecounter=1;
+                  
+                  //     anzeigecounter=1;
                   masterstatus |= (1<<SUB_TASK_BIT);
-               
+                  
                }break;
                   
-                
                   
+                  // ---------------------------------------------------
                case 0xA2: // writeUSB
+                  // ---------------------------------------------------
                {
                   lcd_gotoxy(19,1);
                   lcd_putc('U');
@@ -3376,7 +3426,7 @@ int main (void)
                }break;
                   
                   
- // MARK: D4 read 1 EEPROM Byte
+                  // MARK: D4 read 1 EEPROM Byte
                case 0xD4: // read 1 EEPROM  // 9ms
                {
                   //abschnittnummer++;
@@ -3391,7 +3441,7 @@ int main (void)
                   //usbtask |= (1<<EEPROM_READ_BYTE_TASK);
                   
                }break;
-
+                  
                case 0xDA: // read  EEPROM Part // 9ms
                {
                   //abschnittnummer++;
@@ -3416,9 +3466,9 @@ int main (void)
                   
                   uint8_t pos=0;
                   
-
-                  
+                  // ---------------------------------------------------
                   // Funktion lesen
+                  // ---------------------------------------------------
                   int readstartadresse = TASK_OFFSET  + FUNKTION_OFFSET + modelindex*SETTINGBREITE;
                   
                   //Im Sendbuffer ab pos EE_PARTBREITE + 0x18 (24)
@@ -3427,32 +3477,16 @@ int main (void)
                      if (buffer[6])
                      {
                         uint8_t tempdata = eepromverbosebytelesen(readstartadresse+pos); // ab 0x30 48
-                        //sendbuffer[EE_PARTBREITE + 0x10 + pos] = eepromverbosebytelesen(readstartadresse+pos); // ab 0x30 48
-                        
-                        
                         curr_funktionarray[pos] = tempdata;
-                        
-                        
-                        
                         sendbuffer[EE_PARTBREITE  + pos] = tempdata;
                      }
                      else
                      {
-                        
-                        //sendbuffer[EE_PARTBREITE + 0x10 + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x30 48
                         uint8_t tempdata = eeprombytelesen(readstartadresse+pos); // ab 0x30 48
-                        //sendbuffer[EE_PARTBREITE + 0x10 + pos] = eepromverbosebytelesen(readstartadresse+pos); // ab 0x30 48
-                        
                         curr_funktionarray[pos] = tempdata;
-                        
-                        
                         sendbuffer[EE_PARTBREITE  + pos] = tempdata;
                      }
                   }
-                  
-                  
-                  
-                  
                   
                   sendbuffer[1] = readstartadresse & 0x00FF;
                   sendbuffer[2] = (readstartadresse & 0xFF00)>>8;
@@ -3470,32 +3504,28 @@ int main (void)
                   lcd_putc(' ');
                   lcd_putint1(modelindex);
                   /*
-                  lcd_puthex(curr_levelarray[0]);
-                  lcd_puthex(curr_levelarray[1]);
-                  //lcd_putc(' ');
-                  lcd_puthex(curr_levelarray[2]);
-                  lcd_puthex(curr_levelarray[3]);
-                  
-                  lcd_putc(' ');
-                  lcd_putc('M');
-                  //lcd_putc(' ');
-                  lcd_puthex(curr_mixarray[0]);
-                  lcd_puthex(curr_mixarray[1]);
-                  //lcd_putc(' ');
-                  lcd_puthex(curr_mixarray[2]);
-                  lcd_puthex(curr_mixarray[3]);
-                  //OSZI_D_HI;
-                  */
-                  
-                  
+                   lcd_puthex(curr_levelarray[0]);
+                   lcd_puthex(curr_levelarray[1]);
+                   //lcd_putc(' ');
+                   lcd_puthex(curr_levelarray[2]);
+                   lcd_puthex(curr_levelarray[3]);
+                   
+                   lcd_putc(' ');
+                   lcd_putc('M');
+                   //lcd_putc(' ');
+                   lcd_puthex(curr_mixarray[0]);
+                   lcd_puthex(curr_mixarray[1]);
+                   //lcd_putc(' ');
+                   lcd_puthex(curr_mixarray[2]);
+                   lcd_puthex(curr_mixarray[3]);
+                   //OSZI_D_HI;
+                   */
                }break;
-
-                  
-                  
-                  
                   
                   // MARK: E6 Fix FunktionSettings
+                  // ---------------------------------------------------
                case 0xE6: // Fix FunktionSettings Funktion, Device, Ausgang
+                  // ---------------------------------------------------
                {
                   /*
                    pro Index:
@@ -3527,36 +3557,40 @@ int main (void)
                         lcd_putc('+');
                         lcd_putc('0'+ kanal);
                         
+                        // ---------------------------------------------------
                         // Funktion schreiben
+                        // ---------------------------------------------------
                         // Der Wert ist auf (16 + 2* changeposition) an der ungeraden Stelle
                         uint8_t funktionwert = buffer[datastartbyte + changeposition]; // wert an position im buffer // 0x20
                         sendbuffer[9] = funktionwert;
-
+                        
                         lcd_putc('+');
                         lcd_puthex(funktionwert);
                         lcd_putc('*');
-                        //levelwert = 1;
-                        
-                        //
-                        
                         errcount0 += eeprombyteschreiben(0xB0,fixstartadresse + kanal,funktionwert); // adresse im EEPROM
                         
                         
                         // EE_PARTBREITE 32
                         
+                        // ---------------------------------------------------
                         // Rueckmeldung an Interface
-                         sendbuffer[EE_PARTBREITE+kanal] = funktionwert; // EE_PARTBREITE 32
+                        // ---------------------------------------------------
+                        sendbuffer[EE_PARTBREITE+kanal] = funktionwert; // EE_PARTBREITE 32
                         
                         
                         changeposition++;
                      }
                      //lcd_putc('M'+kanal);
+                     
+                     // ---------------------------------------------------
                      // RAM_SEND_PPM_STATUS schicken: Daten haben geaendert
+                     // ---------------------------------------------------
                      task_out |= (1<< RAM_SEND_PPM_TASK);
                      task_outdata = modelindex;
                      
                   }// for kanal
                   //lcd_putc('C');
+                  sendbuffer[0] = 0xE6;
                   sendbuffer[1] = fixstartadresse & 0x00FF;
                   sendbuffer[2] = (fixstartadresse & 0xFF00)>>8;
                   sendbuffer[3] = errcount0;
@@ -3566,17 +3600,14 @@ int main (void)
                   sendbuffer[7] = task_outdata;
                   sendbuffer[8] = errcount1;
                   
-                  
-                  sendbuffer[0] = 0xE6;
                   usb_rawhid_send((void*)sendbuffer, 50);
-                  
-                  //lcd_putc('D');
-                  
                }break;
-
                   
-// MARK: F4 Fix Settings
+                  
+                  // MARK: F4 Fix Settings
+                  // ---------------------------------------------------
                case 0xF4: // Fix Settings
+                  // ---------------------------------------------------
                {
                   /*
                    pro Kanal:
@@ -3620,25 +3651,13 @@ int main (void)
                         //lcd_puthex(levelwert);
                         //lcd_putc(' ');
                         //lcd_putc('C');
-                        //levelwert = 1;
-                        
-                        //
-                        
                         errcount0 += eeprombyteschreiben(0xF9,fixstartadresse + LEVEL_OFFSET + kanal,levelwert); // adresse im EEPROM
                         
-                        //       lcd_putint(errcount);
-                        /*
-                         sendbuffer[EE_PARTBREITE + 2*kanal+1] = levelwert;
-                         */
-                        //lcd_putc('A'+kanal);
-                        
+                        // ---------------------------------------------------
                         // Expo schreiben
                         // Der Wert ist auf (16 + 2* changeposition) an der geraden Stelle
+                        // ---------------------------------------------------
                         uint8_t expowert = buffer[datastartbyte + 2*changeposition];
-                        
-                        //Test
-                        // expowert= 0;
-                        //
                         
                         errcount1 += eeprombyteschreiben(0xF9,fixstartadresse + EXPO_OFFSET + kanal,expowert); // 0x30
                         
@@ -3651,14 +3670,14 @@ int main (void)
                          lcd_gotoxy(0,changeposition);
                          lcd_putc('k');
                          lcd_putint2(kanal);
-                        lcd_putc(' ');
+                         lcd_putc(' ');
                          lcd_putc('l');
                          lcd_puthex(levelwert);
-                        lcd_putc(' ');
+                         lcd_putc(' ');
                          lcd_putc('e');
                          lcd_puthex(expowert);
                          lcd_putc('*');
-                        */
+                         */
                         //sendbuffer[0x10+2*kanal] = levelwert;
                         //sendbuffer[0x10+2*kanal+1] = expowert;
                         
@@ -3668,8 +3687,10 @@ int main (void)
                         
                         changeposition++;
                      }
-                     //lcd_putc('M'+kanal);
+                     
+                     // ---------------------------------------------------
                      // RAM_SEND_PPM_STATUS schicken: Daten haben geaendert
+                     // ---------------------------------------------------
                      task_out |= (1<< RAM_SEND_PPM_TASK);
                      task_outdata = modelindex;
                      
@@ -3691,13 +3712,15 @@ int main (void)
                   }// for kanal
                }break;
                   
-// MARK: F5 read KanalSettings
-               case 0xF5: // read KanalSettings
+                  // MARK: F5 read KanalSettings
+                  // ---------------------------------------------------
+               case 0xF5: //                          read KanalSettings
+                  // ---------------------------------------------------
                {
                   uint8_t modelindex =0;
                   modelindex = buffer[3]; // welches model soll gelesen werden
                   
-                  uint8_t pos=0, verbose=buffer[4];
+                  uint8_t pos=0;
                   
                   // Level lesen
                   uint16_t readstartadresse = TASK_OFFSET  + LEVEL_OFFSET + modelindex*SETTINGBREITE;
@@ -3718,11 +3741,13 @@ int main (void)
                         //sendbuffer[EE_PARTBREITE + pos] = eepromverbosebytelesen(readstartadresse+pos); // ab 0x20 32
                         sendbuffer[EE_PARTBREITE + pos] = leveldata;
                         curr_levelarray[pos] = leveldata;
-
+                        
                      }
                   }
                   
-                  // Expo lesen
+                  // ---------------------------------------------------
+                  //                                          Expo lesen
+                  // ---------------------------------------------------
                   readstartadresse = TASK_OFFSET  + EXPO_OFFSET + modelindex*SETTINGBREITE;
                   //Im Sendbuffer ab pos EE_PARTBREITE + 0x08 (8)
                   for (pos=0;pos<8;pos++)
@@ -3741,12 +3766,13 @@ int main (void)
                         //sendbuffer[EE_PARTBREITE + 0x08 + pos] = eepromverbosebytelesen(readstartadresse+pos); // ab 0x28 40
                         curr_expoarray[pos] = expodata;
                         sendbuffer[EE_PARTBREITE + 0x08 + pos] = expodata;
-                       
+                        
                      }
                   }
                   
-                  
-                  // Mix lesen
+                  // ---------------------------------------------------
+                  //                                           Mix lesen
+                  // ---------------------------------------------------
                   readstartadresse = TASK_OFFSET  + MIX_OFFSET + modelindex*SETTINGBREITE;
                   
                   //Im Sendbuffer ab pos EE_PARTBREITE + 0x10 (16)
@@ -3770,7 +3796,9 @@ int main (void)
                      }
                   }
                   
-                  // Funktion lesen
+                  // ---------------------------------------------------
+                  //                                     Funktion lesen
+                  // ---------------------------------------------------
                   readstartadresse = TASK_OFFSET  + FUNKTION_OFFSET + modelindex*SETTINGBREITE;
                   
                   //Im Sendbuffer ab pos EE_PARTBREITE + 0x18 (24)
@@ -3802,9 +3830,6 @@ int main (void)
                      }
                   }
                   
-                
-                  
-                  
                   
                   sendbuffer[1] = readstartadresse & 0x00FF;
                   sendbuffer[2] = (readstartadresse & 0xFF00)>>8;
@@ -3817,34 +3842,33 @@ int main (void)
                   usb_rawhid_send((void*)sendbuffer, 50);
                   
                   /*
-                  lcd_clr_line(0);
-                  lcd_gotoxy(0,0);
-                  lcd_putc('L');
-                  //lcd_putc(' ');
-                  lcd_puthex(curr_levelarray[0]);
-                  lcd_puthex(curr_levelarray[1]);
-                  //lcd_putc(' ');
-                  lcd_puthex(curr_levelarray[2]);
-                  lcd_puthex(curr_levelarray[3]);
-                  
-                  lcd_putc(' ');
-                  lcd_putc('M');
-                  //lcd_putc(' ');
-                  lcd_puthex(curr_mixarray[0]);
-                  lcd_puthex(curr_mixarray[1]);
-                  //lcd_putc(' ');
-                  lcd_puthex(curr_mixarray[2]);
-                  lcd_puthex(curr_mixarray[3]);
-                  //OSZI_D_HI;
+                   lcd_clr_line(0);
+                   lcd_gotoxy(0,0);
+                   lcd_putc('L');
+                   //lcd_putc(' ');
+                   lcd_puthex(curr_levelarray[0]);
+                   lcd_puthex(curr_levelarray[1]);
+                   //lcd_putc(' ');
+                   lcd_puthex(curr_levelarray[2]);
+                   lcd_puthex(curr_levelarray[3]);
+                   
+                   lcd_putc(' ');
+                   lcd_putc('M');
+                   //lcd_putc(' ');
+                   lcd_puthex(curr_mixarray[0]);
+                   lcd_puthex(curr_mixarray[1]);
+                   //lcd_putc(' ');
+                   lcd_puthex(curr_mixarray[2]);
+                   lcd_puthex(curr_mixarray[3]);
+                   //OSZI_D_HI;
                    */
-               
-               
+                  
+                  
                }break;
                   
-                  
-                  
-                  
-               case 0xF6: // HALT
+                  // ---------------------------------------------------
+               case 0xF6:                                         // HALT
+                  // ---------------------------------------------------
                {
                   lcd_gotoxy(19,1);
                   lcd_putc('H');
@@ -3862,11 +3886,13 @@ int main (void)
                   masterstatus &= ~(1<<HALT_BIT);
                   MASTER_PORT |= (1<<SUB_BUSY_PIN);
                   abschnittnummer=0;
-
+                  
                }break;
-
-// MARK: FA Fix Mixing
-               case 0xFA: // Fix Mixing
+                  
+                  // MARK: FA Fix Mixing
+                  // ---------------------------------------------------
+               case 0xFA:                                   // Fix Mixing
+                  // ---------------------------------------------------
                {
                   /*
                    pro mixing:
@@ -3912,8 +3938,9 @@ int main (void)
                      
                   }// for mixing
                   
+                  // ---------------------------------------------------
                   // RAM_SEND_PPM_STATUS schicken: Daten haben geaendert
-                  
+                  // ---------------------------------------------------
                   task_out |= (1<< RAM_SEND_PPM_TASK);
                   task_outdata = modelindex;
                   
@@ -3930,35 +3957,40 @@ int main (void)
                }break;
                   
                   
-                  
-                 case 0xFC: // Refresh
+                  // ---------------------------------------------------
+               case 0xFC:                                    // Refresh
+                  // ---------------------------------------------------
                {
                   
                   // RAM_SEND_PPM_STATUS schicken: Daten haben geaendert
                   task_out |= (1<< RAM_SEND_PPM_TASK);
                   uint8_t modelindex = buffer[4];// model
-
+                  
                   task_outdata = modelindex;
-
+                  
                   sendbuffer[0] = 0xFC;
                   usb_rawhid_send((void*)sendbuffer, 50);
-
+                  
                }break;
-
-   // MARK: FD read Sendersettings
-               case 0xFD: // read Sendersettings
+                  
+                  // MARK: FD read Sendersettings
+                  // ---------------------------------------------------
+               case 0xFD: //                          read Sendersettings
+                  // ---------------------------------------------------
                {
                   /*
                    FUNKTION_OFFSET    0x60 // 96
                    DEVICE_OFFSET      0x70 // 122
                    AUSGANG_OFFSET     0x80 // 128
-
+                   
                    */
                   uint8_t modelindex =0;
                   modelindex = buffer[3]; // welches model soll gelesen werden
                   uint8_t pos=0;
                   
+                  // ---------------------------------------------------
                   // funktion lesen
+                  // ---------------------------------------------------
                   uint16_t readstartadresse = TASK_OFFSET  + FUNKTION_OFFSET + modelindex*SETTINGBREITE;
                   // startadresse fuer Settings des models
                   for (pos=0;pos<8;pos++)
@@ -3966,7 +3998,9 @@ int main (void)
                      sendbuffer[EE_PARTBREITE + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x60 32
                   }
                   
+                  // ---------------------------------------------------
                   // device lesen
+                  // ---------------------------------------------------
                   readstartadresse = TASK_OFFSET  + DEVICE_OFFSET + modelindex*SETTINGBREITE;
                   //Im Sendbuffer ab pos 0x08 (8)
                   for (pos=0;pos<8;pos++)
@@ -3974,7 +4008,9 @@ int main (void)
                      sendbuffer[EE_PARTBREITE + 0x08 + pos] = eeprombytelesen(readstartadresse+pos); // ab 0x28 40
                   }
                   
+                  // ---------------------------------------------------
                   // Ausgang lesen
+                  // ---------------------------------------------------
                   readstartadresse = TASK_OFFSET  + AUSGANG_OFFSET + modelindex*SETTINGBREITE;
                   
                   //Im Sendbuffer ab pos 0x10 (16)
@@ -3991,31 +4027,17 @@ int main (void)
                   sendbuffer[0] = 0xFD;
                   
                   usb_rawhid_send((void*)sendbuffer, 50);
-
+                  
                }
                   
             } // switch code
          }
-         /*
-         else
-         {
-            // Data
-            //lcd_clr_line(1);
-            //lcd_gotoxy(18,1);
-            //lcd_putc('X');
-            //lcd_putc('X');
-            
-            
-            
-            //abschnittnummer=0;
-            OSZI_B_TOGG ;
-         }
-         */
+         
          //lcd_putc('$');
          code=0;
          sei();
          
-       //OSZI_D_HI;
+         //OSZI_D_HI;
          
 		} // r>0, neue Daten
       else
@@ -7112,6 +7134,16 @@ int main (void)
          Tastenwert=0;
          // MARK:  Trimmung
          
+         // -------------------------------------------------------
+         // Tastatur Trimmung
+         // -------------------------------------------------------
+     
+         
+         
+         
+         
+         
+         
          if (Trimmtastenwert>5)
          {
             /*
@@ -7257,8 +7289,8 @@ int main (void)
                      lcd_puthex(curr_trimmungarray[0]);
                      lcd_putc('*');
                      lcd_puthex(curr_trimmungarray[1]);
-                     curr_trimmungarray[0]=0x7F;
-                     curr_trimmungarray[1]=0x7F;
+                     //curr_trimmungarray[0]=0x7F;
+                     //curr_trimmungarray[1]=0x7F;
 
                      write_Ext_EEPROM_Trimm(0);
                      delay_ms(2);
