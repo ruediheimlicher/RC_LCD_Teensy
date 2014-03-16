@@ -47,7 +47,8 @@ int16_t adc_read(uint8_t derKanal)
    
    ADMUX = ADC_REF_POWER | (derKanal & 0x1F); // Vcc als Referenz
    
-   
+   ADCSRA |= (1<<ADSC);              // eine ADC-Wandlung (Der ADC setzt dieses Bit ja wieder auf 0 nach dem Wandeln)
+      
    for(i=0;i<4;i++)
    {
       ADCSRA = (1<<ADEN) | (1<<ADPS2) | (1<<ADPS0) | (1<<ADSC); // start the conversion

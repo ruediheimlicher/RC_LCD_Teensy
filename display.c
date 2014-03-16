@@ -2141,9 +2141,6 @@ void display_trimmanzeige_vertikal (uint8_t char_x0, uint8_t char_y0, uint8_t de
          display_write_byte(DATA,0x80);
          display_go_to(char_x0+breite,page);
          display_write_byte(DATA,0x80);
-
-         
-      
       }
 
       for (col=char_x0;col<char_x0+breite;col++)
