@@ -166,7 +166,7 @@
 #define WERT5    88       //    B links unten Taste 7
 #define WERT7    139      //   C rechts oben Taste 3
 #define WERT8    168      // D rechts unten Taste 9
-
+#define WERT9    225      // Mitte rechts unten Taste 9
 
 /*
 #define TASTE_L_O    15
@@ -230,9 +230,9 @@
 #define MINWAIT         3 // Anzahl loops von loopcount1 bis einschalten
 
 
-#define TASTATURPORT PORTF
+#define TASTATURPORT    PORTF
 #define TASTATURPIN		0
-#define TRIMMTASTATURPIN		1
+#define TRIMMTASTATURPIN		3
 
 
 // end Screen
@@ -359,8 +359,8 @@
 #define WRITE_TASKADRESSE        0x1F0     // RAM_Adresse fuer Task-Auftrag von RC_LCD an PPM
 #define WRITE_TASKDATA           0x1F1
 
-#define RAM_SEND_PPM_TASK         2 // PPM soll Status lesen (Auftrag AN PPM)
-#define RAM_RECV_PPM_TASK         1 // LCD soll Status lesen (Auftrag VON PPM)
+#define RAM_SEND_PPM_TASK         2 // PPM soll Status lesen (Auftrag AN PPM) In PPM: RAM_RECV_LCD_TASK
+#define RAM_RECV_PPM_TASK         1 // LCD soll Status lesen (Auftrag VON PPM) In PPM: RAM_SEND_LCD_TASK
 
 #define RAM_SEND_DOGM_TASK         3
 #define RAM_SEND_TRIMM_TASK      4

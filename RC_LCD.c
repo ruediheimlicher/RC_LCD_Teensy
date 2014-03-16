@@ -550,6 +550,9 @@ void Master_Init(void)
    
    ADC_DDR &= ~(1<<ADC_AKKUPIN);
    
+//   TASTATURPORT &= ~(1<<TASTATURPIN);
+//   TASTATURPORT &= ~(1<<TRIMMTASTATURPIN);
+   
    
    SUB_EN_DDR |= (1<<SUB_EN_PIN);
    SUB_EN_PORT |= (1<<SUB_EN_PIN);
@@ -822,7 +825,7 @@ ISR (TIMER0_OVF_vect)
    
    if (mscounter > 2*CLOCK_DIV) // 0.5s
    {
-     // displaycounter++;
+     displaycounter++;
       manuellcounter++;
       
       if (trimmstatus) // trimmtaste wurde gedrueckt
@@ -1621,20 +1624,33 @@ void read_Ext_EEPROM_Settings(void)
       }
       //cli();
       curr_trimmungarray[pos] = (eeprombytelesen(readstartadresse+pos)& 0xFF);
+      
+      
+      
+      // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+      // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+      
+      // Fehler in Trimmtastatur, workarround
+      curr_trimmungarray[pos]=0x7F;
+      
+      // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+      // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+      
+      
       //OSZI_D_HI;
       
    }
    
    
-   lcd_gotoxy(4,0);
+   //lcd_gotoxy(4,0);
    //lcd_putc('+');
    //lcd_putint1(modelindex);
    //lcd_putc('+');
    //lcd_putint12(readstartadresse);
    //lcd_putc('*');
-   lcd_puthex(curr_trimmungarray[0]);
-   lcd_putc('*');
-   lcd_puthex(curr_trimmungarray[1]);
+   //lcd_puthex(curr_trimmungarray[0]);
+   //lcd_putc('*');
+   //lcd_puthex(curr_trimmungarray[1]);
    
    //lcd_puthex((readstartadresse & 0xFF00)>>8);
    //lcd_puthex((readstartadresse & 0x00FF));
@@ -2375,7 +2391,7 @@ int main (void)
 	uint16_t Tastenprellen=0x01F;
 	//timer0();
 	
-	initADC(0);
+	initADC(1);
 	//wdt_enable(WDTO_2S);
 	
 	uint16_t loopcount0=0;
@@ -2771,9 +2787,6 @@ int main (void)
          }
       }
       
-      
-
-      
       if ((masterstatus & (1<<SUB_TASK_BIT) ) )//|| (masterstatus & (1<< HALT_BIT)))// SPI starten, in PCINT0 gesetzt
       {
           if (masterstatus & (1<< HALT_BIT)) // SUB_TASK_BIT nicht zuruecksetzen
@@ -2823,7 +2836,7 @@ int main (void)
             analogcomp_init();
             
             task_out |= 1<<RAM_SEND_TRIMM_TASK; // Aufforderung an PPM, die Daten fuer Trimming zu lesen
-            task_outdata = 0x01;            // Device der Aenderung (increment/decrement)
+            task_outdata = 0xFF;            // Device der Aenderung (increment/decrement)
             
             /*
              lcd_gotoxy(0,0);
@@ -2834,12 +2847,13 @@ int main (void)
              lcd_puthex(curr_trimmungarray[0]);
              lcd_puthex(curr_trimmungarray[1]);
              */
+            
             OSZI_D_HI;
             
             /*
              lcd_gotoxy(0,0);
              
-             lcd_putc('L');
+             //lcd_putc('L');
              //lcd_putc(' ');
              
              lcd_puthex(curr_levelarray[0]);
@@ -2909,13 +2923,17 @@ int main (void)
             }
             
             // Testdaten lesen
-            
+            lcd_gotoxy(0,1);
             for (i=0;i<8;i++)
             {
-               sendbuffer[EE_PARTBREITE+i] = readRAMbyteAnAdresse(teststartadresse+i);
+               uint8_t tempdata =readRAMbyteAnAdresse(teststartadresse+i);
+               sendbuffer[EE_PARTBREITE+i] =tempdata;
+              // lcd_puthex(testdataarray[2*i]);
+              // lcd_puthex(testdataarray[2*i+1]);
                
+
             }
-            
+
             anzeigecounter = 0;
             
             // MARK: task_in
@@ -2994,14 +3012,13 @@ int main (void)
                _delay_us(1);
                
                out_taskcounter++;
-               /*
+               
                 lcd_gotoxy(0,0);
                 lcd_putc('D');
-                lcd_puthex(task_out);
-                lcd_putc('+');
-                lcd_puthex(out_taskcounter);
-                lcd_putc('+');
-                */
+                lcd_puthex(task_out & (1<<RAM_SEND_DOGM_TASK));
+                //lcd_putc('+');
+                //lcd_puthex(out_taskcounter);
+                //lcd_putc('+');
                task_out &= ~(1<<RAM_SEND_DOGM_TASK);
                
             }
@@ -3060,7 +3077,7 @@ int main (void)
                _delay_us(1);
                
                out_taskcounter++;
-               
+/*
                lcd_gotoxy(0,1);
                lcd_putc('T');
                lcd_puthex(task_out);
@@ -3069,12 +3086,9 @@ int main (void)
                lcd_putc(' ');
                lcd_puthex(curr_trimmungarray[1]);
                lcd_putc(' ');
-               
-               
+*/               
                task_out &= ~(1<<RAM_SEND_TRIMM_TASK); // Aufforderung an PPM zuruecksetzen
-               
             }
-            
             
             if (task_out & (1<<RAM_SEND_PPM_TASK))
             {
@@ -3098,14 +3112,14 @@ int main (void)
                _delay_us(1);
                
                out_taskcounter++;
-               /*
-                lcd_gotoxy(10,0);
+               
+                lcd_gotoxy(10,1);
                 lcd_putc('o');
                 lcd_puthex(task_out);
                 lcd_putc('t');
                 lcd_puthex(task_outdata);
-                lcd_putc('c');
-                */
+               
+                //lcd_putc('c');
                //lcd_puthex(out_taskcounter);
                
                task_out &= ~(1<<RAM_SEND_PPM_TASK); // Task gesendet, Bit reset
@@ -3122,7 +3136,7 @@ int main (void)
                   //OSZI_B_HI;
                   
                   // Trimmung
-                  lcd_gotoxy(10,0);
+                  lcd_gotoxy(14,0);
                   lcd_putc('T');
                   lcd_puthex(curr_trimmungarray[0]);
                   lcd_puthex(curr_trimmungarray[1]);
@@ -3132,8 +3146,6 @@ int main (void)
                   lcd_puthex(curr_trimmungarray[3]);
                   lcd_putc('*');
                   */
-                  
-                  
                   /*
                    lcd_clr_line(0);
                    
@@ -3176,8 +3188,6 @@ int main (void)
                }
                OSZI_A_HI;
             }
-            
-            
             
             // Fehler ausgeben
             if (outcounter%0x40 == 0)
@@ -3601,6 +3611,7 @@ int main (void)
                   sendbuffer[8] = errcount1;
                   
                   usb_rawhid_send((void*)sendbuffer, 50);
+                  
                }break;
                   
                   
@@ -3956,7 +3967,7 @@ int main (void)
                   
                }break;
                   
-                  
+              // MARK: FD Refresh
                   // ---------------------------------------------------
                case 0xFC:                                    // Refresh
                   // ---------------------------------------------------
@@ -4279,6 +4290,11 @@ int main (void)
                               display_clear();
                               sethomescreen();
                               
+                              lcd_gotoxy(6,1);
+                              lcd_putc('r');
+                              task_out |= (1<< RAM_SEND_PPM_TASK);
+                              task_outdata = 0;
+
                            }
                            
                            
@@ -7175,12 +7191,14 @@ int main (void)
             
              TastaturCount++;
             
-            if (trimmprellcounter>150)
+            if (trimmprellcounter>100)
             {
-               lcd_gotoxy(0,1);
-               lcd_putint(Trimmtastenwert);
+               /*
+               lcd_gotoxy(9,1);
+               lcd_putint12(Trimmtastenwert);
                lcd_putc(' ');
                lcd_putint2(Trimmtastenindex);
+                */
                Trimmtaste = Trimmtastenindex;
                trimmstatus = (Trimmtastenindex & 0x0F); // Bit 0-3
                trimmprellcounter=0;
@@ -7282,13 +7300,14 @@ int main (void)
                      
                      //lcd_gotoxy(10,task_outdata);
                      //lcd_puts("-----\0");
-                     
+ /*
                      lcd_gotoxy(12,task_outdata);
                      lcd_putint1(task_outdata);
                      lcd_putc(' ');
                      lcd_puthex(curr_trimmungarray[0]);
                      lcd_putc('*');
                      lcd_puthex(curr_trimmungarray[1]);
+ */
                      //curr_trimmungarray[0]=0x7F;
                      //curr_trimmungarray[1]=0x7F;
 
@@ -7364,13 +7383,13 @@ int main (void)
                      
                      //lcd_gotoxy(10,task_outdata);
                      //lcd_puts("-----\0");
-                     
+/*
                      lcd_gotoxy(10,task_outdata);
                      //lcd_puthex(task_outdata);
                      lcd_puthex(curr_trimmungarray[2]);
                      lcd_putc('*');
                      lcd_puthex(curr_trimmungarray[3]);
-                     
+*/
                      
                      write_Ext_EEPROM_Trimm(2);
                      delay_ms(2);
