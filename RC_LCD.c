@@ -2577,8 +2577,9 @@ int main (void)
             {
                masterstatus &= ~(1<<SUB_READ_EEPROM_BIT);
                // Beim Start RAM_SEND_PPM_STATUS schicken
-               task_out |= (1<< RAM_SEND_PPM_TASK);
                task_outdata = 0;
+               task_out |= (1<< RAM_SEND_PPM_TASK);
+              
                
                // Sub soll erst jetzt die Settings lesen. >> in RAM_TASK verschoben
                //substatus |= (1<<SETTINGS_READ);
@@ -2591,8 +2592,9 @@ int main (void)
          
         if ( masterstatus & (1<<DOGM_BIT))
             {
-               task_out |= (1<< RAM_SEND_DOGM_TASK);
                task_outdata = curr_model;//modelindex;
+               task_out |= (1<< RAM_SEND_DOGM_TASK);
+               
                masterstatus &= ~(1<<DOGM_BIT);
             }
 
@@ -3445,13 +3447,11 @@ int main (void)
                {
                   //lcd_gotoxy(19,1);
                   //lcd_putc('U');
-                  if (usb_configured)
-                  {
-
+    
                   sendbuffer[0] = 0xA3;
                   
                   usb_rawhid_send((void*)sendbuffer, 50);
-                  }
+                  
                }break;
                   
                   
