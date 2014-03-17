@@ -2928,8 +2928,8 @@ int main (void)
             lcd_gotoxy(0,1);
             for (i=0;i<8;i++)
             {
-               uint8_t tempdata =readRAMbyteAnAdresse(teststartadresse+i);
-               sendbuffer[EE_PARTBREITE+i] =tempdata;
+            //   uint8_t tempdata =readRAMbyteAnAdresse(teststartadresse+i);
+             //  sendbuffer[EE_PARTBREITE+i] =tempdata;
               // lcd_puthex(testdataarray[2*i]);
               // lcd_puthex(testdataarray[2*i+1]);
                
@@ -2999,12 +2999,23 @@ int main (void)
                OSZI_A_LO;
                
                RAM_CS_LO;
+               _delay_us(LOOPDELAY);
+               //      OSZI_A_LO;
+               spiram_wrbyte(WRITE_TASKDATA, task_outdata);
+               //     OSZI_A_HI;
+               RAM_CS_HI;
+               _delay_us(1);
+
+               
+               RAM_CS_LO;
                
                _delay_us(LOOPDELAY);
                //      OSZI_A_LO;
                spiram_wrbyte(WRITE_TASKADRESSE, task_out);
                //     OSZI_A_HI;
                RAM_CS_HI;
+               
+               /*
                RAM_CS_LO;
                _delay_us(LOOPDELAY);
                //      OSZI_A_LO;
@@ -3012,7 +3023,7 @@ int main (void)
                //     OSZI_A_HI;
                RAM_CS_HI;
                _delay_us(1);
-               
+               */
                out_taskcounter++;
                
                 lcd_gotoxy(0,0);
