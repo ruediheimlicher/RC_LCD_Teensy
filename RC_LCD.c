@@ -3096,13 +3096,9 @@ int main (void)
                // task an PPM senden
                // ---------------------------------------------------
                OSZI_A_LO;
-               RAM_CS_LO;
                
-               _delay_us(LOOPDELAY);
-               //      OSZI_A_LO;
-               spiram_wrbyte(WRITE_TASKADRESSE, task_out);
-               //     OSZI_A_HI;
-               RAM_CS_HI;
+               
+               // ---------------------------------------------------
                RAM_CS_LO;
                _delay_us(LOOPDELAY);
                //      OSZI_A_LO;
@@ -3110,20 +3106,43 @@ int main (void)
                //     OSZI_A_HI;
                RAM_CS_HI;
                _delay_us(1);
+               // ---------------------------------------------------
                
+               // ---------------------------------------------------
+               RAM_CS_LO;
+               
+               _delay_us(LOOPDELAY);
+               //      OSZI_A_LO;
+               spiram_wrbyte(WRITE_TASKADRESSE, task_out);
+               //     OSZI_A_HI;
+               RAM_CS_HI;
+               // ---------------------------------------------------
+               
+               /*
+               // ---------------------------------------------------
+               RAM_CS_LO;
+               _delay_us(LOOPDELAY);
+               //      OSZI_A_LO;
+               spiram_wrbyte(WRITE_TASKDATA, task_outdata);
+               //     OSZI_A_HI;
+               RAM_CS_HI;
+               _delay_us(1);
+               // ---------------------------------------------------
+                */
                out_taskcounter++;
-               
+               /*
                 lcd_gotoxy(10,1);
                 lcd_putc('o');
                 lcd_puthex(task_out);
                 lcd_putc('t');
                 lcd_puthex(task_outdata);
-               
+               */
                 //lcd_putc('c');
                //lcd_puthex(out_taskcounter);
                
                task_out &= ~(1<<RAM_SEND_PPM_TASK); // Task gesendet, Bit reset
-               
+               // ---------------------------------------------------
+
                // ---------------------------------------------------
                // Sub soll  beim Start erst jetzt die Settings lesen.
                // ---------------------------------------------------
@@ -3136,11 +3155,14 @@ int main (void)
                   //OSZI_B_HI;
                   
                   // Trimmung
+                  /*
                   lcd_gotoxy(14,0);
                   lcd_putc('T');
                   lcd_puthex(curr_trimmungarray[0]);
                   lcd_puthex(curr_trimmungarray[1]);
                   lcd_putc('*');
+                   */
+                  
                   /*
                   lcd_puthex(curr_trimmungarray[2]);
                   lcd_puthex(curr_trimmungarray[3]);
@@ -3214,10 +3236,6 @@ int main (void)
          }//a
          
          spi_end(); // SPI von Sub ausschalten
-         
-         
-  
-        
       } // end Task
       else
       {
@@ -3242,10 +3260,8 @@ int main (void)
          usbstatus |= (1<<USB_RECV);
          {
             code = buffer[0];
-            
             switch (code)
             {
-                  
                case 0xC0: // Write EEPROM Page start
                {
                   eeprom_errcount=0;
@@ -3400,7 +3416,6 @@ int main (void)
                   
                   
                   uint16_t erfolg =  eeprompartschreiben(); // return bytechecksumme
-                  
                   sendbuffer[0] = 0xEC;
                   
                   sendbuffer[1] = eepromstartadresse & 0xFF;
@@ -3428,11 +3443,15 @@ int main (void)
                case 0xA2: // writeUSB
                   // ---------------------------------------------------
                {
-                  lcd_gotoxy(19,1);
-                  lcd_putc('U');
+                  //lcd_gotoxy(19,1);
+                  //lcd_putc('U');
+                  if (usb_configured)
+                  {
+
                   sendbuffer[0] = 0xA3;
-                  usb_rawhid_send((void*)sendbuffer, 50);
                   
+                  usb_rawhid_send((void*)sendbuffer, 50);
+                  }
                }break;
                   
                   
@@ -3458,9 +3477,9 @@ int main (void)
                   eepromstartadresse = buffer[1] | (buffer[2]<<8);
                   //sendbuffer[0] = 0xD5;
                   //usb_rawhid_send((void*)sendbuffer, 50);
-                  lcd_gotoxy(18,1);
-                  lcd_putc('D');
-                  lcd_putc('A');
+                  //lcd_gotoxy(18,1);
+                  //lcd_putc('D');
+                  //lcd_putc('A');
                   
                   eeprompartlesen(eepromstartadresse); // 7 ms
                   //usbtask |= (1<<EEPROM_READ_BYTE_TASK);
@@ -3498,21 +3517,24 @@ int main (void)
                      }
                   }
                   
-                  sendbuffer[1] = readstartadresse & 0x00FF;
-                  sendbuffer[2] = (readstartadresse & 0xFF00)>>8;
-                  sendbuffer[3] = modelindex;
-                  sendbuffer[4] = 0xFF;
-                  sendbuffer[5] = buffer[6];
+                     sendbuffer[1] = readstartadresse & 0x00FF;
+                     sendbuffer[2] = (readstartadresse & 0xFF00)>>8;
+                     sendbuffer[3] = modelindex;
+                     sendbuffer[4] = 0xFF;
+                     sendbuffer[5] = buffer[6];
+                     
+                     // code
+                     sendbuffer[0] = 0xE7;
+                     usb_rawhid_send((void*)sendbuffer, 50);
                   
-                  // code
-                  sendbuffer[0] = 0xE7;
-                  usb_rawhid_send((void*)sendbuffer, 50);
+                 /*
                   lcd_clr_line(0);
                   lcd_gotoxy(10,0);
                   lcd_putc('F');
                   lcd_putc('7');
                   lcd_putc(' ');
                   lcd_putint1(modelindex);
+                  */
                   /*
                    lcd_puthex(curr_levelarray[0]);
                    lcd_puthex(curr_levelarray[1]);
@@ -3546,9 +3568,10 @@ int main (void)
                    device: Bezeichnung auf dem Sender aus default_devicearray @"Seite",@"Hoehe",@"Quer"...
                    */
                   // uint16_t fixstartadresse =  buffer[1] | (buffer[2]<<8);
-                  lcd_gotoxy(0,1);
-                  lcd_putc('F');
-                  lcd_putc('6');
+                  //lcd_gotoxy(0,1);
+                  //lcd_putc('F');
+                  //lcd_putc('6');
+                  
                   uint8_t changecode = buffer[3];// Bits fuer zu aendernde kanaele
                   uint8_t modelindex = buffer[4]; // Nummer des models
                   uint16_t fixstartadresse =  TASK_OFFSET + FUNKTION_OFFSET + modelindex * SETTINGBREITE; // Startadresse fuer Settings
@@ -3574,9 +3597,9 @@ int main (void)
                         uint8_t funktionwert = buffer[datastartbyte + changeposition]; // wert an position im buffer // 0x20
                         sendbuffer[9] = funktionwert;
                         
-                        lcd_putc('+');
-                        lcd_puthex(funktionwert);
-                        lcd_putc('*');
+                        //lcd_putc('+');
+                        //lcd_puthex(funktionwert);
+                        //lcd_putc('*');
                         errcount0 += eeprombyteschreiben(0xB0,fixstartadresse + kanal,funktionwert); // adresse im EEPROM
                         
                         
@@ -3600,18 +3623,17 @@ int main (void)
                      
                   }// for kanal
                   //lcd_putc('C');
-                  sendbuffer[0] = 0xE6;
-                  sendbuffer[1] = fixstartadresse & 0x00FF;
-                  sendbuffer[2] = (fixstartadresse & 0xFF00)>>8;
-                  sendbuffer[3] = errcount0;
-                  sendbuffer[4] = changecode;
-                  sendbuffer[5] = modelindex;
-                  sendbuffer[6] = task_out;
-                  sendbuffer[7] = task_outdata;
-                  sendbuffer[8] = errcount1;
-                  
-                  usb_rawhid_send((void*)sendbuffer, 50);
-                  
+                     sendbuffer[0] = 0xE6;
+                     sendbuffer[1] = fixstartadresse & 0x00FF;
+                     sendbuffer[2] = (fixstartadresse & 0xFF00)>>8;
+                     sendbuffer[3] = errcount0;
+                     sendbuffer[4] = changecode;
+                     sendbuffer[5] = modelindex;
+                     sendbuffer[6] = task_out;
+                     sendbuffer[7] = task_outdata;
+                     sendbuffer[8] = errcount1;
+                     
+                     usb_rawhid_send((void*)sendbuffer, 50);
                }break;
                   
                   
@@ -3635,8 +3657,8 @@ int main (void)
                    state = 1;
                    */
                   // uint16_t fixstartadresse =  buffer[1] | (buffer[2]<<8);
-                  lcd_gotoxy(0,0);
-                  lcd_putc('M');
+                  //lcd_gotoxy(0,0);
+                  //lcd_putc('M');
                   uint8_t changecode = buffer[3];// Bits fuer zu aendernde kanaele
                   uint8_t modelindex = buffer[4]; // Nummer des models
                   
