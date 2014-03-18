@@ -1962,6 +1962,10 @@ void write_Ext_EEPROM_Settings(void)
    
    masterstatus |= (1<<DOGM_BIT);
    
+   //lcd_gotoxy(8,0);
+   //lcd_putc('w');
+
+   
    // Lšst in der loop das Setzen von task_out aus.
    // UmstŠndlich, aber sonst nicht machbar.
 
@@ -2993,6 +2997,8 @@ int main (void)
             // MARK: task_out
             
             sendbuffer[0x3B] =task_out;
+            
+            
             if (task_out & (1<<RAM_SEND_DOGM_TASK))
                
             {
@@ -3026,12 +3032,12 @@ int main (void)
                */
                out_taskcounter++;
                
-                lcd_gotoxy(0,0);
+                lcd_gotoxy(10,0);
                 lcd_putc('D');
                 lcd_puthex(task_out & (1<<RAM_SEND_DOGM_TASK));
-                //lcd_putc('+');
-                //lcd_puthex(out_taskcounter);
-                //lcd_putc('+');
+                lcd_putc('+');
+                lcd_puthex(task_outdata);
+                lcd_putc('+');
                task_out &= ~(1<<RAM_SEND_DOGM_TASK);
                
             }
@@ -4251,7 +4257,7 @@ int main (void)
             */
             TastaturCount++;
             
-            if (prellcounter>150)
+            if (prellcounter>100)
             {
                //lcd_gotoxy(6,0);
               // lcd_putint2(Tastenindex);
@@ -4325,8 +4331,9 @@ int main (void)
                               
                               lcd_gotoxy(6,1);
                               lcd_putc('r');
-                              task_out |= (1<< RAM_SEND_PPM_TASK);
                               task_outdata = 0;
+                              task_out |= (1<< RAM_SEND_PPM_TASK);
+                              
 
                            }
                            
@@ -5526,7 +5533,9 @@ int main (void)
                            {
                               case 0: // sichern
                               {
-                                 
+                                 //lcd_gotoxy(6,0);
+                                 //lcd_putc('l');
+
                                  write_Ext_EEPROM_Settings();// neue Einstellungen setzen
                                  
                                  // In write_Ext_EEPROM_Settings wird masterstatus & 1<<DOGM_BIT gesetzt.
@@ -5540,6 +5549,7 @@ int main (void)
                               case 1: // abbrechen
                               {
                                  eepromsavestatus=0;
+                                 
                                  read_Ext_EEPROM_Settings();// zuruecksetzen
                               
                               }break;
